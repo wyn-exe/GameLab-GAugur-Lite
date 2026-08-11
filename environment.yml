@@ -1,0 +1,14 @@
+name: gaugur-lite
+
+channels:
+  - defaults
+
+dependencies:
+  # Pyxel 2.9.8 要求 Python 3.11 及以上。
+  - python=3.11
+  - pip
+  - pip:
+      - -r requirements-windows.txt
+
+# CUDA PyTorch 使用独立的官方索引，环境创建后再安装 requirements-torch-cu121.txt。
+

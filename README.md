@@ -4,14 +4,15 @@
 
 ## 项目状态
 
-| 模块                  | 状态   | 产物                                                    |
-| --------------------- | ------ | ------------------------------------------------------- |
-| 原论文归档            | 已完成 | [GAugur_HPDC_2019.pdf](docs/papers/GAugur_HPDC_2019.pdf) |
-| 论文中文解读          | 已完成 | [GAugur 中文解读](docs/papers/GAugur_中文解读.md)        |
-| 八个真实小游戏        | 已下载 | [游戏清单与试玩方法](games/README.md)                    |
-| Windows-only 实现方案 | 已完成 | 本 README                                               |
-| Python 实现           | 待实现 | 计划放在`gaugur_lite/`                                |
-| 实验数据、模型与报告  | 待生成 | 计划放在`data/` 与 `artifacts/`                     |
+| 模块                     | 状态         | 产物                                                         |
+| ------------------------ | ------------ | ------------------------------------------------------------ |
+| 原论文归档               | 已完成       | [GAugur_HPDC_2019.pdf](docs/papers/GAugur_HPDC_2019.pdf)      |
+| 论文中文解读             | 已完成       | [GAugur 中文解读](docs/papers/GAugur_中文解读.md)             |
+| 八个真实小游戏           | 已下载       | [游戏清单与试玩方法](games/README.md)                         |
+| Windows-only 实现方案    | 已完成       | 本 README                                                    |
+| Step 0 环境基线          | 已完成       | [真实验收记录](artifacts/environment/step0/idle-summary.json) |
+| Python 实现              | 分阶段实现中 | Step 0 脚本位于`scripts/`，下一阶段创建 `gaugur_lite/`   |
+| 正式实验数据、模型与报告 | 待生成       | 计划放在`data/` 与 `artifacts/`                          |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -48,16 +49,16 @@
 
 ### 1.3 与原论文的差异
 
-| 项目       | 原论文                    | 本项目                            |
-| ---------- | ------------------------- | --------------------------------- |
-| workload   | 100 款真实游戏            | 8 个固定的 MIT 许可 Pyxel 小游戏  |
-| 平台       | Windows 10 + ASTER 多座席 | 单机 Windows + Conda + 多独立进程 |
-| 共享资源   | 7 类 CPU/GPU 资源         | 4 个代理维度                      |
-| 压力档位   | 11 档，$k=10$           | 主实验 5 档，11 档作为曲线消融    |
+| 项目       | 原论文                    | 本项目                                            |
+| ---------- | ------------------------- | ------------------------------------------------- |
+| workload   | 100 款真实游戏            | 8 个固定的 MIT 许可 Pyxel 小游戏                  |
+| 平台       | Windows 10 + ASTER 多座席 | 单机 Windows + Conda + 多独立进程                 |
+| 共享资源   | 7 类 CPU/GPU 资源         | 4 个代理维度                                      |
+| 压力档位   | 11 档，$k=10$           | 主实验 5 档，11 档作为曲线消融                    |
 | 共置组合   | 700 个二/三/四游戏组合    | 主数据集 60 个二/三元组合，另设 12 个四元外推组合 |
-| 性能指标   | 真实游戏 FPS              | Pyxel 引擎实际交付帧率            |
-| 云游戏串流 | 论文主要实验未纳入        | 不实现                            |
-| 在线集群   | 请求级调度                | 基于实测组合表的离线 replay       |
+| 性能指标   | 真实游戏 FPS              | Pyxel 引擎实际交付帧率                            |
+| 云游戏串流 | 论文主要实验未纳入        | 不实现                                            |
+| 在线集群   | 请求级调度                | 基于实测组合表的离线 replay                       |
 
 因此本项目应称为“GAugur 方法的轻量复现”或“GAugur-Lite”，不能称为原论文数值级完整复现。
 
@@ -297,9 +298,7 @@ python -c "import importlib.metadata; print(importlib.metadata.version('pyxel'))
 PyTorch 不再生成游戏 workload，只用于 `gpu_compute` 和 `gpu_memory` 压力 benchmark。使用与本机 NVIDIA 驱动兼容的 Windows CUDA wheel：
 
 ```powershell
-python -m pip install `
-  torch==2.4.0 `
-  --index-url https://download.pytorch.org/whl/cu121
+python -m pip install -r requirements-torch-cu121.txt
 ```
 
 验收：
@@ -344,16 +343,16 @@ Get-ComputerInfo | Out-File artifacts\environment\computer-info.txt
 
 游戏文件已经下载到 [`games/pyxel/`](games/pyxel/)，来源、commit、许可证和校验值见 [`games/README.md`](games/README.md)。八个 ID 固定，不在 profiling 或共置结果出来后增删游戏。
 
-| ID | 游戏 | 类型/主要场景 | 实验入口 |
-| --- | --- | --- | --- |
-| `pyxel_jump` | Pyxel Jump | 跳跃、障碍与 sprite 绘制 | `games/pyxel/02_jump_game.py` |
-| `pyxel_bubbles` | Pyxel Bubbles | 大量移动圆形与点击判定 | `games/pyxel/06_click_game.py` |
-| `pyxel_snake` | Snake! | 网格移动、碰撞与音频 | `games/pyxel/07_snake.py` |
-| `pyxel_shooter` | Pyxel Shooter | 星空、敌机、子弹与爆炸 | `games/pyxel/09_shooter.py` |
-| `pyxel_platformer` | Pyxel Platformer | tilemap、滚屏、物理与碰撞 | `games/pyxel/10_platformer.py` |
-| `daylight` | 30 Seconds of Daylight | Roguelike 地图、敌人和战斗 | `games/pyxel/apps-src/30SecondsOfDaylight/src/main.py` |
-| `mega_wing` | Mega Wing | 多弹幕、多对象与音频 | `games/pyxel/apps-src/mega_wing/mega_wing.py` |
-| `space_rescue` | Space Rescue | 单键飞行、对象生成与救援 | `games/pyxel/apps-src/space_rescue/space_rescue.py` |
+| ID                   | 游戏                   | 类型/主要场景              | 实验入口                                                 |
+| -------------------- | ---------------------- | -------------------------- | -------------------------------------------------------- |
+| `pyxel_jump`       | Pyxel Jump             | 跳跃、障碍与 sprite 绘制   | `games/pyxel/02_jump_game.py`                          |
+| `pyxel_bubbles`    | Pyxel Bubbles          | 大量移动圆形与点击判定     | `games/pyxel/06_click_game.py`                         |
+| `pyxel_snake`      | Snake!                 | 网格移动、碰撞与音频       | `games/pyxel/07_snake.py`                              |
+| `pyxel_shooter`    | Pyxel Shooter          | 星空、敌机、子弹与爆炸     | `games/pyxel/09_shooter.py`                            |
+| `pyxel_platformer` | Pyxel Platformer       | tilemap、滚屏、物理与碰撞  | `games/pyxel/10_platformer.py`                         |
+| `daylight`         | 30 Seconds of Daylight | Roguelike 地图、敌人和战斗 | `games/pyxel/apps-src/30SecondsOfDaylight/src/main.py` |
+| `mega_wing`        | Mega Wing              | 多弹幕、多对象与音频       | `games/pyxel/apps-src/mega_wing/mega_wing.py`          |
+| `space_rescue`     | Space Rescue           | 单键飞行、对象生成与救援   | `games/pyxel/apps-src/space_rescue/space_rescue.py`    |
 
 这里的“强/弱资源行为”不再由人为 profile 参数预设，而由后续敏感度/强度实验实际测出。八个游戏共享 Pyxel 引擎，因此框架差异较小、资源负载也比 3A 游戏轻；这是复现有效性限制，必须在报告中说明，不能通过给某个游戏附加隐藏矩阵计算来人为制造差异。
 
@@ -781,17 +780,113 @@ subprocess.Popen(
 
 #### 验收
 
+以下安装命令耗时较长，由用户在 **Anaconda PowerShell Prompt** 中运行。当前仓库默认 Anaconda 位于 `D:\anaconda3`：
+
 ```powershell
-python -c "import torch, psutil; print(torch.cuda.is_available()); print(psutil.cpu_count())"
-python -c "import importlib.metadata; print(importlib.metadata.version('pyxel'))"
-python -c "from pynvml import *; nvmlInit(); print(nvmlDeviceGetName(nvmlDeviceGetHandleByIndex(0)))"
+Set-Location D:\github\GameLab-RLCG
+
+# 环境不存在时才执行；当前机器已创建，可以跳过。
+conda create -n gaugur-lite python=3.11 pip -y
+conda activate gaugur-lite
+
+python -m pip install -r requirements-windows.txt
+python -m pip install -r requirements-torch-cu121.txt
+python -m pip check
+
+New-Item -ItemType Directory -Force artifacts\environment\step0 | Out-Null
+$acceptanceOutput = python scripts\verify_step0_environment.py
+$acceptanceExitCode = $LASTEXITCODE
+$acceptanceOutput | Out-File `
+  artifacts\environment\step0\acceptance.json -Encoding utf8
+$acceptanceOutput
+if ($acceptanceExitCode -ne 0) {
+  throw "Step 0 environment verification failed (exit $acceptanceExitCode)"
+}
 ```
 
-- CUDA 可用；
-- Pyxel 版本为 2.9.8，八个游戏的上游校验值全部通过；
-- NVML 初始化成功；
-- 空载 GPU 利用率和温度合理；
-- 没有 WSL 或 GameLab 依赖。
+> Windows 上不要使用 `torch==2.4.0+cu121`：该版本的官方 wheel 存在已知 DLL 打包回归，
+> `fbgemm.dll`/`torch_cpu.dll` 会依赖但未携带 `libomp140.x86_64.dll`。该问题被纳入
+> [PyTorch 2.4.1 修复范围](https://github.com/pytorch/pytorch/issues/131662)，本项目因此锁定`torch==2.4.1+cu121`。
+
+若曾经安装本项目旧锁定值 `2.4.0+cu121`，执行下面的官方 wheel 无缓存升级；下载约 2.4 GB：
+
+```powershell
+python -m pip install `
+  --upgrade `
+  --force-reinstall `
+  --no-cache-dir `
+  -r requirements-torch-cu121.txt
+
+python -m pip check
+$acceptanceOutput = python scripts\verify_step0_environment.py
+$acceptanceExitCode = $LASTEXITCODE
+$acceptanceOutput | Out-File `
+  artifacts\environment\step0\acceptance.json -Encoding utf8
+$acceptanceOutput
+if ($acceptanceExitCode -ne 0) {
+  throw "Step 0 environment verification failed (exit $acceptanceExitCode)"
+}
+```
+
+验证通过后再运行约 60 秒的真实空载基线采集：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\capture_step0_environment.ps1
+```
+
+空载质量门槛只用于控制 Windows 后台噪声，不参与 QoS 标签或模型训练：CPU mean `<=15%`、
+CPU P95 `<=35%`、GPU mean `<=5%`、GPU P95 `<=20%`、GPU 最高温度 `<=70°C`，且必须得到
+60 个样本。任一项失败时脚本保留 `idle-summary.json` 和 CPU 增量最大的 15 个进程，但返回非零状态；
+关闭干扰程序、等待系统静稳后重新采集，不得把失败采集写成通过。
+
+#### 真实验收结果
+
+结论：**PASS**。本机 Windows Conda 环境、CUDA/NVML、八个游戏文件和 60 秒空载质量门槛全部通过。
+
+环境验收：
+
+| 检查项                        |                                             实测结果 |   状态 |
+| ----------------------------- | ---------------------------------------------------: | -----: |
+| Python                        |                                              3.11.15 |   PASS |
+| Pyxel                         |                                                2.9.8 |   PASS |
+| PyTorch / CUDA runtime        |                                   2.4.1+cu121 / 12.1 |   PASS |
+| `torch.cuda.is_available()` |                                             `true` |   PASS |
+| Torch / NVML GPU              |                   NVIDIA GeForce RTX 4060 Laptop GPU |   PASS |
+| GPU 驱动 / 显存               |                                    560.94 / 8188 MiB |   PASS |
+| CPU / 内存                    |                     24 物理核、32 逻辑核 / 31.73 GiB |   PASS |
+| `pip check`                 |                    `No broken requirements found.` |   PASS |
+| 上游文件 SHA-256              |         11/11 匹配（8 个游戏、2 个资源、1 个许可证） |   PASS |
+| Windows 电源方案              | 平衡（GUID`381b4222-f694-41f0-9685-ff5bb260df2e`） | 已记录 |
+
+第二次有效空载采集得到 60 个样本，观测窗口 60.003 秒：
+
+| 指标                     |    Mean |     Min |     Max |     P95 | 门槛结果 |
+| ------------------------ | ------: | ------: | ------: | ------: | -------: |
+| CPU utilization (%)      |    4.22 |    1.60 |   14.00 |    8.70 |     PASS |
+| RAM utilization (%)      |   59.18 |   59.00 |   59.90 |   59.30 |     记录 |
+| GPU utilization (%)      |    1.22 |    0.00 |   21.00 |    8.00 |     PASS |
+| GPU memory used (MiB)    | 1261.93 | 1213.82 | 1302.60 | 1299.79 |     记录 |
+| GPU temperature (°C)    |   48.58 |   48.00 |   50.00 |   50.00 |     PASS |
+| GPU power (W)            |    6.10 |    3.95 |   16.42 |   15.82 |     记录 |
+| GPU graphics clock (MHz) |  395.00 |  210.00 | 1890.00 | 1890.00 |     记录 |
+
+质量门槛的 6 项检查全部通过：样本数 `60/60`、CPU mean `4.22<=15`、CPU P95
+`8.7<=35`、GPU mean `1.22<=5`、GPU P95 `8<=20`、GPU max temperature `50<=70°C`。
+
+首轮采集虽完整生成 60 个样本，但 CPU mean/P95 为 `31.31%/56.8%`、GPU P95 为 `27%`，
+且存在多个 Edge/WebView2 进程，因此被如实拒绝；关闭干扰程序并把遥测移到 WMI/依赖枚举之前后，
+第二次采集通过。没有把失败采集冒充正式结果。
+
+原始证据：[`acceptance.json`](artifacts/environment/step0/acceptance.json)、
+[`idle-summary.json`](artifacts/environment/step0/idle-summary.json)、
+[`idle-telemetry.jsonl`](artifacts/environment/step0/idle-telemetry.jsonl)、
+[`game-checksums.json`](artifacts/environment/step0/game-checksums.json)、
+[`pip-check.txt`](artifacts/environment/step0/pip-check.txt)、
+[`pip-freeze.txt`](artifacts/environment/step0/pip-freeze.txt)、
+[`gpu-summary.txt`](artifacts/environment/step0/gpu-summary.txt)、
+[`power-plan.txt`](artifacts/environment/step0/power-plan.txt) 和
+[`computer-info.txt`](artifacts/environment/step0/computer-info.txt)。
 
 ### Step 1：建立 Python 包、schema 和 CLI
 
@@ -1117,20 +1212,20 @@ python -m gaugur_lite features build-profiles `
 - 每个组合运行 3 次，共 36 个额外物理 run；
 - 这 12 个 key 的 `split` 永久标为 `extra_test`，单独写入组合 manifest。
 
-| ID  | 固定四元组合 |
-| --- | ------------ |
-| E01 | `pyxel_jump + pyxel_snake + pyxel_platformer + mega_wing` |
-| E02 | `pyxel_bubbles + pyxel_shooter + daylight + space_rescue` |
-| E03 | `pyxel_jump + pyxel_bubbles + pyxel_platformer + daylight` |
-| E04 | `pyxel_snake + pyxel_shooter + mega_wing + space_rescue` |
+| ID  | 固定四元组合                                                     |
+| --- | ---------------------------------------------------------------- |
+| E01 | `pyxel_jump + pyxel_snake + pyxel_platformer + mega_wing`      |
+| E02 | `pyxel_bubbles + pyxel_shooter + daylight + space_rescue`      |
+| E03 | `pyxel_jump + pyxel_bubbles + pyxel_platformer + daylight`     |
+| E04 | `pyxel_snake + pyxel_shooter + mega_wing + space_rescue`       |
 | E05 | `pyxel_jump + pyxel_shooter + pyxel_platformer + space_rescue` |
-| E06 | `pyxel_bubbles + pyxel_snake + daylight + mega_wing` |
-| E07 | `pyxel_jump + pyxel_bubbles + pyxel_snake + pyxel_shooter` |
-| E08 | `pyxel_platformer + daylight + mega_wing + space_rescue` |
-| E09 | `pyxel_jump + pyxel_snake + daylight + space_rescue` |
+| E06 | `pyxel_bubbles + pyxel_snake + daylight + mega_wing`           |
+| E07 | `pyxel_jump + pyxel_bubbles + pyxel_snake + pyxel_shooter`     |
+| E08 | `pyxel_platformer + daylight + mega_wing + space_rescue`       |
+| E09 | `pyxel_jump + pyxel_snake + daylight + space_rescue`           |
 | E10 | `pyxel_bubbles + pyxel_shooter + pyxel_platformer + mega_wing` |
-| E11 | `pyxel_jump + pyxel_bubbles + mega_wing + space_rescue` |
-| E12 | `pyxel_snake + pyxel_shooter + pyxel_platformer + daylight` |
+| E11 | `pyxel_jump + pyxel_bubbles + mega_wing + space_rescue`        |
+| E12 | `pyxel_snake + pyxel_shooter + pyxel_platformer + daylight`    |
 
 额外测试集必须在主模型结构、特征、预处理和超参数全部冻结后评估。它衡量的是组合规模外推，不是“未见游戏”泛化：八个游戏的独占基线、敏感度和强度 profile 都允许作为输入特征，这与论文对已 profile 游戏预测新共置关系的设定一致。
 
@@ -1251,12 +1346,12 @@ python -m gaugur_lite features audit `
 
 主数据集按 `combination_key` 固定切分，而不是对模型行随机切分：
 
-| split        | pair key | triple key | key 合计 | RM 行数 | CM 行数 |
-| ------------ | -------- | ---------- | -------- | ------- | ------- |
-| train        | 17       | 19         | 36       | 273     | 819     |
-| validation   | 6        | 6          | 12       | 90      | 270     |
-| test         | 5        | 7          | 12       | 93      | 279     |
-| extra_test   | 0        | 0          | 12 quad  | 144     | 432     |
+| split      | pair key | triple key | key 合计 | RM 行数 | CM 行数 |
+| ---------- | -------- | ---------- | -------- | ------- | ------- |
+| train      | 17       | 19         | 36       | 273     | 819     |
+| validation | 6        | 6          | 12       | 90      | 270     |
+| test       | 5        | 7          | 12       | 93      | 279     |
+| extra_test | 0        | 0          | 12 quad  | 144     | 432     |
 
 切分 seed 固定为 `20260811`。分配器在满足上表数量的前提下平衡各 workload 在各 split 的出现次数，并将完整 key 列表写入 `split_manifest.json`。同一物理组合的三个重复、其中所有目标样本以及三个 QoS 标签行必须进入同一个 split；仅按 `colocation_id` 分组会让相同组合的不同重复泄漏，因此禁止使用。
 
@@ -1605,24 +1700,24 @@ Run 进入模型前必须满足：
 
 ## 18. 主要风险
 
-| 风险                          | 表现                              | 处理                                    |
-| ----------------------------- | --------------------------------- | --------------------------------------- |
-| 引擎 FPS 被误写成 Present FPS | 指标层级混淆                      | 统一称 `game_fps`，PresentMon 单独报告  |
-| Pyxel 帧率上限产生天花板效应   | 轻度干扰时 retention 都接近 1     | 同报 deadline miss/尾延迟并保留负面结果 |
-| 八个游戏共享同一轻量引擎       | 资源特征差异可能偏小              | 明确外部有效性限制，不附加隐藏合成负载  |
-| 自动输入不稳定                 | 游戏状态和资源轨迹漂移            | 固定 seed/controller 版本并记录状态哈希 |
-| 窗口遮挡、最小化或后台节流     | FPS 非资源争用下降                | 固定窗口布局，采集前检查可见性和前后台状态 |
-| GPU benchmark 异步计时错误     | 压力吞吐异常高                    | CUDA event/synchronize                  |
-| Windows spawn 错误            | 子进程递归启动                    | `__main__` 保护、subprocess 独立入口  |
-| 粗暴清理进程                  | 杀死用户其他 Python               | PID + 创建时间 + run ID 精确清理        |
-| benchmark 不隔离              | 资源维度高度相关                  | 使用 proxy 命名并记录所有 observed 指标 |
-| 热降频                        | 后运行配置性能下降                | 随机顺序、cooldown、温度/时钟记录       |
-| Windows 后台 GPU 干扰         | 结果波动                          | 关闭 GPU 应用、空载检查、重复实验       |
-| 数据泄漏                      | 测试分数虚高                      | 按 `combination_key` 锁定全部重复与目标行 |
-| 组合数量太少                  | 模型不稳定                        | 学习曲线、bootstrap、增加重复/组合      |
-| 类别不平衡                    | accuracy 高但 precision/recall 差 | 多指标和混淆矩阵                        |
-| 未实测组合没有真值            | 调度自证                          | 限制 replay 组合域或补测                |
-| 游戏或资源文件被误改           | 无法与上游对应                    | SHA-256 校验、保留 app bundle 与许可证  |
+| 风险                          | 表现                              | 处理                                       |
+| ----------------------------- | --------------------------------- | ------------------------------------------ |
+| 引擎 FPS 被误写成 Present FPS | 指标层级混淆                      | 统一称`game_fps`，PresentMon 单独报告    |
+| Pyxel 帧率上限产生天花板效应  | 轻度干扰时 retention 都接近 1     | 同报 deadline miss/尾延迟并保留负面结果    |
+| 八个游戏共享同一轻量引擎      | 资源特征差异可能偏小              | 明确外部有效性限制，不附加隐藏合成负载     |
+| 自动输入不稳定                | 游戏状态和资源轨迹漂移            | 固定 seed/controller 版本并记录状态哈希    |
+| 窗口遮挡、最小化或后台节流    | FPS 非资源争用下降                | 固定窗口布局，采集前检查可见性和前后台状态 |
+| GPU benchmark 异步计时错误    | 压力吞吐异常高                    | CUDA event/synchronize                     |
+| Windows spawn 错误            | 子进程递归启动                    | `__main__` 保护、subprocess 独立入口     |
+| 粗暴清理进程                  | 杀死用户其他 Python               | PID + 创建时间 + run ID 精确清理           |
+| benchmark 不隔离              | 资源维度高度相关                  | 使用 proxy 命名并记录所有 observed 指标    |
+| 热降频                        | 后运行配置性能下降                | 随机顺序、cooldown、温度/时钟记录          |
+| Windows 后台 GPU 干扰         | 结果波动                          | 关闭 GPU 应用、空载检查、重复实验          |
+| 数据泄漏                      | 测试分数虚高                      | 按`combination_key` 锁定全部重复与目标行 |
+| 组合数量太少                  | 模型不稳定                        | 学习曲线、bootstrap、增加重复/组合         |
+| 类别不平衡                    | accuracy 高但 precision/recall 差 | 多指标和混淆矩阵                           |
+| 未实测组合没有真值            | 调度自证                          | 限制 replay 组合域或补测                   |
+| 游戏或资源文件被误改          | 无法与上游对应                    | SHA-256 校验、保留 app bundle 与许可证     |
 
 ## 19. 里程碑
 
@@ -1635,7 +1730,7 @@ Run 进入模型前必须满足：
 
 ### M1：可重复 workload
 
-- [x] 八个 MIT 许可小游戏及上游校验记录；
+- [X] 八个 MIT 许可小游戏及上游校验记录；
 - [ ] Pyxel 适配器与八个固定 controller；
 - [ ] JSONL 遥测；
 - [ ] Windows Runner；
