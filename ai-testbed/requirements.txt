@@ -1,0 +1,22 @@
+# Keep PyPI as the default index, add PyTorch CUDA wheels as extra [EDIT TO YOUR CUDA VERSION]
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+# aiortc from our fork
+aiortc @ git+ssh://git@github.com/haseebfazal/aiortc.git@main
+
+# PyTorch GPU stack (CUDA 12.1)
+torch==2.4.0
+torchvision==0.19.0
+
+# CUDA tensor display (matches torch 2.4.0 + cu121) [EDIT TO YOUR CUDA VERSION]
+cudacanvas==1.0.1.post240121
+
+# Core deps
+av
+numpy
+opencv-python
+mss
+torch-dct
+pyee
+Pillow
+qrcode[pil]
