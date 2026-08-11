@@ -1,6 +1,6 @@
-# GAugur 论文详细中文解读与 GameLab-GAugur-Lite 复现设计
+# GAugur 论文详细中文解读与 Windows 轻量复现设计
 
-> 文档定位：这是对 GAugur 原论文的逐节中文解读，同时给出一个适合本科生在本地完成的 `GameLab-GAugur-Lite` 复现边界。它不是论文的官方中文翻译，也不把计划中的 Lite 结果冒充原论文结果。
+> 文档定位：这是对 GAugur 原论文的逐节中文解读，并讨论适合本科生完成的轻量复现边界。当前实施路线为 Windows Conda-only，不依赖 GameLab、WSL 或云游戏串流；活动实现规格以项目根目录 [README](../../README.md) 为准。
 
 ## 0. 论文与文件信息
 
@@ -11,7 +11,7 @@
 - DOI：[10.1145/3307681.3325409](https://doi.org/10.1145/3307681.3325409)
 - 实验室来源：[南开大学—百度联合实验室官网 PDF](https://nbjl.nankai.edu.cn/_upload/article/files/b8/df/788a01c9442a8597ae8379cb37f1/2051df30-080f-4224-bdde-ceef114596e4.pdf)
 - 本地原文：[GAugur_HPDC_2019.pdf](GAugur_HPDC_2019.pdf)
-- 本地复现底座：[GameLab / ai-testbed](../../ai-testbed/README.md)
+- 当前复现方案：[GAugur-Lite-Windows README](../../README.md)
 
 ## 1. 概括
 
@@ -40,7 +40,7 @@ $$
 - $\delta=0.8$：保留 80% 独占性能，即损失 20%；
 - $\delta$ 越大越好。
 
-为了避免中文语境中“降幅越大损失越大”的歧义，`GameLab-GAugur-Lite` 应同时记录：
+为了避免中文语境中“降幅越大损失越大”的歧义，`GAugur-Lite-Windows` 应同时记录：
 
 ```text
 retention_ratio = colocated_fps / solo_fps
@@ -395,15 +395,11 @@ GAugur(RM)、Sigmoid 和 SMiTe 都采用逐请求贪心：把当前请求放到�
 
 原论文为了简化实验，**没有把视频编码和网络流传输纳入评估**。其理由是 NVIDIA GRID 等现代 GPU 的硬件编码器开销较小，并指出方法可扩展到编码/串流及服务端处理时延。
 
-这是 GameLab 复现最有价值的切入点：GameLab 已包含屏幕采集、H.264/VP8 编码、WebRTC 发送、客户端解码显示、发送/传输码率与服务器/客户端 FPS 统计。因此 `GameLab-GAugur-Lite` 可以验证：在端到端流媒体链路存在时，共置干扰特征是否仍能预测渲染/传输 QoS。
+当前轻量复现与原论文保持相同边界，同样不实现编码和网络链路，而是集中验证敏感度、强度、CM/RM 与干扰感知调度。性能对象由真实商业游戏缩减为可控的类游戏合成 workload，因此必须称为“GAugur 思想的轻量再实现”，不能称为数值级完整复现。
 
-需要诚实区分：
+GameLab 端到端扩展仍有研究价值，但已从当前实施范围移除。下文第 14–21 节保留的是早期 GameLab 扩展设想，仅作为归档备选，不代表当前开发计划；Windows-only 的目录、命令和验收标准以根 [README](../../README.md) 为准。
 
-- **原论文复现目标**：FPS 共置干扰预测；
-- **Lite 扩展目标**：在 GameLab 端到端管线中加入编码与传输指标；
-- 如果无法构造原文七类隔离 benchmark，Lite 是“GAugur 思想的简化再实现”，不是数值级复现。
-
-## 14. GameLab 现有能力与 GAugur 模块映射
+## 14. （归档备选）GameLab 现有能力与 GAugur 模块映射
 
 | GAugur 所需能力 | GameLab 当前可用部分 | Lite 版需要补齐 |
 |---|---|---|
@@ -423,7 +419,7 @@ GAugur(RM)、Sigmoid 和 SMiTe 都采用逐请求贪心：把当前请求放到�
 
 GameLab 的输入注入部分包含 X11 依赖，整体脚本也偏 Linux/Bash，而当前本地环境为 Windows。首版可采用固定视频/可脚本化渲染 workload，绕过交互输入；若要运行真实交互式游戏，应迁移到 Linux 主机，或为 Windows 实现等价输入与多实例隔离。
 
-## 15. 建议的 GameLab-GAugur-Lite 复现边界
+## 15. （归档备选）GameLab-GAugur-Lite 复现边界
 
 本科推免项目的关键不是把“100 款商业游戏、700 个组合”机械照搬，而是建立一条可验证、可重复、有对照组的最小研究闭环。
 
@@ -678,7 +674,7 @@ GameLab-RLCG/
 
 ### 可以如实写
 
-> 基于南开大学—百度联合实验室 HPDC 2019 工作 GAugur，在 GameLab 端到端云游戏平台上实现轻量级共置干扰预测原型；复现其敏感度/强度特征、分类/回归模型与干扰感知装箱思想，并进一步评估编码与 WebRTC 传输存在时的客户端 QoS。
+> 在 Windows Conda 环境中对南开大学—百度联合实验室 HPDC 2019 工作 GAugur 进行轻量复现，构建多维 CPU/GPU 类游戏 workload 和资源压力基准，实现敏感度/强度 profiling、分类/回归干扰预测、基线消融与 QoS 感知调度 replay。
 
 ### 不应在没有证据时写
 
@@ -690,7 +686,7 @@ GameLab-RLCG/
 
 ### 更能体现研究能力的材料
 
-- 一张原论文方法到 GameLab 模块的对应图；
+- 一张原论文方法到 Windows 实验模块的对应图；
 - 一张敏感度曲线图，展示非线性或不同 workload 差异；
 - 一张 GAugur-Lite 与三种基线的误差 CDF；
 - 一张 QoS 安全装箱的服务器数—违约率权衡图；
@@ -710,7 +706,7 @@ GameLab-RLCG/
 - [ ] RM 按组合大小报告误差，并绘制误差 CDF；
 - [ ] 至少有 count-only、linear-additive、VBP-like 三个基线；
 - [ ] 调度 replay 的 ground truth 来自实测，而不是另一层模型预测；
-- [ ] 清楚区分原论文结果、Lite 复现结果与 GameLab 扩展结果；
+- [ ] 清楚区分原论文结果、Windows Lite 复现结果与归档的 GameLab 扩展设想；
 - [ ] 失败配置和负面结果也被保留并解释。
 
 ---
@@ -719,4 +715,4 @@ GameLab-RLCG/
 
 1. Yusen Li et al., *GAugur: Quantifying Performance Interference of Colocated Games for Improving Resource Utilization in Cloud Gaming*, HPDC 2019：[DOI](https://doi.org/10.1145/3307681.3325409)
 2. 南开大学—百度联合实验室托管原文：[官方 PDF](https://nbjl.nankai.edu.cn/_upload/article/files/b8/df/788a01c9442a8597ae8379cb37f1/2051df30-080f-4224-bdde-ceef114596e4.pdf)
-3. 本项目 GameLab 底座：[ai-testbed README](../../ai-testbed/README.md)
+3. 本项目当前实施规格：[GAugur-Lite-Windows README](../../README.md)
