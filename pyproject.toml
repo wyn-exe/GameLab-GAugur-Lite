@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gaugur-lite"
+version = "0.1.0"
+description = "Windows-only lightweight reproduction scaffold for GAugur"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "nvidia-ml-py>=12,<14",
+  "psutil>=5.9,<8",
+  "pydantic>=2.6,<3",
+  "PyYAML>=6,<7",
+  "typer>=0.12,<1",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+
+[project.scripts]
+gaugur-lite = "gaugur_lite.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["gaugur_lite*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+

@@ -11,8 +11,9 @@
 | 八个真实小游戏           | 已下载       | [游戏清单与试玩方法](games/README.md)                         |
 | Windows-only 实现方案    | 已完成       | 本 README                                                    |
 | Step 0 环境基线          | 已完成       | [真实验收记录](artifacts/environment/step0/idle-summary.json) |
-| Python 实现              | 分阶段实现中 | Step 0 脚本位于`scripts/`，下一阶段创建 `gaugur_lite/`   |
-| 正式实验数据、模型与报告 | 待生成       | 计划放在`data/` 与 `artifacts/`                          |
+| Step 1 schema/config/CLI | 已完成       | [`gaugur_lite/`](gaugur_lite)、[`configs/`](configs)、[`tests/unit/`](tests/unit) |
+| Python 实现              | 分阶段实现中 | Step 0–1 已完成，下一阶段实现结构化指标与系统采样        |
+| 正式实验数据、模型与报告 | 待生成       | 计划放在 `data/` 与 `artifacts/`                         |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -893,13 +894,17 @@ CPU P95 `<=35%`、GPU mean `<=5%`、GPU P95 `<=20%`、GPU 最高温度 `<=70°C`
 #### 新建
 
 ```text
+.gitignore
 pyproject.toml
-requirements-windows.txt
+configs/local.example.yaml
+configs/workloads.yaml
 gaugur_lite/__init__.py
 gaugur_lite/__main__.py
 gaugur_lite/cli.py
 gaugur_lite/config.py
+gaugur_lite/doctor.py
 gaugur_lite/schema.py
+tests/unit/test_cli.py
 tests/unit/test_config.py
 tests/unit/test_schema.py
 ```
@@ -921,12 +926,65 @@ python -m gaugur_lite --help
 python -m gaugur_lite doctor --config configs\local.example.yaml
 ```
 
-#### 验收
+#### 真实验收结果（2026-08-11）
 
-- 相同配置产生相同哈希；
-- 非法路径/压力/重复数明确报错；
-- `doctor` 不启动 workload；
-- 单元测试不需要 GPU。
+结论：**PASS**。已创建 `pyproject.toml`、`gaugur_lite/` 包、主机与八 workload YAML、
+17 个无 GPU 单元测试用例，并完成真实 CLI/`doctor` 验收。
+
+实现内容：
+
+- `HostSpec`、`WorkloadSpec`、`RunSpec`、`MetricEvent`、`RunStatus` 使用 Pydantic v2 严格模型，
+  禁止未知字段并冻结校验后的对象；
+- 路径统一规范为仓库相对 POSIX 表示，拒绝 Windows 盘符、绝对路径、空路径和 `..` 逃逸；
+- 压力限制为 `[0,1]`，重复数限制为 `>=1`，测量时长必须为正数；
+- `combination_key` 对 workload ID 排序且拒绝重复，`colocation_id` 和 `run_id` 由规范化字段生成；
+- YAML 拒绝重复键；稳定 JSON 使用排序键、紧凑分隔符、UTF-8 和禁止 NaN，再计算 SHA-256；
+- CLI 同时支持 `gaugur-lite` console script 与 `python -m gaugur_lite`；
+- 全局和子命令位置均支持 `--dry-run`；`doctor` 只读取配置、包元数据和 `nvidia-smi`。
+
+单元测试真实输出：
+
+```text
+.................                                                        [100%]
+17 passed in 0.53s
+```
+
+测试覆盖相同配置哈希、YAML 重复键、8 个 workload 路径、仓库路径逃逸、非法压力/重复数/时长、
+排序无关的组合 ID、显式错误 run ID、CPU affinity、非有限指标以及 CLI 两种 dry-run 位置。
+测试中的 `doctor` 注入假的 `nvidia-smi`，因此单元测试本身不需要 GPU。
+
+真实帮助页暴露了预期接口：
+
+```text
+Usage: python -m gaugur_lite [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --dry-run   只输出计划或诊断，不执行可变操作。
+  --version   显示版本并退出。
+  --help
+
+Commands:
+  doctor      只读检查配置、依赖和 GPU；不会启动 workload。
+```
+
+在 `gaugur-lite` Conda 环境中依次执行普通、全局 dry-run 和后置 dry-run 三种 `doctor` 调用，
+均返回退出码 0。关键结果：
+
+| 字段/检查 | 三次实测结果 | 状态 |
+|---|---:|---:|
+| `status` | `passed` | PASS |
+| config SHA-256 | `9c3819e68c7158b9518dc1d5636032710d7a33a090e8515213d850963d5355cc` | 三次一致 |
+| platform / Python | windows / 3.11.15 | PASS |
+| Pydantic / Typer / PyYAML | 2.13.4 / 0.27.1 / 6.0.3 | PASS |
+| Pyxel / Torch | 2.9.8 / 2.4.1+cu121 | PASS |
+| GPU / 驱动 / 显存 | RTX 4060 Laptop / 560.94 / 8188 MiB | PASS |
+| `read_only` | `true` | PASS |
+| `workload_processes_started` | `0` | PASS |
+| `mutations_performed` | `[]` | PASS |
+| 两种 `--dry-run` 位置 | 均返回 `dry_run: true` | PASS |
+
+`data/raw`、`data/interim`、`data/processed` 当前不存在是预期状态；`doctor` 只验证它们解析后仍位于
+仓库内，不会为了检查而创建目录。至此 Step 1 的四项验收条件全部满足。
 
 ### Step 2：实现结构化指标与系统采样
 

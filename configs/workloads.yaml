@@ -1,0 +1,65 @@
+schema_version: 1
+
+workloads:
+  - id: "pyxel_jump"
+    driver: "pyxel_game"
+    entrypoint: "games/pyxel/02_jump_game.py"
+    working_directory: "games/pyxel"
+    controller: "jump_v1"
+    seed: 1001
+    display_scale: 2
+  - id: "pyxel_bubbles"
+    driver: "pyxel_game"
+    entrypoint: "games/pyxel/06_click_game.py"
+    working_directory: "games/pyxel"
+    controller: "bubbles_v1"
+    seed: 1002
+    display_scale: 2
+  - id: "pyxel_snake"
+    driver: "pyxel_game"
+    entrypoint: "games/pyxel/07_snake.py"
+    working_directory: "games/pyxel"
+    controller: "snake_cycle_v1"
+    seed: 1003
+    display_scale: 2
+  - id: "pyxel_shooter"
+    driver: "pyxel_game"
+    entrypoint: "games/pyxel/09_shooter.py"
+    working_directory: "games/pyxel"
+    controller: "shooter_patrol_v1"
+    seed: 1004
+    display_scale: 2
+  - id: "pyxel_platformer"
+    driver: "pyxel_game"
+    entrypoint: "games/pyxel/10_platformer.py"
+    working_directory: "games/pyxel"
+    controller: "platformer_right_jump_v1"
+    seed: 1005
+    display_scale: 2
+  - id: "daylight"
+    driver: "pyxel_game"
+    entrypoint: "games/pyxel/apps-src/30SecondsOfDaylight/src/main.py"
+    working_directory: "games/pyxel/apps-src/30SecondsOfDaylight/src"
+    controller: "daylight_patrol_v1"
+    seed: 1006
+    display_scale: 2
+  - id: "mega_wing"
+    driver: "pyxel_game"
+    entrypoint: "games/pyxel/apps-src/mega_wing/mega_wing.py"
+    working_directory: "games/pyxel/apps-src/mega_wing"
+    controller: "mega_wing_patrol_v1"
+    seed: 1007
+    display_scale: 2
+  - id: "space_rescue"
+    driver: "pyxel_game"
+    entrypoint: "games/pyxel/apps-src/space_rescue/space_rescue.py"
+    working_directory: "games/pyxel/apps-src/space_rescue"
+    controller: "space_rescue_pulse_v1"
+    seed: 1008
+    display_scale: 2
+
+defaults:
+  audio_mode: "muted"
+  input_mode: "deterministic_engine_api"
+  preserve_game_logic: true
+
