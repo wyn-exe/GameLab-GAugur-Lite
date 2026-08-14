@@ -13,8 +13,9 @@
 | Step 0 环境基线          | 已完成       | [真实验收记录](artifacts/environment/step0/idle-summary.json) |
 | Step 1 schema/config/CLI | 已完成       | [`gaugur_lite/`](gaugur_lite)、[`configs/`](configs)、[`tests/unit/`](tests/unit) |
 | Step 2 指标与系统采样    | 已完成       | [60 秒探针](artifacts/telemetry/step2/formal-probe/summary.json)、[120 秒开销实验](artifacts/telemetry/step2/formal-overhead.json) |
-| Python 实现              | 分阶段实现中 | Step 0–2 已完成，下一阶段接入八个真实 Pyxel 游戏          |
-| 正式实验数据、模型与报告 | 待生成       | 计划放在 `data/` 与 `artifacts/`                         |
+| Step 3 真实 Pyxel workload | 已完成     | [24 run 验收汇总](artifacts/workloads/step3/acceptance.json)、[上游校验](artifacts/workloads/step3/upstream-verification.json) |
+| Python 实现              | 分阶段实现中 | Step 0–3 已完成，下一阶段实现压力 benchmark 与校准             |
+| 正式实验数据、模型与报告 | 分阶段生成中 | Step 3 workload 验收数据已生成；模型与最终报告待后续阶段       |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -1107,9 +1108,19 @@ writer 按批 flush，`status.json` 通过临时文件原子替换；采样异�
 ```powershell
 python -m gaugur_lite workload list
 python -m gaugur_lite workload verify-upstream --root games\pyxel
-python -m gaugur_lite workload smoke pyxel_jump --duration 30 --seed 1001
-python -m gaugur_lite workload smoke mega_wing --duration 30 --seed 1007
+
+python -m gaugur_lite workload smoke pyxel_jump `
+  --duration 30 `
+  --max-frames 900 `
+  --repeat 1 `
+  --output-directory artifacts\workloads\step3\smoke\pyxel_jump\r01
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step3_acceptance.ps1
 ```
+
+验收脚本以独占模式创建每个 run 目录，既有数据不会被覆盖。中断后必须先审查并归档失败目录，
+再显式使用 `-Resume`；恢复模式仅跳过 `summary/status/launcher` 状态均完整且帧数符合预期的 run。
 
 #### 验收
 
@@ -1120,6 +1131,63 @@ python -m gaugur_lite workload smoke mega_wing --duration 30 --seed 1007
 - 超过 5% 时保留结果并排查温度、后台任务、窗口遮挡、DPI 和 controller；
 - draw 计数、1 秒窗口 FPS、missed deadline 与总测量时长互相一致；
 - 适配器不修改 `games/pyxel/` 中的上游文件。
+
+#### 真实验收结果（2026-08-14）
+
+结论：**PASS**。八个真实 Pyxel 游戏均完成 3 次、30 秒、可见窗口的独立运行，正式布局共有
+24 个有效 run。机器可读汇总的 `status` 为 `passed`，`failed_workloads` 为空。
+
+恢复运行前的单元测试真实输出：
+
+```text
+........................................                                 [100%]
+40 passed in 0.84s
+```
+
+正式运行汇总：
+
+| workload | 目标 FPS | 每次帧数 | 3 次 mean FPS 的均值 | FPS CV | controller 轨迹一致 | 结论 |
+| -------- | -------: | ---------: | ----------------------: | -----: | -------------------- | ---- |
+| `pyxel_jump` | 30 | 900 | 30.0552 | 0.0085% | 是 | PASS |
+| `pyxel_bubbles` | 30 | 900 | 30.0535 | 0.0102% | 是 | PASS |
+| `pyxel_snake` | 20 | 600 | 20.0382 | 0.0923% | 是 | PASS |
+| `pyxel_shooter` | 30 | 900 | 29.9987 | 0.3324% | 是 | PASS |
+| `pyxel_platformer` | 30 | 900 | 30.0559 | 0.0031% | 是 | PASS |
+| `daylight` | 10 | 300 | 10.0657 | 0.0017% | 是 | PASS |
+| `mega_wing` | 30 | 900 | 30.0542 | 0.0024% | 是 | PASS |
+| `space_rescue` | 30 | 900 | 30.0557 | 0.0048% | 是 | PASS |
+
+全部 CV 均低于 5% 门槛，最大值为 `pyxel_shooter` 的 0.3324%。`pyxel_shooter/r02` 有 8 次
+missed deadline，其 mean/p05 FPS 为 29.8836/28.9714，但帧数、状态、窗口健康性和重复稳定性仍通过；
+该局部抖动被如实保留，没有删除或重跑成更好的数值。
+
+独立复核结果：
+
+- 24/24 个 `summary.json`、`status.json` 和 `launcher.json` 均为 `completed`；
+- 总 draw 数为 18,900，24 个 run 的帧数均与各自目标 FPS × 30 秒一致；
+- 逐行解析 24 份 `game_metrics.jsonl`，共 715 行，715/715 个采样点均找到可见、未最小化的游戏窗口；
+- 24/24 个 run 的 summary/status 计数与对应 JSONL 实际行数一致；
+- 每个 workload 的 3 次 `controller_trace_sha256` 完全一致；
+- 上游校验通过 8 个 catalog 检查、18 次文件比对（覆盖 manifest 的 11 个唯一条目）和 3 个解包源码树检查，
+  `manifest_exactly_covered=true`。
+
+异常与恢复记录：首次运行在 `space_rescue/r02` 替换 `heartbeat.json` 时遇到一次 Windows
+`WinError 5`。最后成功心跳记录到 645 帧，stop 记录到 675 帧，未生成 summary。该失败尝试的 8 个文件已原样保留在
+[`failed-attempts/space_rescue/r02-attempt01-winerror5`](artifacts/workloads/step3/failed-attempts/space_rescue/r02-attempt01-winerror5)。
+修复为只对 `PermissionError` 执行有上界的原子替换重试，添加“瞬时锁恢复”与“持续锁有界失败”回归测试后，
+`-Resume` 预检确认 15 个完成、9 个待跑、0 个无效目录；恢复运行跳过原有 15 个 run，只补齐剩余 9 个并最终通过汇总。
+
+机器可读产物：
+
+- 最终汇总：[`acceptance.json`](artifacts/workloads/step3/acceptance.json)，SHA-256
+  `e56dc94f74d651995797fbb6412e6213f0638c43893d3de9829e31e38393bb27`；
+- 上游校验：[`upstream-verification.json`](artifacts/workloads/step3/upstream-verification.json)，SHA-256
+  `67ceac4b3fad8780e5c9cb0b5622334b6a49717cdb89ab135aefbdd3e9d07857`；
+- 24 个正式 run：[`formal/`](artifacts/workloads/step3/formal)；
+- 失败尝试原始现场：[`failed-attempts/`](artifacts/workloads/step3/failed-attempts)。
+
+本阶段证明的是“真实游戏可重复启动、控制、采样和停止”，尚未实施资源压力、共置干扰或 GAugur 模型；
+因此这些 FPS 数值是 Step 3 的 workload 稳定性验收，不当作论文最终对比结果。
 
 ### Step 4：实现压力 benchmark 与校准
 
@@ -1856,18 +1924,18 @@ Run 进入模型前必须满足：
 
 ### M0：Windows 环境
 
-- [ ] Conda 环境创建；
-- [ ] CUDA/NVML 可用；
-- [ ] 环境清单生成；
-- [ ] 无 GameLab/WSL 依赖。
+- [X] Conda 环境创建；
+- [X] CUDA/NVML 可用；
+- [X] 环境清单生成；
+- [X] 无 GameLab/WSL 依赖。
 
 ### M1：可重复 workload
 
 - [X] 八个 MIT 许可小游戏及上游校验记录；
-- [ ] Pyxel 适配器与八个固定 controller；
-- [ ] JSONL 遥测；
-- [ ] Windows Runner；
-- [ ] 三次独占重复稳定。
+- [X] Pyxel 适配器与八个固定 controller；
+- [X] JSONL 遥测；
+- [ ] 完整 Windows Runner（Step 5 多进程共置、窗口排列与恢复）；
+- [X] 三次独占重复稳定。
 
 ### M2：GAugur 特征
 

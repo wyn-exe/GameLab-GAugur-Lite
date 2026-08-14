@@ -1,0 +1,108 @@
+{
+  "audio_mode": "muted",
+  "controller": "mega_wing_patrol_v1",
+  "controller_trace_sha256": "f5f64d3371b24dfb354f1aca2e8bcd51b48c54059ca0fc6d52eec46b103bb088",
+  "display_scale": 2,
+  "draw_count": 900,
+  "draw_interval_ms": {
+    "count": 899,
+    "max": 35.7968,
+    "mean": 33.298625250278086,
+    "min": 0.9162,
+    "p95": 34.8996
+  },
+  "draw_time_ms": {
+    "count": 900,
+    "max": 0.1177,
+    "mean": 0.03935577777777778,
+    "min": 0.0269,
+    "p95": 0.0585
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 29.9802031,
+  "entrypoint": "games/pyxel/apps-src/mega_wing/mega_wing.py",
+  "game_fps": {
+    "count": 29,
+    "max": 31.53884842005646,
+    "mean": 30.053475791622137,
+    "min": 29.952200153355264,
+    "p05": 29.95243167367231,
+    "p95": 30.06768526931723,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 160,
+  "logical_width": 120,
+  "max_frames": 900,
+  "metric_rows": 30,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "max_frames_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 30,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": 900
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "step3-smoke-mega_wing-r02",
+  "schema_version": 1,
+  "seed": 1007,
+  "status": "completed",
+  "stop_reason": "max_frames_reached",
+  "target_fps": 30,
+  "title": "Mega Wing",
+  "update_count": 900,
+  "update_time_ms": {
+    "count": 900,
+    "max": 0.3409,
+    "mean": 0.09654122222222222,
+    "min": 0.0557,
+    "p95": 0.1602
+  },
+  "window_observations": 30,
+  "workload_id": "mega_wing"
+}

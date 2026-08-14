@@ -14,6 +14,11 @@ from ..config import stable_json_dumps
 from ..schema import RunStatus, TelemetryStatus
 
 
+_ATOMIC_REPLACE_ATTEMPTS = 10
+_ATOMIC_REPLACE_INITIAL_DELAY_S = 0.02
+_ATOMIC_REPLACE_MAX_DELAY_S = 0.25
+
+
 class JsonlWriter:
     """逐行写入稳定 JSON，在批次边界 flush，异常退出也保留已有数据。"""
 
@@ -60,6 +65,21 @@ class JsonlWriter:
             self._pending = 0
 
 
+def _replace_with_retry(source: Path, target: Path) -> None:
+    """Retry transient Windows locks while keeping replacement bounded."""
+
+    delay_s = _ATOMIC_REPLACE_INITIAL_DELAY_S
+    for attempt in range(_ATOMIC_REPLACE_ATTEMPTS):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if attempt == _ATOMIC_REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(delay_s)
+            delay_s = min(delay_s * 2, _ATOMIC_REPLACE_MAX_DELAY_S)
+
+
 def write_json_atomic(path: str | Path, value: BaseModel | dict[str, Any]) -> None:
     """先写同目录临时文件，再原子替换，避免半截 status/summary JSON。"""
 
@@ -71,7 +91,7 @@ def write_json_atomic(path: str | Path, value: BaseModel | dict[str, Any]) -> No
             stream.write(stable_json_dumps(value, indent=2) + "\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, target)
+        _replace_with_retry(temporary, target)
     finally:
         if temporary.exists():
             temporary.unlink()

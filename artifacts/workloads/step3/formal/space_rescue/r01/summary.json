@@ -1,0 +1,108 @@
+{
+  "audio_mode": "muted",
+  "controller": "space_rescue_pulse_v1",
+  "controller_trace_sha256": "3fe1eecf2405d9b164182bf5f98d1a863823e0a223f3fa07d8b108c11d5a9331",
+  "display_scale": 2,
+  "draw_count": 900,
+  "draw_interval_ms": {
+    "count": 899,
+    "max": 36.1267,
+    "mean": 33.29651468298109,
+    "min": 0.5575,
+    "p95": 35.1186
+  },
+  "draw_time_ms": {
+    "count": 900,
+    "max": 0.2104,
+    "mean": 0.030957444444444444,
+    "min": 0.0206,
+    "p95": 0.0453
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 29.9764946,
+  "entrypoint": "games/pyxel/apps-src/space_rescue/space_rescue.py",
+  "game_fps": {
+    "count": 29,
+    "max": 31.639024046844742,
+    "mean": 30.05624168422397,
+    "min": 29.961233160413737,
+    "p05": 29.970158712969496,
+    "p95": 30.042928437356814,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 120,
+  "logical_width": 160,
+  "max_frames": 900,
+  "metric_rows": 30,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "max_frames_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 30,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": 900
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "step3-smoke-space_rescue-r01",
+  "schema_version": 1,
+  "seed": 1008,
+  "status": "completed",
+  "stop_reason": "max_frames_reached",
+  "target_fps": 30,
+  "title": "Space Rescue",
+  "update_count": 900,
+  "update_time_ms": {
+    "count": 900,
+    "max": 0.1599,
+    "mean": 0.024791444444444446,
+    "min": 0.0129,
+    "p95": 0.0339
+  },
+  "window_observations": 30,
+  "workload_id": "space_rescue"
+}

@@ -1,0 +1,108 @@
+{
+  "audio_mode": "muted",
+  "controller": "bubbles_v1",
+  "controller_trace_sha256": "3c913ccaf5a31e33c0183520afb44567e2f6610e39ce42051f8274bb0449b588",
+  "display_scale": 2,
+  "draw_count": 900,
+  "draw_interval_ms": {
+    "count": 899,
+    "max": 36.2594,
+    "mean": 33.29966952169077,
+    "min": 3.8363,
+    "p95": 35.2291
+  },
+  "draw_time_ms": {
+    "count": 900,
+    "max": 0.1734,
+    "mean": 0.027601888888888888,
+    "min": 0.0174,
+    "p95": 0.0398
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 29.9820523,
+  "entrypoint": "games/pyxel/06_click_game.py",
+  "game_fps": {
+    "count": 29,
+    "max": 31.51167615923086,
+    "mean": 30.05006910407648,
+    "min": 29.952613998441112,
+    "p05": 29.96106125171708,
+    "p95": 30.043231240618756,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 256,
+  "logical_width": 256,
+  "max_frames": 900,
+  "metric_rows": 30,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "max_frames_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 30,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": 900
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "step3-smoke-pyxel_bubbles-r02",
+  "schema_version": 1,
+  "seed": 1002,
+  "status": "completed",
+  "stop_reason": "max_frames_reached",
+  "target_fps": 30,
+  "title": "Pyxel Bubbles",
+  "update_count": 900,
+  "update_time_ms": {
+    "count": 900,
+    "max": 0.6345,
+    "mean": 0.13423322222222223,
+    "min": 0.0597,
+    "p95": 0.2362
+  },
+  "window_observations": 30,
+  "workload_id": "pyxel_bubbles"
+}

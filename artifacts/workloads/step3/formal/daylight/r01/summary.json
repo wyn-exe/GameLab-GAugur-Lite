@@ -1,0 +1,108 @@
+{
+  "audio_mode": "muted",
+  "controller": "daylight_patrol_v1",
+  "controller_trace_sha256": "a108f55b03b72bf91b1e05685ceda24abcf30e7f0dd067cd8ad4435ea6d24f94",
+  "display_scale": 2,
+  "draw_count": 300,
+  "draw_interval_ms": {
+    "count": 299,
+    "max": 102.17,
+    "mean": 99.67210903010033,
+    "min": 0.7168,
+    "p95": 101.2494
+  },
+  "draw_time_ms": {
+    "count": 300,
+    "max": 0.2125,
+    "mean": 0.08870800000000001,
+    "min": 0.0128,
+    "p95": 0.1342
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 29.9124801,
+  "entrypoint": "games/pyxel/apps-src/30SecondsOfDaylight/src/main.py",
+  "game_fps": {
+    "count": 28,
+    "max": 11.85880433210028,
+    "mean": 10.065901123006944,
+    "min": 9.985557887627126,
+    "p05": 9.990298421203171,
+    "p95": 10.015165692266917,
+    "windows_used": 28
+  },
+  "headless": false,
+  "logical_height": 120,
+  "logical_width": 160,
+  "max_frames": 300,
+  "metric_rows": 29,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "max_frames_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 300,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 29,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 300,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": 300
+      },
+      {
+        "actual": 10,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 10
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "step3-smoke-daylight-r01",
+  "schema_version": 1,
+  "seed": 1006,
+  "status": "completed",
+  "stop_reason": "max_frames_reached",
+  "target_fps": 10,
+  "title": "30 Seconds of Daylight",
+  "update_count": 300,
+  "update_time_ms": {
+    "count": 300,
+    "max": 0.7967,
+    "mean": 0.05755533333333333,
+    "min": 0.01,
+    "p95": 0.0879
+  },
+  "window_observations": 29,
+  "workload_id": "daylight"
+}

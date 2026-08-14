@@ -1,0 +1,108 @@
+{
+  "audio_mode": "muted",
+  "controller": "snake_cycle_v1",
+  "controller_trace_sha256": "e2931f53c7d73abeb7cf949abc8f0287853464d02a77a55bdb8dfd9f19840024",
+  "display_scale": 2,
+  "draw_count": 600,
+  "draw_interval_ms": {
+    "count": 599,
+    "max": 53.8261,
+    "mean": 49.92268380634391,
+    "min": 0.7836,
+    "p95": 50.8504
+  },
+  "draw_time_ms": {
+    "count": 600,
+    "max": 0.0432,
+    "mean": 0.014813333333333333,
+    "min": 0.0097,
+    "p95": 0.0209
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 29.9622913,
+  "entrypoint": "games/pyxel/07_snake.py",
+  "game_fps": {
+    "count": 29,
+    "max": 21.722814711993493,
+    "mean": 20.059574744063813,
+    "min": 19.97553197088886,
+    "p05": 19.98517670893246,
+    "p95": 20.02142864906268,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 50,
+  "logical_width": 40,
+  "max_frames": 600,
+  "metric_rows": 30,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "max_frames_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 600,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 30,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 600,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": 600
+      },
+      {
+        "actual": 20,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 20
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "step3-smoke-pyxel_snake-r03",
+  "schema_version": 1,
+  "seed": 1003,
+  "status": "completed",
+  "stop_reason": "max_frames_reached",
+  "target_fps": 20,
+  "title": "Snake!",
+  "update_count": 600,
+  "update_time_ms": {
+    "count": 600,
+    "max": 0.1269,
+    "mean": 0.013313833333333332,
+    "min": 0.0086,
+    "p95": 0.0184
+  },
+  "window_observations": 30,
+  "workload_id": "pyxel_snake"
+}

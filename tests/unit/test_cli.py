@@ -16,6 +16,7 @@ def test_help_and_version() -> None:
 
     assert help_result.exit_code == 0
     assert "doctor" in help_result.stdout
+    assert "workload" in help_result.stdout
     assert "--dry-run" in help_result.stdout
     assert version_result.exit_code == 0
     assert version_result.stdout.strip() == "0.1.0"
@@ -90,4 +91,28 @@ def test_global_dry_run_reaches_overhead_command(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert '"benchmark_kind": "synthetic_frame_loop_proxy"' in result.stdout
+    assert not output.exists()
+
+
+def test_workload_list_and_smoke_dry_run_do_not_start_child(tmp_path: Path) -> None:
+    listed = runner.invoke(cli.app, ["workload", "list"])
+    output = tmp_path / "must-not-exist"
+    planned = runner.invoke(
+        cli.app,
+        [
+            "workload",
+            "smoke",
+            "pyxel_jump",
+            "--duration",
+            "1",
+            "--output-directory",
+            str(output),
+            "--dry-run",
+        ],
+    )
+
+    assert listed.exit_code == 0
+    assert '"count": 8' in listed.stdout
+    assert planned.exit_code == 0
+    assert '"child_processes_planned": 1' in planned.stdout
     assert not output.exists()

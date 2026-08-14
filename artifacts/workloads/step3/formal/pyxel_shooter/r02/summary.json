@@ -1,0 +1,108 @@
+{
+  "audio_mode": "muted",
+  "controller": "shooter_patrol_v1",
+  "controller_trace_sha256": "55b1b5b917d343f5e36abf09508e4dc22fcb5d14ffefcab9e57d75964b1fb74b",
+  "display_scale": 2,
+  "draw_count": 900,
+  "draw_interval_ms": {
+    "count": 899,
+    "max": 211.0695,
+    "mean": 33.48320300333704,
+    "min": 0.1651,
+    "p95": 34.7242
+  },
+  "draw_time_ms": {
+    "count": 900,
+    "max": 0.2076,
+    "mean": 0.040390777777777775,
+    "min": 0.0205,
+    "p95": 0.0582
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 30.1447212,
+  "entrypoint": "games/pyxel/09_shooter.py",
+  "game_fps": {
+    "count": 29,
+    "max": 31.617104221041497,
+    "mean": 29.883586332567546,
+    "min": 25.969659646634835,
+    "p05": 28.97142548304607,
+    "p95": 30.05756022783631,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 160,
+  "logical_width": 120,
+  "max_frames": 900,
+  "metric_rows": 30,
+  "missed_deadline_count": 8,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "max_frames_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 30,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": 900
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "step3-smoke-pyxel_shooter-r02",
+  "schema_version": 1,
+  "seed": 1004,
+  "status": "completed",
+  "stop_reason": "max_frames_reached",
+  "target_fps": 30,
+  "title": "Pyxel Shooter",
+  "update_count": 900,
+  "update_time_ms": {
+    "count": 900,
+    "max": 0.2393,
+    "mean": 0.11352255555555556,
+    "min": 0.0632,
+    "p95": 0.1899
+  },
+  "window_observations": 30,
+  "workload_id": "pyxel_shooter"
+}

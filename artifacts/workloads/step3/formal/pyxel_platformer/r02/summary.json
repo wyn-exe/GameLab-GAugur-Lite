@@ -1,0 +1,108 @@
+{
+  "audio_mode": "muted",
+  "controller": "platformer_right_jump_v1",
+  "controller_trace_sha256": "8bfa4df9fec426368c6ff85988ac9ea6728dfe71b0e031e7ae8ae7e7df9ecd4c",
+  "display_scale": 2,
+  "draw_count": 900,
+  "draw_interval_ms": {
+    "count": 899,
+    "max": 36.1824,
+    "mean": 33.29816418242491,
+    "min": 0.8175,
+    "p95": 34.73
+  },
+  "draw_time_ms": {
+    "count": 900,
+    "max": 0.1049,
+    "mean": 0.04680044444444445,
+    "min": 0.0296,
+    "p95": 0.0691
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 29.9800848,
+  "entrypoint": "games/pyxel/10_platformer.py",
+  "game_fps": {
+    "count": 29,
+    "max": 31.571190617673576,
+    "mean": 30.055018191485516,
+    "min": 29.949968577491305,
+    "p05": 29.96241215395287,
+    "p95": 30.06663250709257,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 128,
+  "logical_width": 128,
+  "max_frames": 900,
+  "metric_rows": 30,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "max_frames_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 30,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": 900
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "step3-smoke-pyxel_platformer-r02",
+  "schema_version": 1,
+  "seed": 1005,
+  "status": "completed",
+  "stop_reason": "max_frames_reached",
+  "target_fps": 30,
+  "title": "Pyxel Platformer",
+  "update_count": 900,
+  "update_time_ms": {
+    "count": 900,
+    "max": 0.5821,
+    "mean": 0.11583677777777779,
+    "min": 0.0535,
+    "p95": 0.1933
+  },
+  "window_observations": 30,
+  "workload_id": "pyxel_platformer"
+}

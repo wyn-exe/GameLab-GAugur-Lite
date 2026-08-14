@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
+from gaugur_lite.metrics import writer as writer_module
 from gaugur_lite.metrics.writer import JsonlWriter, StatusTracker, write_json_atomic
 
 
@@ -70,4 +72,51 @@ def test_status_tracker_completes_and_atomic_writer_leaves_no_temp(tmp_path: Pat
     parsed = json.loads(status_file.read_text(encoding="utf-8"))
     assert parsed["status"] == "completed"
     assert parsed["summary_file"] == "summary.json"
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_atomic_writer_retries_transient_windows_replace_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "heartbeat.json"
+    real_replace = os.replace
+    calls = 0
+
+    def flaky_replace(source: Path, target: Path) -> None:
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise PermissionError(5, "synthetic Windows file lock")
+        real_replace(source, target)
+
+    monkeypatch.setattr(writer_module.os, "replace", flaky_replace)
+    monkeypatch.setattr(writer_module.time, "sleep", lambda _: None)
+
+    write_json_atomic(output, {"status": "running", "draw_count": 645})
+
+    assert calls == 3
+    assert json.loads(output.read_text(encoding="utf-8"))["draw_count"] == 645
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_atomic_writer_stops_retrying_and_removes_temp_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "heartbeat.json"
+    calls = 0
+
+    def locked_replace(source: Path, target: Path) -> None:
+        del source, target
+        nonlocal calls
+        calls += 1
+        raise PermissionError(5, "synthetic persistent Windows file lock")
+
+    monkeypatch.setattr(writer_module.os, "replace", locked_replace)
+    monkeypatch.setattr(writer_module.time, "sleep", lambda _: None)
+
+    with pytest.raises(PermissionError, match="persistent Windows file lock"):
+        write_json_atomic(output, {"status": "running"})
+
+    assert calls == writer_module._ATOMIC_REPLACE_ATTEMPTS
+    assert not output.exists()
     assert not list(tmp_path.glob("*.tmp"))

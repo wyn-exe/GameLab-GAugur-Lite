@@ -1,0 +1,108 @@
+{
+  "audio_mode": "muted",
+  "controller": "jump_v1",
+  "controller_trace_sha256": "70e6dc3b8a742f336ccc87a2c73849e5a25afb904713fa53aeb591a64522a251",
+  "display_scale": 2,
+  "draw_count": 900,
+  "draw_interval_ms": {
+    "count": 899,
+    "max": 35.886,
+    "mean": 33.298237931034485,
+    "min": 1.657,
+    "p95": 34.7452
+  },
+  "draw_time_ms": {
+    "count": 900,
+    "max": 0.2308,
+    "mean": 0.04202433333333333,
+    "min": 0.029,
+    "p95": 0.0593
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 29.9793527,
+  "entrypoint": "games/pyxel/02_jump_game.py",
+  "game_fps": {
+    "count": 29,
+    "max": 31.541092869298147,
+    "mean": 30.052224005135223,
+    "min": 29.950641343066625,
+    "p05": 29.960287638734854,
+    "p95": 30.05434309979913,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 120,
+  "logical_width": 160,
+  "max_frames": 900,
+  "metric_rows": 30,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "max_frames_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 30,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 900,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": 900
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "step3-smoke-pyxel_jump-r02",
+  "schema_version": 1,
+  "seed": 1001,
+  "status": "completed",
+  "stop_reason": "max_frames_reached",
+  "target_fps": 30,
+  "title": "Pyxel Jump",
+  "update_count": 900,
+  "update_time_ms": {
+    "count": 900,
+    "max": 0.0451,
+    "mean": 0.024536222222222223,
+    "min": 0.0174,
+    "p95": 0.0331
+  },
+  "window_observations": 30,
+  "workload_id": "pyxel_jump"
+}
