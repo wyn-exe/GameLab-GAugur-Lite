@@ -1,0 +1,130 @@
+{
+  "absolute_impact_pct": {
+    "count": 4,
+    "max": 1.0373083353817592,
+    "mean": 0.8432089622539773,
+    "min": 0.6127346031380654,
+    "p95": 1.0373083353817592
+  },
+  "acceptance_threshold_abs_median_pct": 5.0,
+  "benchmark_kind": "synthetic_frame_loop_proxy",
+  "duration_requested_s": 120.0,
+  "impact_pct": {
+    "count": 4,
+    "max": 1.0373083353817592,
+    "mean": 0.40292390886135787,
+    "min": -0.880570106785239,
+    "p95": 1.0373083353817592
+  },
+  "median_impact_pct": 0.7274787034244556,
+  "note": "proxy_fps only; Step 5 must repeat overhead validation with real Pyxel game_fps",
+  "paired_results": [
+    {
+      "impact_pct": -0.880570106785239,
+      "repeat": 1,
+      "with_sampler_proxy_fps": 819.8469913416877,
+      "without_sampler_proxy_fps": 827.1304548714021
+    },
+    {
+      "impact_pct": 1.0373083353817592,
+      "repeat": 2,
+      "with_sampler_proxy_fps": 818.1173513633662,
+      "without_sampler_proxy_fps": 809.7180782446414
+    },
+    {
+      "impact_pct": 0.6127346031380654,
+      "repeat": 3,
+      "with_sampler_proxy_fps": 817.2398482309684,
+      "without_sampler_proxy_fps": 812.2628327860588
+    },
+    {
+      "impact_pct": 0.8422228037108459,
+      "repeat": 4,
+      "with_sampler_proxy_fps": 810.8849851827191,
+      "without_sampler_proxy_fps": 804.1125657861636
+    }
+  ],
+  "phase_duration_s": 15.0,
+  "phases": [
+    {
+      "elapsed_s": 15.001261199999135,
+      "frames": 12408,
+      "mode": "without_sampler",
+      "proxy_fps": 827.1304548714021,
+      "repeat": 1,
+      "sample_calls": 0,
+      "sentinel": 12406.970135997239
+    },
+    {
+      "elapsed_s": 15.010117900001205,
+      "frames": 12306,
+      "mode": "with_sampler",
+      "proxy_fps": 819.8469913416877,
+      "repeat": 1,
+      "sample_calls": 16,
+      "sentinel": 12304.978601997322
+    },
+    {
+      "elapsed_s": 15.005182299999433,
+      "frames": 12276,
+      "mode": "with_sampler",
+      "proxy_fps": 818.1173513633662,
+      "repeat": 2,
+      "sample_calls": 16,
+      "sentinel": 12274.981091997346
+    },
+    {
+      "elapsed_s": 15.00028260000181,
+      "frames": 12146,
+      "mode": "without_sampler",
+      "proxy_fps": 809.7180782446414,
+      "repeat": 2,
+      "sample_calls": 0,
+      "sentinel": 12144.991881997452
+    },
+    {
+      "elapsed_s": 15.000070800000685,
+      "frames": 12184,
+      "mode": "without_sampler",
+      "proxy_fps": 812.2628327860588,
+      "repeat": 3,
+      "sample_calls": 0,
+      "sentinel": 12182.988727997421
+    },
+    {
+      "elapsed_s": 15.002939500001958,
+      "frames": 12261,
+      "mode": "with_sampler",
+      "proxy_fps": 817.2398482309684,
+      "repeat": 3,
+      "sample_calls": 16,
+      "sentinel": 12259.982336997358
+    },
+    {
+      "elapsed_s": 15.003360800001246,
+      "frames": 12166,
+      "mode": "with_sampler",
+      "proxy_fps": 810.8849851827191,
+      "repeat": 4,
+      "sample_calls": 16,
+      "sentinel": 12164.990221997436
+    },
+    {
+      "elapsed_s": 15.000387399999454,
+      "frames": 12062,
+      "mode": "without_sampler",
+      "proxy_fps": 804.1125657861636,
+      "repeat": 4,
+      "sample_calls": 0,
+      "sentinel": 12060.99885399752
+    }
+  ],
+  "raw_metrics_file": "formal-overhead-metrics.jsonl",
+  "raw_sample_count": 64,
+  "repeats": 4,
+  "sample_interval_s": 1.0,
+  "schema_version": 1,
+  "status": "passed",
+  "status_file": "formal-overhead-status.json",
+  "work_iterations_per_frame": 20000
+}

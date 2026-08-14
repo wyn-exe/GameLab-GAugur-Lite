@@ -390,3 +390,75 @@ class MetricEvent(StrictModel):
         _ensure_json_safe(value)
         return value
 
+
+class SystemMetricEvent(StrictModel):
+    """Step 2 系统遥测的扁平 JSONL 契约。"""
+
+    schema_version: Literal[1] = SCHEMA_VERSION
+    run_id: str
+    source: Literal["system"] = "system"
+    wall_time_ns: int = Field(gt=0)
+    monotonic_time_ns: int = Field(ge=0)
+    sequence: int = Field(ge=0)
+    process_pid: int = Field(ge=0)
+    cpu_util_pct: float = Field(ge=0, le=100)
+    cpu_freq_mhz: float | None = Field(default=None, ge=0)
+    ram_used_bytes: int = Field(ge=0)
+    ram_available_bytes: int = Field(ge=0)
+    process_cpu_util_pct: float = Field(ge=0)
+    process_rss_bytes: int = Field(ge=0)
+    gpu_util_pct: float | None = Field(default=None, ge=0, le=100)
+    gpu_mem_util_pct: float | None = Field(default=None, ge=0, le=100)
+    gpu_mem_used_bytes: int | None = Field(default=None, ge=0)
+    gpu_clock_mhz: float | None = Field(default=None, ge=0)
+    gpu_power_w: float | None = Field(default=None, ge=0)
+    gpu_temp_c: float | None = Field(default=None, ge=0, le=150)
+
+    @field_validator("run_id")
+    @classmethod
+    def validate_system_run_id(cls, value: str) -> str:
+        return validate_generated_identifier(value, field_name="run_id")
+
+
+class TelemetryStatus(StrictModel):
+    """机器可读 status.json；错误时不包含 traceback 或本机绝对路径。"""
+
+    schema_version: Literal[1] = SCHEMA_VERSION
+    run_id: str
+    status: RunStatus
+    started_wall_time_ns: int = Field(gt=0)
+    updated_wall_time_ns: int = Field(gt=0)
+    finished_wall_time_ns: int | None = Field(default=None, gt=0)
+    samples_written: int = Field(default=0, ge=0)
+    error_type: str | None = None
+    error_message: str | None = None
+    summary_file: str | None = None
+
+    @field_validator("run_id")
+    @classmethod
+    def validate_status_run_id(cls, value: str) -> str:
+        return validate_generated_identifier(value, field_name="run_id")
+
+    @field_validator("summary_file")
+    @classmethod
+    def validate_summary_file(cls, value: str | None) -> str | None:
+        return (
+            validate_repo_relative_path(value, field_name="summary_file")
+            if value is not None
+            else None
+        )
+
+    @model_validator(mode="after")
+    def validate_status_fields(self) -> "TelemetryStatus":
+        if self.updated_wall_time_ns < self.started_wall_time_ns:
+            raise ValueError("updated_wall_time_ns 不得早于 started_wall_time_ns")
+        if (
+            self.finished_wall_time_ns is not None
+            and self.finished_wall_time_ns < self.started_wall_time_ns
+        ):
+            raise ValueError("finished_wall_time_ns 不得早于 started_wall_time_ns")
+        if self.status is RunStatus.FAILED and not self.error_type:
+            raise ValueError("failed 状态必须包含 error_type")
+        if self.status is not RunStatus.FAILED and (self.error_type or self.error_message):
+            raise ValueError("只有 failed 状态可以包含错误字段")
+        return self

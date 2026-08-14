@@ -48,3 +48,46 @@ def test_doctor_accepts_dry_run_before_or_after_command(monkeypatch: object) -> 
     assert observed == [True, True]
     assert '"workload_processes_started": 0' in before.stdout
 
+
+def test_telemetry_dry_run_does_not_create_output(tmp_path: Path) -> None:
+    output = tmp_path / "probe"
+    result = runner.invoke(
+        cli.app,
+        [
+            "telemetry",
+            "probe",
+            "--duration",
+            "1",
+            "--interval",
+            "0.5",
+            "--output-directory",
+            str(output),
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert '"dry_run": true' in result.stdout
+    assert not output.exists()
+
+
+def test_global_dry_run_reaches_overhead_command(tmp_path: Path) -> None:
+    output = tmp_path / "overhead.json"
+    result = runner.invoke(
+        cli.app,
+        [
+            "--dry-run",
+            "telemetry",
+            "overhead",
+            "--duration",
+            "2",
+            "--repeats",
+            "2",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert '"benchmark_kind": "synthetic_frame_loop_proxy"' in result.stdout
+    assert not output.exists()

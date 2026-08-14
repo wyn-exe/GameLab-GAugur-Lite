@@ -12,7 +12,8 @@
 | Windows-only 实现方案    | 已完成       | 本 README                                                    |
 | Step 0 环境基线          | 已完成       | [真实验收记录](artifacts/environment/step0/idle-summary.json) |
 | Step 1 schema/config/CLI | 已完成       | [`gaugur_lite/`](gaugur_lite)、[`configs/`](configs)、[`tests/unit/`](tests/unit) |
-| Python 实现              | 分阶段实现中 | Step 0–1 已完成，下一阶段实现结构化指标与系统采样        |
+| Step 2 指标与系统采样    | 已完成       | [60 秒探针](artifacts/telemetry/step2/formal-probe/summary.json)、[120 秒开销实验](artifacts/telemetry/step2/formal-overhead.json) |
+| Python 实现              | 分阶段实现中 | Step 0–2 已完成，下一阶段接入八个真实 Pyxel 游戏          |
 | 正式实验数据、模型与报告 | 待生成       | 计划放在 `data/` 与 `artifacts/`                         |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
@@ -998,19 +999,93 @@ Commands:
 6. 异常退出时保留已有原始数据；
 7. 人类日志和机器指标分离。
 
-#### 计划命令
+#### 验收命令
 
 ```powershell
-python -m gaugur_lite telemetry probe --duration 60
-python -m gaugur_lite telemetry overhead --duration 120
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+python -m pytest tests\unit -q -p no:cacheprovider
+
+python -m gaugur_lite telemetry probe `
+  --duration 60 `
+  --interval 1 `
+  --batch-size 10 `
+  --gpu-index 0 `
+  --output-directory artifacts\telemetry\step2\formal-probe
+
+python -m gaugur_lite telemetry overhead `
+  --duration 120 `
+  --interval 1 `
+  --repeats 4 `
+  --work-iterations 20000 `
+  --gpu-index 0 `
+  --output artifacts\telemetry\step2\formal-overhead.json
 ```
 
-#### 验收
+探针与开销命令使用独占创建模式，不会覆盖同名的既有原始数据。需要重新采集时应改用新的输出目录或文件名，
+不得删除失败结果后冒充第一次成功。
 
-- JSONL 每行可独立解析；
-- 时间戳不倒退；
-- 采样间隔符合容差；
-- 采样器本身对 `game_fps` 的影响可忽略或被量化。
+#### 真实验收结果（2026-08-13）
+
+结论：**PASS**。结构化指标 writer、CPU/RAM/进程/GPU 采样、状态跟踪、异常数据保留、
+时序质量门和合成帧循环开销测试均已实现并通过。新增实现位于 `gaugur_lite/metrics/`，
+CLI 入口为 `telemetry probe` 与 `telemetry overhead`。
+
+单元测试真实输出：
+
+```text
+..............................                                           [100%]
+30 passed in 1.39s
+```
+
+60 秒正式探针结果：
+
+| 检查项 | 实测结果 | 门槛 | 结论 |
+| ------ | -------- | ---- | ---- |
+| 采集时长 | 60.0012 s | `>= 60 s` | PASS |
+| JSONL 样本数 | 60 | 60 | PASS |
+| sequence | `0..59` 连续 | 必须连续 | PASS |
+| wall/monotonic 时间 | 均未倒退 | 不得倒退 | PASS |
+| 采样间隔 | mean 0.9995 s，min 0.969 s，max 1.000 s | 请求 1 s | PASS |
+| 间隔绝对误差 P95 | 0.000 s | `<= 0.100 s` | PASS |
+| 必需字段缺失 | 0 | 0 | PASS |
+| status | `completed`，记录 60 行 | 必须与原始行数一致 | PASS |
+
+探针同时真实取得 CPU、内存、进程、GPU、显存、时钟、功耗和温度字段。例如本次采集中，
+CPU 利用率 mean/P95 为 4.435%/18.8%，GPU 利用率 mean/P95 为 26.53%/51%，GPU 温度最高 52°C。
+这些数值用于验证采样链路，不作为 Step 0 的空载质量门或后续模型标签。
+
+120 秒开销实验将 120 秒平均分成 8 个 15 秒阶段，完成 4 组交替顺序的“不开采样器/开启采样器”
+配对测试。开启采样器的阶段共写入 64 条真实系统指标。结果如下：
+
+| repeat | 无采样器 proxy FPS | 有采样器 proxy FPS | 影响 |
+| ------ | ------------------: | ------------------: | ---: |
+| 1 | 827.1305 | 819.8470 | -0.8806% |
+| 2 | 809.7181 | 818.1174 | +1.0373% |
+| 3 | 812.2628 | 817.2398 | +0.6127% |
+| 4 | 804.1126 | 810.8850 | +0.8422% |
+
+四组影响的中位数为 **+0.7275%**，绝对影响 mean/max 为 0.8432%/1.0373%，
+满足预设的 `abs(median impact) <= 5%` 门槛。正值表示该组开启采样器时代理吞吐略高，属于配对运行噪声，
+不能解释为采样器提升性能。
+
+机器可读验收产物：
+
+- 探针原始数据：[system_metrics.jsonl](artifacts/telemetry/step2/formal-probe/system_metrics.jsonl)；
+- 探针汇总：[summary.json](artifacts/telemetry/step2/formal-probe/summary.json)；
+- 探针状态：[status.json](artifacts/telemetry/step2/formal-probe/status.json)；
+- 开销原始数据：[formal-overhead-metrics.jsonl](artifacts/telemetry/step2/formal-overhead-metrics.jsonl)；
+- 开销汇总：[formal-overhead.json](artifacts/telemetry/step2/formal-overhead.json)；
+- 开销状态：[formal-overhead-status.json](artifacts/telemetry/step2/formal-overhead-status.json)。
+
+独立复核已逐行解析两份 JSONL，共 124 行；必需字段缺失数为 0，summary/status 中的计数均与原始行数一致。
+writer 按批 flush，`status.json` 通过临时文件原子替换；采样异常时已落盘 JSONL 不会被回滚，
+状态转为 `failed` 并仅记录安全的异常类型与信息。`--dry-run` 不初始化 NVML 且不写文件。
+
+本阶段的 `proxy_fps` 来自确定性的合成帧循环，只量化系统采样器与 JSONL 写入的基础开销，
+**不是实际游戏 FPS**。八个游戏尚未接入，因此不能在本阶段声称采样器对 `game_fps` 的影响已经验证；
+接入 Pyxel 后必须在 Step 5 使用真实 `game_fps` 重复同一配对开销验收，并如实保留结果。
 
 ### Step 3：接入八个真实 Pyxel 游戏
 
