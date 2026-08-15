@@ -14,8 +14,9 @@
 | Step 1 schema/config/CLI | 已完成       | [`gaugur_lite/`](gaugur_lite)、[`configs/`](configs)、[`tests/unit/`](tests/unit) |
 | Step 2 指标与系统采样    | 已完成       | [60 秒探针](artifacts/telemetry/step2/formal-probe/summary.json)、[120 秒开销实验](artifacts/telemetry/step2/formal-overhead.json) |
 | Step 3 真实 Pyxel workload | 已完成     | [24 run 验收汇总](artifacts/workloads/step3/acceptance.json)、[上游校验](artifacts/workloads/step3/upstream-verification.json) |
-| Python 实现              | 分阶段实现中 | Step 0–3 已完成，下一阶段实现压力 benchmark 与校准             |
-| 正式实验数据、模型与报告 | 分阶段生成中 | Step 3 workload 验收数据已生成；模型与最终报告待后续阶段       |
+| Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
+| Python 实现              | 分阶段实现中 | Step 0–4 已完成，下一阶段实现实验计划与 Windows Runner          |
+| 正式实验数据、模型与报告 | 分阶段生成中 | Step 3 workload 与 Step 4 校准验收数据已生成；模型与最终报告待后续阶段 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -396,12 +397,12 @@ run_game_with_runpy(entrypoint, working_directory)
 
 ### 8.1 四个代理维度
 
-| 名称                 | 核心实现                         | observed pressure                 |
-| -------------------- | -------------------------------- | --------------------------------- |
-| `cpu_compute`      | 多进程整数/浮点计算 + duty cycle | benchmark 吞吐、CPU 利用率        |
-| `memory_bandwidth` | NumPy 顺序 copy/read/write       | 实测 GB/s、内存吞吐代理           |
-| `gpu_compute`      | CUDA matmul/卷积 + duty cycle    | CUDA event 吞吐、GPU 利用率       |
-| `gpu_memory`       | CUDA tensor copy/elementwise     | 实测 GB/s、GPU memory utilization |
+| 名称                 | Lite 核心实现                                      | `pressure_observed`                    | 同步记录的硬件信号 |
+| -------------------- | -------------------------------------------------- | -------------------------------------- | ------------------ |
+| `cpu_compute`        | 8 线程 NumPy `float32` 256×256 矩阵乘法 + duty cycle | worker 实测 active time / elapsed time | 系统 CPU 利用率    |
+| `memory_bandwidth`   | 8 个 64 MiB NumPy buffer 原地读改写 + duty cycle  | worker 实测 active time / elapsed time | 系统 CPU 利用率    |
+| `gpu_compute`        | PyTorch CUDA `float32` 1024×1024 矩阵乘法 + duty cycle | worker 实测 active time / elapsed time | NVML GPU 利用率    |
+| `gpu_memory`         | 预分配并原地更新最大 1 GiB CUDA tensor             | allocated bytes / 1 GiB                | NVML 已用显存      |
 
 这些维度分别近似 CPU-CE、MEM-BW、GPU-CE、GPU-BW。本项目不声称隔离 LLC、GPU-L2 或 PCIe-BW。
 
@@ -409,7 +410,7 @@ run_game_with_runpy(entrypoint, working_directory)
 
 1. 压力可从 0 单调增加到最大稳定压力；
 2. 每档记录 requested 和 observed pressure；
-3. 测量 benchmark 自身吞吐，不能只读系统利用率；
+3. worker 必须记录 operation count、active time、elapsed time 和实际分配字节，不能只读系统利用率；
 4. GPU 计时必须同步；
 5. 预分配数组/tensor，正式测量期间不反复申请大内存；
 6. 每个 benchmark 独立进程运行；
@@ -434,22 +435,28 @@ run_game_with_runpy(entrypoint, working_directory)
 
 ### 8.4 校准
 
-校准不能把 duty cycle 直接当成实际压力。对每个控制参数 $u$，测量 benchmark 吞吐 $B(u)$，归一化：
+GAugur-Lite 的本地 Windows 校准分为“送达的执行器压力”和“外部硬件响应”两层。对于前三类 duty-cycle benchmark，不直接把请求值当成实际值，而是由子进程实测：
 
 $$
-p_{observed}(u)=\frac{B(u)-B_{idle}}{B_{max}-B_{idle}}
+p_{observed}=\frac{t_{active}}{t_{elapsed}}
 $$
 
-为每个目标压力选择 observed 误差最小且方差可接受的控制参数。校准绑定：
+对于 `gpu_memory`：
 
-- 主机 ID；
-- CPU/GPU；
-- Windows 电源模式；
-- 驱动；
-- benchmark 版本；
-- 数组/tensor 大小。
+$$
+p_{observed}=\frac{bytes_{allocated}}{bytes_{capacity}}
+$$
 
-环境变化后必须重新校准。
+CPU 利用率、GPU 利用率和 NVML 已用显存作为独立的 `hardware_signal` 保存，用于证明压力确实改变了硬件状态，但不冒充 `pressure_observed`。这是 Lite 复现的执行器校准；若后续要研究“单位时间吞吐相对满载吞吐”的非线性，需要在当前原始 `operations` 数据之上另做吞吐归一化，不能用本阶段接近对角线的曲线代替。
+
+质量门槛为每档 3 次重复、observed 单调、最大绝对误差不超过 0.05、硬件信号存在。校准产物绑定：
+
+- 完整实验配置 SHA-256（含主机 ID）；
+- Python、PyTorch、CUDA runtime、CPU 数量、RAM、GPU 型号组成的环境指纹 SHA-256；
+- CPU worker 数、buffer 大小、CUDA matrix 大小和显存容量参数；
+- 原始 JSONL 与曲线图各自的 SHA-256。
+
+当前环境指纹不采集 Windows 电源模式和 NVIDIA 驱动版本；正式复现实验还应与 Step 0 环境清单和 Git commit 一并归档。环境或 benchmark 代码变化后必须重新校准。
 
 ## 9. 配置设计
 
@@ -1191,37 +1198,74 @@ missed deadline，其 mean/p05 FPS 为 29.8836/28.9714，但帧数、状态、�
 
 ### Step 4：实现压力 benchmark 与校准
 
-#### 实现顺序
+#### 已实现
 
-1. `cpu_compute`；
-2. `memory_bandwidth`；
-3. `gpu_compute`；
-4. `gpu_memory`；
-5. duty-cycle 控制；
-6. benchmark 独占吞吐测量；
-7. requested → observed 校准曲线；
-8. 校准结果绑定环境哈希。
+1. [`engine.py`](gaugur_lite/benchmarks/engine.py) 实现四类真实压力源、250 ms duty cycle、CUDA 同步、ready/status 原子文件和资源回收；
+2. [`calibration.py`](gaugur_lite/benchmarks/calibration.py) 按 cell 启动精确子进程，ready 后预热与采样，失败时只终止该子进程并保留原始现场；
+3. 每个 cell 独立保存 worker stdout、stderr、ready、status，正式输出已存在时拒绝覆盖；
+4. 聚合 5 档 requested → observed 均值、样本标准差、绝对误差和对应硬件信号；
+5. 生成 2×2 校准曲线，并把配置哈希、环境哈希、原始 JSONL 哈希写入校准 JSON；
+6. `benchmark verify` 从磁盘重新计算哈希并执行 9 项结构与质量门槛检查；
+7. 单元测试覆盖参数校验、四类 load、worker 成功/失败状态、聚合、哈希校验和 CLI dry-run。
 
-#### 计划命令
+#### 正式验收命令
 
 ```powershell
-python -m gaugur_lite benchmark calibrate `
-  --config configs\local.example.yaml `
-  --resources cpu_compute,memory_bandwidth,gpu_compute,gpu_memory `
-  --levels 0,0.25,0.5,0.75,1.0 `
-  --repeats 3
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
 
-python -m gaugur_lite benchmark verify `
-  --calibration artifacts\calibration\windows-rtx4060.json
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step4_acceptance.ps1
 ```
 
-#### 验收
+验收脚本先运行全部单元测试，再顺序执行 60 个 calibration cell：4 类资源 × 5 档压力 × 3 次重复。每个 cell 预热 1 秒、测量 6 秒、每秒采样一次；正式路径已有任一产物时脚本会在启动 worker 前拒绝覆盖。
 
-- observed pressure 总体单调；
-- 每档有均值与标准差；
-- 目标误差建议不超过绝对 0.05；
-- benchmark 停止后资源回到空载；
-- GPU 显存使用不随运行时间增长。
+#### 真实验收结果（2026-08-15）
+
+结论：**通过**。验收机器为 Windows、Python 3.11.15、PyTorch 2.4.1+cu121、CUDA runtime 12.1、NVIDIA GeForce RTX 4060 Laptop GPU。完整 60 cell 用时 528.661608 秒（约 8 分 49 秒）。
+
+```text
+[Step 4] Running unit tests...
+47 passed in 1.24s
+[Step 4] Starting 60 calibration cells (about 8 minutes including worker shutdown)...
+PASS cpu_compute: max abs error=0.0140, actuation=measured_active_duty_fraction
+PASS memory_bandwidth: max abs error=0.0334, actuation=measured_active_duty_fraction
+PASS gpu_compute: max abs error=0.0008, actuation=measured_active_duty_fraction
+PASS gpu_memory: max abs error=0.0000, actuation=allocated_memory_fraction
+[Step 4] Verifying calibration JSON, raw JSONL hash and quality gates...
+PASS verification: 9 checks, calibration SHA-256=1d8f30961c5c2ef820f47af57d9b3492d69e959b552ac64ba0ca9e315b412645
+```
+
+五档 requested 依次为 `0.00 / 0.25 / 0.50 / 0.75 / 1.00`：
+
+| 资源 | observed mean（依档位） | 最大绝对误差 | 原始硬件信号（0.00 → 1.00） |
+| ---- | ----------------------- | ------------ | ------------------------------ |
+| `cpu_compute` | 0.000000 / 0.263335 / 0.514024 / 0.754965 / 0.999641 | 0.014024 | CPU 4.876% → 66.438% |
+| `memory_bandwidth` | 0.000000 / 0.259135 / 0.515716 / 0.783449 / 0.999884 | 0.033449 | CPU 3.552% → 27.710% |
+| `gpu_compute` | 0.000000 / 0.250806 / 0.500190 / 0.749996 / 0.999155 | 0.000845 | GPU 12.667% → 93.762% |
+| `gpu_memory` | 0.000000 / 0.250000 / 0.500000 / 0.750000 / 1.000000 | 0.000000 | 已用显存 1.369 GiB → 2.456 GiB |
+
+![Step 4 requested 与 observed 校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)
+
+对机器产物的独立核对结果：
+
+- 原始 JSONL 共 420 行，即 60 cell × 每 cell 7 个样本；60 组均为 sequence 0–6，monotonic timestamp 严格递增，必填字段无缺失；
+- 60 个 `ready.json` 与 60 个 `status.json` 均存在，60 个状态全部为 `completed`，60 份 stderr 均为空；验收后 60 个 worker PID 均不再存活；
+- GPU 温度采样范围为 50–84 °C；这是观测记录，不是本阶段的质量门槛。最高值超过配置中的 82 °C 提示值，因此后续长实验的 Runner 必须落实温度中止/冷却策略；
+- `gpu_memory` 的 0 压力三次均值为 1,468,939,703 / 1,469,173,760 / 1,470,203,611 bytes，最大差约 1.21 MiB；15 个显存 cell 的首末差在 -11.75 MiB 至 +9.13 MiB 之间，未呈现持续单调增长。结合每个 CUDA worker 均独立退出，本次未发现显存泄漏；
+- 四类资源的 observed 均严格非递减、每档均有 3 次重复且每次 7 个样本、最大误差均低于 0.05；独立 verify 的 9 项检查全部通过。
+
+机器可读产物：
+
+- 校准汇总：[`formal-calibration.json`](artifacts/calibration/step4/formal-calibration.json)，SHA-256 `1d8f30961c5c2ef820f47af57d9b3492d69e959b552ac64ba0ca9e315b412645`；
+- 原始遥测：[`formal-calibration-metrics.jsonl`](artifacts/calibration/step4/formal-calibration-metrics.jsonl)，SHA-256 `f07693c31a534cde1a53796efdbc1e368127a635305e5536eef23c646ad3a42d`；
+- 校准曲线：[`formal-calibration-curves.png`](artifacts/calibration/step4/formal-calibration-curves.png)，SHA-256 `117ad0f730d28ee687cbee717c1fe9f1375a4553b6e08c3627c36d811321c610`；
+- 执行状态：[`formal-calibration-status.json`](artifacts/calibration/step4/formal-calibration-status.json)，SHA-256 `1525ef7476bffde52b4c947c9cf167b322df30ad32e126d0b4ef012197ddedaa`；
+- 独立校验：[`formal-calibration-verification.json`](artifacts/calibration/step4/formal-calibration-verification.json)，SHA-256 `6dfa9f8519de38590ba18e575f8146ceec148efdfc31847abc37e8587b4df3b6`；
+- 配置 SHA-256 为 `9c3819e68c7158b9518dc1d5636032710d7a33a090e8515213d850963d5355cc`，环境指纹 SHA-256 为 `a55ae66e188cd05f54a43f0f0d46e8bfa16a4b251481673c572d378cd43ae7fa`；
+- 60 个 worker 的 ready/status/stdout/stderr：[`formal-calibration-workers/`](artifacts/calibration/step4/formal-calibration-workers)。
+
+本阶段证明的是“压力执行器能按 requested 单调、可重复地送达 duty 或显存分配比例，且硬件信号随之响应”。它尚未证明八个游戏在压力下的 FPS 敏感度，也没有把硬件利用率或 benchmark 吞吐伪装成 observed pressure；这些属于 Step 6 profiling 和后续分析。
 
 ### Step 5：实现实验计划与 Windows Runner
 
@@ -1939,8 +1983,8 @@ Run 进入模型前必须满足：
 
 ### M2：GAugur 特征
 
-- [ ] 四类 benchmark；
-- [ ] 压力校准；
+- [X] 四类 benchmark；
+- [X] 压力执行器校准；
 - [ ] 敏感度曲线；
 - [ ] 强度 slowdown；
 - [ ] 至少验证一个关键观察。

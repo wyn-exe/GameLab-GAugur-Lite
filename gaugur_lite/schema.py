@@ -405,6 +405,7 @@ class SystemMetricEvent(StrictModel):
     cpu_freq_mhz: float | None = Field(default=None, ge=0)
     ram_used_bytes: int = Field(ge=0)
     ram_available_bytes: int = Field(ge=0)
+    # 单进程可能使用多个逻辑核，psutil 因而允许返回超过 100 的百分比。
     process_cpu_util_pct: float = Field(ge=0)
     process_rss_bytes: int = Field(ge=0)
     gpu_util_pct: float | None = Field(default=None, ge=0, le=100)

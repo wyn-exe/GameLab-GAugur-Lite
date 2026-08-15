@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
 import typer
 
 from . import __version__
+from .benchmarks.calibration import (
+    CalibrationRequest,
+    format_calibration_result,
+    run_calibration,
+    verify_calibration,
+)
+from .benchmarks.engine import BENCHMARK_RESOURCES, BenchmarkWorkerConfig, run_benchmark_worker, worker_result_text
 from .config import ConfigError, discover_repo_root, stable_json_dumps
 from .doctor import build_doctor_report
 from .metrics.telemetry import format_result, run_overhead, run_probe
@@ -41,8 +49,15 @@ workload_app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+benchmark_app = typer.Typer(
+    name="benchmark",
+    help="四类资源压力 benchmark 的独占校准与只读复核。",
+    no_args_is_help=True,
+    add_completion=False,
+)
 app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(workload_app, name="workload")
+app.add_typer(benchmark_app, name="benchmark")
 
 
 def _version_callback(value: bool) -> None:
@@ -110,6 +125,34 @@ def doctor(
 def _effective_dry_run(ctx: typer.Context, local_dry_run: bool) -> bool:
     state = ctx.ensure_object(CliState)
     return state.dry_run or local_dry_run
+
+
+def _parse_csv_strings(value: str, *, option_name: str) -> tuple[str, ...]:
+    parsed = tuple(part.strip() for part in value.split(",") if part.strip())
+    if not parsed:
+        raise ValueError(f"{option_name} 不能为空")
+    return parsed
+
+
+def _parse_csv_floats(value: str, *, option_name: str) -> tuple[float, ...]:
+    try:
+        return tuple(float(part) for part in _parse_csv_strings(value, option_name=option_name))
+    except ValueError as exc:
+        raise ValueError(f"{option_name} 必须是逗号分隔的浮点数") from exc
+
+
+def _calibration_paths(
+    output: Path,
+    metrics_output: Path | None,
+    status_output: Path | None,
+    workers_directory: Path | None,
+    plot: Path | None,
+) -> tuple[Path, Path, Path, Path, Path | None]:
+    stem = output.with_suffix("")
+    metrics = metrics_output or output.with_name(f"{stem.name}-metrics.jsonl")
+    status = status_output or output.with_name(f"{stem.name}-status.json")
+    workers = workers_directory or output.with_name(f"{stem.name}-workers")
+    return output, metrics, status, workers, plot
 
 
 @telemetry_app.command("probe")
@@ -218,6 +261,157 @@ def telemetry_overhead(
     typer.echo(format_result(result))
     if result["status"] != "passed":
         raise typer.Exit(code=3)
+
+
+@benchmark_app.command("calibrate")
+def benchmark_calibrate(
+    ctx: typer.Context,
+    config: Path = typer.Option(
+        Path("configs/local.example.yaml"),
+        "--config",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="主机 YAML 配置。",
+    ),
+    resources: str = typer.Option(
+        ",".join(BENCHMARK_RESOURCES),
+        "--resources",
+        help="逗号分隔的 cpu_compute,memory_bandwidth,gpu_compute,gpu_memory。",
+    ),
+    levels: str = typer.Option("0,0.25,0.5,0.75,1.0", "--levels", help="严格递增压力档。"),
+    repeats: int = typer.Option(3, "--repeats", min=2, max=20),
+    warmup_s: float = typer.Option(1.0, "--warmup-s", min=0.0),
+    duration_s: float = typer.Option(6.0, "--duration-s", min=0.1),
+    sample_interval_s: float = typer.Option(1.0, "--sample-interval-s", min=0.05),
+    gpu_index: int = typer.Option(0, "--gpu-index", min=0),
+    cpu_workers: int = typer.Option(8, "--cpu-workers", min=1, max=64),
+    memory_buffer_mib: int = typer.Option(64, "--memory-buffer-mib", min=8, max=4096),
+    gpu_matrix_size: int = typer.Option(1024, "--gpu-matrix-size", min=128, max=4096),
+    gpu_memory_max_mib: int = typer.Option(1024, "--gpu-memory-max-mib", min=64, max=12288),
+    output: Path = typer.Option(
+        Path("artifacts/calibration/step4/calibration.json"),
+        "--output",
+        help="独占创建的校准汇总 JSON。",
+    ),
+    metrics_output: Path | None = typer.Option(None, "--metrics-output", help="原始 JSONL 路径。"),
+    status_output: Path | None = typer.Option(None, "--status-output", help="校准状态 JSON 路径。"),
+    workers_directory: Path | None = typer.Option(None, "--workers-directory", help="worker 日志目录。"),
+    plot: Path | None = typer.Option(None, "--plot", help="可选的请求/作用压力曲线 PNG。"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="仅输出 4×5×repeat 计划，不启动 worker。"),
+) -> None:
+    """顺序校准四类 benchmark；真实资源加载由独立 worker 承担。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        parsed_resources = _parse_csv_strings(resources, option_name="--resources")
+        invalid_resources = [item for item in parsed_resources if item not in BENCHMARK_RESOURCES]
+        if invalid_resources:
+            raise ValueError(f"--resources 包含未知项: {', '.join(invalid_resources)}")
+        output_path, metrics_path, status_path, workers_path, plot_path = _calibration_paths(
+            output,
+            metrics_output,
+            status_output,
+            workers_directory,
+            plot,
+        )
+        request = CalibrationRequest(
+            config_path=config,
+            resources=parsed_resources,  # type: ignore[arg-type]
+            levels=_parse_csv_floats(levels, option_name="--levels"),
+            repeats=repeats,
+            warmup_s=warmup_s,
+            duration_s=duration_s,
+            sample_interval_s=sample_interval_s,
+            gpu_index=gpu_index,
+            cpu_workers=cpu_workers,
+            memory_buffer_mib=memory_buffer_mib,
+            gpu_matrix_size=gpu_matrix_size,
+            gpu_memory_max_mib=gpu_memory_max_mib,
+            output_file=output_path,
+            metrics_file=metrics_path,
+            status_file=status_path,
+            workers_root=workers_path,
+            plot_file=plot_path,
+        )
+        request.validate(repo_root)
+        if _effective_dry_run(ctx, dry_run):
+            typer.echo(stable_json_dumps(request.public_plan(repo_root), indent=2))
+            return
+        result = run_calibration(repo_root=repo_root, request=request)
+    except (ConfigError, FileExistsError, OSError, RuntimeError, ValueError) as exc:
+        typer.echo(f"BENCHMARK_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(format_calibration_result(result))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@benchmark_app.command("verify")
+def benchmark_verify(
+    calibration: Path = typer.Option(
+        ...,
+        "--calibration",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="由 benchmark calibrate 生成的 JSON。",
+    ),
+    output: Path | None = typer.Option(None, "--output", help="可选的独占验证 JSON。"),
+) -> None:
+    """只读复核校准摘要、每资源质量门和原始 JSONL 哈希。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        if output is not None and output.exists():
+            raise FileExistsError(f"验证输出已存在，拒绝覆盖: {output}")
+        result = verify_calibration(repo_root=repo_root, calibration_file=calibration)
+        if output is not None:
+            write_json_atomic(output, result)
+    except (ConfigError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"BENCHMARK_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(format_calibration_result(result))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@benchmark_app.command("_worker", hidden=True)
+def benchmark_worker(
+    resource: str = typer.Option(..., "--resource"),
+    pressure: float = typer.Option(..., "--pressure", min=0.0, max=1.0),
+    runtime_s: float = typer.Option(..., "--runtime-s", min=0.1),
+    cpu_workers: int = typer.Option(..., "--cpu-workers", min=1, max=64),
+    memory_buffer_mib: int = typer.Option(..., "--memory-buffer-mib", min=8, max=4096),
+    gpu_matrix_size: int = typer.Option(..., "--gpu-matrix-size", min=128, max=4096),
+    gpu_memory_max_mib: int = typer.Option(..., "--gpu-memory-max-mib", min=64, max=12288),
+    ready_file: Path = typer.Option(..., "--ready-file"),
+    status_file: Path = typer.Option(..., "--status-file"),
+) -> None:
+    """仅供校准父进程调用的隐藏 worker 入口。"""
+
+    try:
+        result = run_benchmark_worker(
+            config=BenchmarkWorkerConfig(
+                resource=resource,  # type: ignore[arg-type]
+                pressure=pressure,
+                runtime_s=runtime_s,
+                cpu_workers=cpu_workers,
+                memory_buffer_mib=memory_buffer_mib,
+                gpu_matrix_size=gpu_matrix_size,
+                gpu_memory_max_mib=gpu_memory_max_mib,
+            ),
+            ready_file=ready_file,
+            status_file=status_file,
+        )
+    except BaseException as exc:
+        typer.echo(f"BENCHMARK_WORKER_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(worker_result_text(result))
 
 
 @workload_app.command("list")

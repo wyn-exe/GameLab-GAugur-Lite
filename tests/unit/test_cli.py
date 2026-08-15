@@ -16,10 +16,44 @@ def test_help_and_version() -> None:
 
     assert help_result.exit_code == 0
     assert "doctor" in help_result.stdout
+    assert "benchmark" in help_result.stdout
     assert "workload" in help_result.stdout
     assert "--dry-run" in help_result.stdout
     assert version_result.exit_code == 0
     assert version_result.stdout.strip() == "0.1.0"
+
+
+def test_benchmark_calibrate_dry_run_does_not_create_artifacts(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    (tmp_path / "README.md").write_text("# test\n", encoding="utf-8")
+    (tmp_path / "games").mkdir()
+    output = tmp_path / "artifacts" / "calibration.json"
+    config = REPO_ROOT / "configs" / "local.example.yaml"
+    monkeypatch.setattr(cli, "discover_repo_root", lambda _: tmp_path)
+
+    result = runner.invoke(
+        cli.app,
+        [
+            "benchmark",
+            "calibrate",
+            "--config",
+            str(config),
+            "--resources",
+            "cpu_compute,gpu_memory",
+            "--levels",
+            "0,0.5,1",
+            "--repeats",
+            "2",
+            "--output",
+            str(output),
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert '"cell_count": 12' in result.stdout
+    assert not output.exists()
 
 
 def test_doctor_accepts_dry_run_before_or_after_command(monkeypatch: object) -> None:

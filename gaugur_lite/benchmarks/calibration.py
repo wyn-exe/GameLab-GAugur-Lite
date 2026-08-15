@@ -1,0 +1,628 @@
+"""Step 4 请求压力到实际作用压力的校准、汇总与独立复核。"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import platform
+import statistics
+import subprocess
+import sys
+import time
+from collections import defaultdict
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Iterable
+
+import psutil
+
+from ..config import config_sha256, load_local_config, stable_json_dumps
+from ..metrics.system_sampler import SystemSampler
+from ..metrics.writer import JsonlWriter, write_json_atomic
+from .engine import BENCHMARK_RESOURCES, BenchmarkResource
+
+CALIBRATION_SCHEMA_VERSION = 1
+
+
+@dataclass(frozen=True)
+class CalibrationRequest:
+    config_path: Path
+    resources: tuple[BenchmarkResource, ...]
+    levels: tuple[float, ...]
+    repeats: int
+    warmup_s: float
+    duration_s: float
+    sample_interval_s: float
+    gpu_index: int
+    cpu_workers: int
+    memory_buffer_mib: int
+    gpu_matrix_size: int
+    gpu_memory_max_mib: int
+    output_file: Path
+    metrics_file: Path
+    status_file: Path
+    workers_root: Path
+    plot_file: Path | None = None
+
+    def validate(self, repo_root: Path) -> None:
+        if not self.resources or len(set(self.resources)) != len(self.resources):
+            raise ValueError("resources 必须非空且不重复")
+        if any(resource not in BENCHMARK_RESOURCES for resource in self.resources):
+            raise ValueError("resources 包含未知项")
+        if not self.levels or self.levels[0] != 0.0 or self.levels[-1] != 1.0:
+            raise ValueError("levels 必须以 0 开始、以 1 结束")
+        if tuple(sorted(self.levels)) != self.levels or len(set(self.levels)) != len(self.levels):
+            raise ValueError("levels 必须严格递增且不重复")
+        if any(not 0.0 <= level <= 1.0 for level in self.levels):
+            raise ValueError("levels 必须位于 [0, 1]")
+        if self.repeats < 2:
+            raise ValueError("repeats 必须至少为 2")
+        if self.warmup_s < 0 or self.duration_s <= 0 or self.sample_interval_s <= 0:
+            raise ValueError("warmup/duration/sample interval 参数非法")
+        if self.sample_interval_s > self.duration_s:
+            raise ValueError("sample_interval_s 不得大于 duration_s")
+        if not 1 <= self.cpu_workers <= 64:
+            raise ValueError("cpu_workers 必须位于 [1, 64]")
+        if not 8 <= self.memory_buffer_mib <= 4096:
+            raise ValueError("memory_buffer_mib 必须位于 [8, 4096]")
+        if not 128 <= self.gpu_matrix_size <= 4096:
+            raise ValueError("gpu_matrix_size 必须位于 [128, 4096]")
+        if not 64 <= self.gpu_memory_max_mib <= 12288:
+            raise ValueError("gpu_memory_max_mib 必须位于 [64, 12288]")
+        for path in self._all_output_paths():
+            _inside_repo(repo_root, path)
+            if path.exists():
+                raise FileExistsError(f"输出已存在，拒绝覆盖: {path}")
+
+    def _all_output_paths(self) -> tuple[Path, ...]:
+        paths: tuple[Path, ...] = (
+            self.output_file,
+            self.metrics_file,
+            self.status_file,
+            self.workers_root,
+        )
+        return paths if self.plot_file is None else (*paths, self.plot_file)
+
+    def public_plan(self, repo_root: Path) -> dict[str, Any]:
+        return {
+            "schema_version": CALIBRATION_SCHEMA_VERSION,
+            "command": "benchmark calibrate",
+            "dry_run": True,
+            "resources": list(self.resources),
+            "levels": list(self.levels),
+            "repeats": self.repeats,
+            "warmup_s": self.warmup_s,
+            "duration_s": self.duration_s,
+            "sample_interval_s": self.sample_interval_s,
+            "cell_count": len(self.resources) * len(self.levels) * self.repeats,
+            "estimated_measurement_s": len(self.resources)
+            * len(self.levels)
+            * self.repeats
+            * (self.warmup_s + self.duration_s),
+            "outputs": {
+                "calibration": _repo_relative(repo_root, self.output_file),
+                "metrics": _repo_relative(repo_root, self.metrics_file),
+                "status": _repo_relative(repo_root, self.status_file),
+                "workers": _repo_relative(repo_root, self.workers_root),
+                "plot": _repo_relative(repo_root, self.plot_file)
+                if self.plot_file is not None
+                else None,
+            },
+            "mutations_planned": [
+                "calibration JSON",
+                "raw calibration JSONL",
+                "status JSON",
+                "per-worker ready/status/log files",
+                "calibration plot" if self.plot_file is not None else None,
+            ],
+        }
+
+
+def _inside_repo(repo_root: Path, path: Path) -> Path:
+    root = repo_root.resolve()
+    resolved = path.resolve()
+    if resolved == root or root not in resolved.parents:
+        raise ValueError(f"输出必须位于仓库内且不能等于仓库根目录: {path}")
+    return resolved
+
+
+def _repo_relative(repo_root: Path, path: Path | None) -> str | None:
+    return path.resolve().relative_to(repo_root.resolve()).as_posix() if path is not None else None
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _environment_fingerprint(gpu_index: int) -> dict[str, Any]:
+    fingerprint: dict[str, Any] = {
+        "platform": platform.platform(),
+        "python": sys.version.split()[0],
+        "logical_cpu_count": psutil.cpu_count(logical=True),
+        "physical_cpu_count": psutil.cpu_count(logical=False),
+        "ram_total_bytes": psutil.virtual_memory().total,
+        "gpu_index": gpu_index,
+    }
+    try:
+        import torch
+
+        fingerprint.update(
+            {
+                "torch": torch.__version__,
+                "torch_cuda_runtime": torch.version.cuda,
+                "cuda_available": torch.cuda.is_available(),
+                "gpu_name": torch.cuda.get_device_name(gpu_index)
+                if torch.cuda.is_available()
+                else None,
+            }
+        )
+    except (ImportError, RuntimeError):
+        fingerprint.update({"torch": None, "cuda_available": False, "gpu_name": None})
+    return fingerprint
+
+
+def _pressure_token(level: float) -> str:
+    return f"p{int(round(level * 100)):03d}"
+
+
+def _hardware_signal(resource: BenchmarkResource, rows: list[dict[str, Any]]) -> float | None:
+    field = {
+        "cpu_compute": "cpu_util_pct",
+        "memory_bandwidth": "cpu_util_pct",
+        "gpu_compute": "gpu_util_pct",
+        "gpu_memory": "gpu_mem_used_bytes",
+    }[resource]
+    values = [float(row[field]) for row in rows if row.get(field) is not None]
+    return statistics.fmean(values) if values else None
+
+
+def _terminate_exact_child(process: subprocess.Popen[str]) -> str:
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+        return "terminated"
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+        return "killed"
+
+
+def _wait_for_ready(process: subprocess.Popen[str], ready_file: Path, timeout_s: float = 30.0) -> None:
+    deadline = time.perf_counter() + timeout_s
+    while time.perf_counter() < deadline:
+        if ready_file.is_file():
+            return
+        if process.poll() is not None:
+            raise RuntimeError(f"benchmark worker 在 ready 前退出，exit_code={process.returncode}")
+        time.sleep(0.05)
+    raise RuntimeError("benchmark worker ready 超时")
+
+
+def _run_cell(
+    *,
+    request: CalibrationRequest,
+    resource: BenchmarkResource,
+    level: float,
+    repeat: int,
+    writer: JsonlWriter,
+) -> dict[str, Any]:
+    worker_dir = request.workers_root / resource / _pressure_token(level) / f"r{repeat:02d}"
+    worker_dir.mkdir(parents=True, exist_ok=False)
+    ready_file = worker_dir / "ready.json"
+    worker_status = worker_dir / "status.json"
+    stdout_file = worker_dir / "stdout.log"
+    stderr_file = worker_dir / "stderr.log"
+    runtime_s = request.warmup_s + request.duration_s + max(0.5, request.sample_interval_s / 2)
+    command = [
+        sys.executable,
+        "-m",
+        "gaugur_lite",
+        "benchmark",
+        "_worker",
+        "--resource",
+        resource,
+        "--pressure",
+        str(level),
+        "--runtime-s",
+        str(runtime_s),
+        "--cpu-workers",
+        str(request.cpu_workers),
+        "--memory-buffer-mib",
+        str(request.memory_buffer_mib),
+        "--gpu-matrix-size",
+        str(request.gpu_matrix_size),
+        "--gpu-memory-max-mib",
+        str(request.gpu_memory_max_mib),
+        "--ready-file",
+        str(ready_file),
+        "--status-file",
+        str(worker_status),
+    ]
+    environment = os.environ.copy()
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+    process: subprocess.Popen[str] | None = None
+    records: list[dict[str, Any]] = []
+    started = time.perf_counter()
+    try:
+        with stdout_file.open("x", encoding="utf-8", newline="\n") as stdout, stderr_file.open(
+            "x", encoding="utf-8", newline="\n"
+        ) as stderr:
+            process = subprocess.Popen(
+                command,
+                cwd=request.config_path.resolve().parents[1],
+                env=environment,
+                stdin=subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=stderr,
+                text=True,
+                creationflags=creationflags,
+            )
+            _wait_for_ready(process, ready_file)
+            time.sleep(request.warmup_s)
+            measurement_started = time.perf_counter()
+            measurement_deadline = measurement_started + request.duration_s
+            next_sample = measurement_started
+            sample_index = 0
+            run_key = f"step4-{resource}-{_pressure_token(level)}-r{repeat:02d}"
+            with SystemSampler(
+                run_id=run_key,
+                gpu_index=request.gpu_index,
+                process_pid=process.pid,
+            ) as sampler:
+                # 同时保留窗口起点和终点样本，原始序列可覆盖完整 duration_s。
+                while next_sample <= measurement_deadline + 1e-9:
+                    now = time.perf_counter()
+                    if now < next_sample:
+                        time.sleep(next_sample - now)
+                    event = sampler.sample(sample_index)
+                    row = event.model_dump(mode="json")
+                    row.update(
+                        {
+                            "calibration_run_id": run_key,
+                            "resource": resource,
+                            "pressure_requested": level,
+                            "repeat": repeat,
+                        }
+                    )
+                    writer.write(row)
+                    records.append(row)
+                    sample_index += 1
+                    next_sample += request.sample_interval_s
+        process.wait(timeout=max(5.0, request.sample_interval_s * 3))
+        if process.returncode != 0:
+            raise RuntimeError(f"benchmark worker 失败，exit_code={process.returncode}")
+        if not worker_status.is_file():
+            raise RuntimeError("benchmark worker 未写入 status.json")
+        worker = json.loads(worker_status.read_text(encoding="utf-8"))
+        if worker.get("status") != "completed":
+            raise RuntimeError(f"benchmark worker 状态异常: {worker.get('status')}")
+        elapsed_s = time.perf_counter() - started
+        if resource == "gpu_memory":
+            capacity = int(worker.get("capacity_bytes", 0))
+            observed_pressure = int(worker.get("allocated_bytes", 0)) / capacity if capacity else 0.0
+        else:
+            observed_pressure = float(worker.get("active_fraction", 0.0))
+        return {
+            "resource": resource,
+            "pressure_requested": level,
+            "repeat": repeat,
+            "run_key": run_key,
+            "elapsed_s": elapsed_s,
+            "sample_count": len(records),
+            "observed_pressure": observed_pressure,
+            "hardware_signal": _hardware_signal(resource, records),
+            "worker": worker,
+            "worker_directory": worker_dir,
+        }
+    except BaseException:
+        if process is not None and process.poll() is None:
+            _terminate_exact_child(process)
+        raise
+
+
+def _sample_std(values: Iterable[float]) -> float:
+    collected = list(values)
+    return statistics.stdev(collected) if len(collected) >= 2 else 0.0
+
+
+def summarize_calibration_records(
+    *,
+    request: CalibrationRequest,
+    records: list[dict[str, Any]],
+    repo_root: Path,
+    config_hash: str,
+    environment: dict[str, Any],
+) -> dict[str, Any]:
+    """将单次 records 聚合为每个资源的 requested → observed 曲线。"""
+
+    grouped: dict[tuple[BenchmarkResource, float], list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        grouped[(record["resource"], float(record["pressure_requested"]))].append(record)
+
+    resources: list[dict[str, Any]] = []
+    all_checks_passed = True
+    for resource in request.resources:
+        points: list[dict[str, Any]] = []
+        previous_observed = -1.0
+        signal_values_available = True
+        monotonic = True
+        for level in request.levels:
+            cells = grouped[(resource, level)]
+            observed_values = [float(cell["observed_pressure"]) for cell in cells]
+            signal_values = [
+                float(cell["hardware_signal"])
+                for cell in cells
+                if cell["hardware_signal"] is not None
+            ]
+            observed_mean = statistics.fmean(observed_values) if observed_values else None
+            observed_std = _sample_std(observed_values)
+            abs_error = abs(observed_mean - level) if observed_mean is not None else None
+            if observed_mean is None or observed_mean + 1e-9 < previous_observed:
+                monotonic = False
+            if observed_mean is not None:
+                previous_observed = observed_mean
+            if len(signal_values) != request.repeats:
+                signal_values_available = False
+            points.append(
+                {
+                    "pressure_requested": level,
+                    "repeat_count": len(cells),
+                    "observed_pressure_mean": observed_mean,
+                    "observed_pressure_std": observed_std,
+                    "abs_error": abs_error,
+                    "hardware_signal_mean": statistics.fmean(signal_values)
+                    if signal_values
+                    else None,
+                    "hardware_signal_std": _sample_std(signal_values),
+                    "samples_per_repeat": [int(cell["sample_count"]) for cell in cells],
+                }
+            )
+        max_abs_error = max(
+            (float(point["abs_error"]) for point in points if point["abs_error"] is not None),
+            default=None,
+        )
+        checks = {
+            "all_levels_have_repeats": all(
+                point["repeat_count"] == request.repeats for point in points
+            ),
+            "observed_pressure_monotonic": monotonic,
+            "max_abs_error_at_most_0_05": max_abs_error is not None and max_abs_error <= 0.05,
+            "hardware_signal_available": signal_values_available,
+        }
+        passed = all(checks.values())
+        all_checks_passed = all_checks_passed and passed
+        resources.append(
+            {
+                "resource": resource,
+                "actuation_kind": "allocated_memory_fraction"
+                if resource == "gpu_memory"
+                else "measured_active_duty_fraction",
+                "hardware_signal": {
+                    "cpu_compute": "cpu_util_pct",
+                    "memory_bandwidth": "cpu_util_pct",
+                    "gpu_compute": "gpu_util_pct",
+                    "gpu_memory": "gpu_mem_used_bytes",
+                }[resource],
+                "max_abs_error": max_abs_error,
+                "checks": checks,
+                "status": "passed" if passed else "failed",
+                "points": points,
+            }
+        )
+
+    worker_records = []
+    for record in records:
+        safe_record = dict(record)
+        safe_record["worker_directory"] = _repo_relative(repo_root, Path(record["worker_directory"]))
+        worker_records.append(safe_record)
+    return {
+        "schema_version": CALIBRATION_SCHEMA_VERSION,
+        "status": "passed" if all_checks_passed else "failed",
+        "config_sha256": config_hash,
+        "environment": environment,
+        "environment_sha256": config_sha256(environment),
+        "resources": resources,
+        "cell_count": len(records),
+        "expected_cell_count": len(request.resources) * len(request.levels) * request.repeats,
+        "request": {
+            "resources": list(request.resources),
+            "levels": list(request.levels),
+            "repeats": request.repeats,
+            "warmup_s": request.warmup_s,
+            "duration_s": request.duration_s,
+            "sample_interval_s": request.sample_interval_s,
+            "gpu_index": request.gpu_index,
+            "cpu_workers": request.cpu_workers,
+            "memory_buffer_mib": request.memory_buffer_mib,
+            "gpu_matrix_size": request.gpu_matrix_size,
+            "gpu_memory_max_mib": request.gpu_memory_max_mib,
+        },
+        "runs": worker_records,
+        "artifacts": {
+            "metrics": _repo_relative(repo_root, request.metrics_file),
+            "workers": _repo_relative(repo_root, request.workers_root),
+            "plot": _repo_relative(repo_root, request.plot_file),
+        },
+    }
+
+
+def _write_plot(result: dict[str, Any], output_file: Path) -> None:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError as exc:  # pragma: no cover - 由正式 Conda 环境验证。
+        raise RuntimeError("--plot 需要 matplotlib") from exc
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    figure, axes = plt.subplots(2, 2, figsize=(11, 8), constrained_layout=True)
+    for axis, resource_result in zip(axes.flat, result["resources"], strict=True):
+        points = resource_result["points"]
+        requested = [point["pressure_requested"] for point in points]
+        observed = [point["observed_pressure_mean"] for point in points]
+        error = [point["observed_pressure_std"] for point in points]
+        axis.plot([0, 1], [0, 1], "--", color="gray", label="requested")
+        axis.errorbar(requested, observed, yerr=error, marker="o", capsize=3, label="observed")
+        axis.set_title(resource_result["resource"])
+        axis.set_xlabel("requested pressure")
+        axis.set_ylabel("observed pressure")
+        axis.set_xlim(-0.05, 1.05)
+        axis.set_ylim(-0.05, 1.05)
+        axis.grid(alpha=0.25)
+        axis.legend(loc="best")
+    figure.savefig(output_file, dpi=160)
+    plt.close(figure)
+
+
+def run_calibration(*, repo_root: Path, request: CalibrationRequest) -> dict[str, Any]:
+    """顺序运行所有 cell；任一失败保留原始 JSONL、worker 日志和 failed status。"""
+
+    request.validate(repo_root)
+    local_config = load_local_config(request.config_path)
+    config_hash = config_sha256(local_config.model_dump(mode="json"))
+    environment = _environment_fingerprint(request.gpu_index)
+    request.workers_root.mkdir(parents=True, exist_ok=False)
+    started_wall_ns = time.time_ns()
+    write_json_atomic(
+        request.status_file,
+        {
+            "schema_version": CALIBRATION_SCHEMA_VERSION,
+            "status": "running",
+            "started_wall_time_ns": started_wall_ns,
+            "config_sha256": config_hash,
+        },
+    )
+    records: list[dict[str, Any]] = []
+    try:
+        with JsonlWriter(request.metrics_file, batch_size=10) as writer:
+            for resource in request.resources:
+                for level in request.levels:
+                    for repeat in range(1, request.repeats + 1):
+                        records.append(
+                            _run_cell(
+                                request=request,
+                                resource=resource,
+                                level=level,
+                                repeat=repeat,
+                                writer=writer,
+                            )
+                        )
+        result = summarize_calibration_records(
+            request=request,
+            records=records,
+            repo_root=repo_root,
+            config_hash=config_hash,
+            environment=environment,
+        )
+        result["artifacts"]["metrics_sha256"] = _file_sha256(request.metrics_file)
+        if request.plot_file is not None:
+            _write_plot(result, request.plot_file)
+            result["artifacts"]["plot_sha256"] = _file_sha256(request.plot_file)
+        write_json_atomic(request.output_file, result)
+        write_json_atomic(
+            request.status_file,
+            {
+                "schema_version": CALIBRATION_SCHEMA_VERSION,
+                "status": "completed" if result["status"] == "passed" else "failed",
+                "started_wall_time_ns": started_wall_ns,
+                "finished_wall_time_ns": time.time_ns(),
+                "config_sha256": config_hash,
+                "calibration_file": _repo_relative(repo_root, request.output_file),
+                "cell_count": len(records),
+                "error_type": None if result["status"] == "passed" else "QualityGateFailed",
+            },
+        )
+        return result
+    except BaseException as exc:
+        write_json_atomic(
+            request.status_file,
+            {
+                "schema_version": CALIBRATION_SCHEMA_VERSION,
+                "status": "failed",
+                "started_wall_time_ns": started_wall_ns,
+                "finished_wall_time_ns": time.time_ns(),
+                "config_sha256": config_hash,
+                "completed_cell_count": len(records),
+                "error_type": type(exc).__name__,
+                "error_message": str(exc)[:1000],
+            },
+        )
+        raise
+
+
+def verify_calibration(*, repo_root: Path, calibration_file: Path) -> dict[str, Any]:
+    """只读验证校准 JSON、原始 JSONL 哈希与每资源质量门。"""
+
+    calibration_path = _inside_repo(repo_root, calibration_file)
+    result = json.loads(calibration_path.read_text(encoding="utf-8"))
+    checks: list[dict[str, Any]] = []
+    checks.append(
+        {
+            "name": "schema_version",
+            "passed": result.get("schema_version") == CALIBRATION_SCHEMA_VERSION,
+            "actual": result.get("schema_version"),
+            "expected": CALIBRATION_SCHEMA_VERSION,
+        }
+    )
+    checks.append(
+        {
+            "name": "calibration_status",
+            "passed": result.get("status") == "passed",
+            "actual": result.get("status"),
+            "expected": "passed",
+        }
+    )
+    expected_cells = result.get("expected_cell_count")
+    checks.append(
+        {
+            "name": "cell_count",
+            "passed": result.get("cell_count") == expected_cells,
+            "actual": result.get("cell_count"),
+            "expected": expected_cells,
+        }
+    )
+    resources = result.get("resources", [])
+    checks.append(
+        {
+            "name": "resource_count",
+            "passed": len(resources) == len(result.get("request", {}).get("resources", [])),
+            "actual": len(resources),
+            "expected": len(result.get("request", {}).get("resources", [])),
+        }
+    )
+    for resource in resources:
+        checks.append(
+            {
+                "name": f"{resource.get('resource')}_quality_gate",
+                "passed": resource.get("status") == "passed"
+                and all(resource.get("checks", {}).values()),
+                "actual": resource.get("checks"),
+                "expected": True,
+            }
+        )
+    artifacts = result.get("artifacts", {})
+    metrics_relative = artifacts.get("metrics")
+    metrics_path = _inside_repo(repo_root, repo_root / metrics_relative) if metrics_relative else None
+    metrics_hash = _file_sha256(metrics_path) if metrics_path is not None and metrics_path.is_file() else None
+    checks.append(
+        {
+            "name": "metrics_sha256",
+            "passed": metrics_hash == artifacts.get("metrics_sha256"),
+            "actual": metrics_hash,
+            "expected": artifacts.get("metrics_sha256"),
+        }
+    )
+    return {
+        "schema_version": CALIBRATION_SCHEMA_VERSION,
+        "status": "passed" if all(check["passed"] for check in checks) else "failed",
+        "calibration": _repo_relative(repo_root, calibration_path),
+        "checks": checks,
+        "calibration_sha256": _file_sha256(calibration_path),
+    }
+
+
+def format_calibration_result(result: dict[str, Any]) -> str:
+    return stable_json_dumps(result, indent=2)
