@@ -16,8 +16,9 @@
 | Step 3 真实 Pyxel workload | 已完成     | [24 run 验收汇总](artifacts/workloads/step3/acceptance.json)、[上游校验](artifacts/workloads/step3/upstream-verification.json) |
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
-| Python 实现              | 分阶段实现中 | Step 0–5 已完成，下一阶段采集独占基线                            |
-| 正式实验数据、模型与报告 | 分阶段生成中 | Step 3 workload、Step 4 校准及 Step 5 不可变计划/Runner 验收数据已生成；720 个正式 run、模型与最终报告待后续阶段 |
+| Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
+| Python 实现              | 分阶段实现中 | Step 0–6 已完成，下一阶段采集敏感度与干扰强度 profile             |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；profile、共置、模型与最终报告待后续阶段 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -1266,7 +1267,7 @@ PASS verification: 9 checks, calibration SHA-256=1d8f30961c5c2ef820f47af57d9b349
 - 配置 SHA-256 为 `9c3819e68c7158b9518dc1d5636032710d7a33a090e8515213d850963d5355cc`，环境指纹 SHA-256 为 `a55ae66e188cd05f54a43f0f0d46e8bfa16a4b251481673c572d378cd43ae7fa`；
 - 60 个 worker 的 ready/status/stdout/stderr：[`formal-calibration-workers/`](artifacts/calibration/step4/formal-calibration-workers)。
 
-本阶段证明的是“压力执行器能按 requested 单调、可重复地送达 duty 或显存分配比例，且硬件信号随之响应”。它尚未证明八个游戏在压力下的 FPS 敏感度，也没有把硬件利用率或 benchmark 吞吐伪装成 observed pressure；这些属于 Step 6 profiling 和后续分析。
+本阶段证明的是“压力执行器能按 requested 单调、可重复地送达 duty 或显存分配比例，且硬件信号随之响应”。它尚未证明八个游戏在压力下的 FPS 敏感度，也没有把硬件利用率或 benchmark 吞吐伪装成 observed pressure；这些属于 Step 7 profiling 和后续分析。
 
 ### Step 5：实现实验计划与 Windows Runner
 
@@ -1394,41 +1395,106 @@ PASS independent verification: 31/31 checks, formal plan SHA-256=97f39a41e830ccb
 - 完整 attempt 历史：[`formal-runs/step5-acceptance/`](artifacts/runner/step5/formal-runs/step5-acceptance)，其中 `a001` 失败现场和 `a002` 成功原始数据均保留；
 - 最终独立复核：[`formal-acceptance-verification.json`](artifacts/runner/step5/formal-acceptance-verification.json)，31/31 项通过，文件 SHA-256 `b5f4695174418b28cbf676b61d4d085ea0c35754d9a494a80bc79ec06585b545`。
 
-该 720 行计划在 Step 5 代码提交前生成，因此 manifest 如实记录 `root_commit=ed5c9df...` 与 `root_dirty_at_generation=true`。它是本阶段不可变的结构与 Runner 验收证据，720 行并未在本阶段执行；用户上传 Step 5 提交后，Step 6 会从干净 commit 生成新的版本化采集计划，再开始独占基线，避免把 dirty worktree 的 provenance 当作最终实验环境。
+该 720 行计划在 Step 5 代码提交前生成，因此 manifest 如实记录 `root_commit=ed5c9df...` 与 `root_dirty_at_generation=true`。它是本阶段不可变的结构与 Runner 验收证据，720 行并未在本阶段执行。Step 5 提交后，Step 6 已从 clean commit `71ed4d4...` 生成新的版本化采集计划 [`artifacts/plans/formal-v1.csv`](artifacts/plans/formal-v1.csv)，后续正式采集统一使用新计划，避免把 dirty worktree 的 plan provenance 当作最终实验环境。
 
 本阶段证明的是“正式组合可以确定性展开、四个真实游戏能由 Windows Runner 同步启动/测量/排布/停止、失败 attempt 可审计且 resume 安全”。它没有执行 720 个正式 run，也没有生成 solo retention、敏感度/强度特征或模型结果；这些仍属于 Step 6 及以后阶段。
 
 ### Step 6：采集独占基线
 
-#### 流程
+#### 已实现
 
-1. 展开 workload × repeat；
-2. 随机运行顺序；
-3. warmup；
-4. 正式测 FPS/frame time；
-5. 记录 CPU/GPU/温度；
-6. cooldown；
-7. 汇总 mean/p05/min；
-8. 检查重复方差。
+1. 在 Step 5 clean commit `71ed4d4...` 上冻结供 Step 6–8 共用的全阶段 720-row 计划，manifest 明确记录 `root_dirty_at_generation=false`；
+2. `run --stage solo` 先复核整张不可变计划，再按 stage 选择 24 个 solo 行；`--max-runs` 只在过滤后生效；
+3. 每次 runner invocation 计算 `gaugur_lite/**/*.py + pyproject.toml` 的逐文件哈希和统一 source-tree SHA-256，并把 execution commit/dirty 状态写入每个 attempt manifest；
+4. 8 个 workload 各运行 3 次；每次 warmup 20 秒、正式测量 60 秒、系统/窗口采样间隔 1 秒、cooldown 20 秒；
+5. solo 质量门拒绝任何邻居、benchmark、压力字段、非唯一 workload、无效 attempt、artifact 哈希错误或低于 0.95 的覆盖率；
+6. [`baselines.py`](gaugur_lite/baselines.py) 从原始 attempts 构建 24 行 run-level JSONL 和 8 行 workload baseline；
+7. baseline mean FPS 是三次 per-run mean FPS 的算术平均，p05 baseline 是三次 per-run p05 FPS 的算术平均，min 是所有有效重复的一秒 FPS 窗口最小值；
+8. 重复稳定性使用三次 per-run mean FPS 的样本标准差除以均值，正式门槛为 CV `<=5%`；
+9. 每个 workload 生成唯一 `baseline_id`，其输入包含 plan/config SHA-256、workload ID、三个 run ID 和各 run summary SHA-256；后续 retention 必须引用该 ID，不能模糊匹配；
+10. 生成 4×2 重复稳定性图；`summarize-verify` 从原始 attempt 重算 baseline，并精确核对 summary、24 行 JSONL 和 PNG 哈希；
+11. 正式 PowerShell 脚本为每次执行分配只增不改的 `invocation-NNN` 报告。中断或失败时保留已完成 attempt，再次运行只补齐未完成项。
 
-#### 计划命令
+#### 正式验收命令
 
 ```powershell
-python -m gaugur_lite plan `
-  --experiment configs\experiments\formal.yaml `
-  --stage solo `
-  --out artifacts\plans\formal-solo.csv
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
 
-python -m gaugur_lite run --plan artifacts\plans\formal-solo.csv --resume
-python -m gaugur_lite summarize --experiment formal-v1 --stage solo
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step6_acceptance.ps1
 ```
 
-#### 验收
+脚本从空状态预计运行 40–45 分钟。每个游戏窗口必须保持可见、未最小化且不被其他应用遮挡；不得在采集中修改源码。若某个 run 失败，脚本保留该 attempt 和 invocation 报告并返回非零状态；审计后再次运行同一脚本会通过 `--resume` 跳过完整有效项。
 
-- 每个 workload 至少 3 个有效独占重复；
-- 独占期间没有 benchmark 或邻居；
-- 所有后续 retention 都能精确匹配同配置 solo 基线；
-- 不稳定 workload 在继续实验前调整参数或标记。
+#### 真实验收结果（2026-08-15）
+
+结论：**通过**。正式计划、24 个独占 run、8 个 workload baseline、重复稳定性图和从原始 attempt 的重算验证均通过。全部 run 首次完成，无失败或补跑。
+
+真实命令输出：
+
+```text
+[Step 6/invocation-001] Running unit tests...
+................................................................         [100%]
+64 passed in 2.59s
+[Step 6] Verifying the frozen clean-commit 720-row plan...
+PASS formal plan: rows=720, checks=7, SHA-256=94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a
+[Step 6] Computing safe resume decisions for the 24 solo rows...
+PASS resume preflight: would_run=24, would_skip=0
+[Step 6] Running/resuming 24 visible solo runs (about 40 minutes from empty state)...
+PASS solo runner: completed=24, skipped=0, elapsed=2,437.85s
+[Step 6] Building 8 workload baselines and repeat-stability plot...
+PASS baselines: workloads=8, runs=24, max CV=0.0829%
+[Step 6] Recomputing baselines from raw attempts and verifying JSONL/PNG hashes...
+PASS independent verification: 6/6 checks, summary SHA-256=965d4e5a68df4293442f0272422b1f38a67b8595f2bcc7c02c939196aaf096e6
+```
+
+正式 baseline 数值：
+
+| Workload | Target FPS | Baseline mean FPS | Baseline p05 FPS | 最小 1s-window FPS | Mean FPS CV | 最大相对偏差 |
+| -------- | ---------: | ----------------: | ---------------: | -----------------: | ----------: | -----------: |
+| `daylight` | 10 | 10.01097 | 9.98490 | 9.09784 | 0.08289% | 0.09571% |
+| `mega_wing` | 30 | 29.99904 | 29.94149 | 28.94156 | 0.00175% | 0.00192% |
+| `pyxel_bubbles` | 30 | 30.00929 | 29.92904 | 28.80529 | 0.03934% | 0.04540% |
+| `pyxel_jump` | 30 | 30.00464 | 29.95327 | 28.97729 | 0.03350% | 0.03862% |
+| `pyxel_platformer` | 30 | 30.01087 | 29.94260 | 28.97985 | 0.03472% | 0.04007% |
+| `pyxel_shooter` | 30 | 29.99767 | 29.93604 | 28.72555 | 0.00804% | 0.00928% |
+| `pyxel_snake` | 20 | 20.01133 | 19.96854 | 19.06718 | 0.04688% | 0.05407% |
+| `space_rescue` | 30 | 29.99946 | 29.95400 | 28.97235 | 0.00138% | 0.00147% |
+
+最不稳定的是 `daylight`，mean FPS CV 也只有 0.08289%，远低于 5% 门槛；因此 8 个 workload 都可作为后续 retention 分母，无需调整参数或排除。min 列是所有一秒 FPS 窗口的极小值，不是逐帧瞬时 FPS；它用于诊断短抖动，不替代 mean/p05 基线。
+
+![Step 6 三次独占重复的 mean FPS 与正式 baseline](artifacts/baselines/step6/formal-solo-baselines.png)
+
+原始 attempt 审计：
+
+| 检查项 | 实测结果 | 状态 |
+| ------ | -------- | ---- |
+| run 目录 / 有效 attempt | 24 / 24，全部为 `a001 completed/valid=true` | PASS |
+| solo 隔离 | benchmark 目录 0，邻居 0 | PASS |
+| 系统样本 | 1464 行，即 24×61；最小覆盖率 0.999483 | PASS |
+| workload 正式覆盖率 | 24/24 均为 1.0 | PASS |
+| 窗口样本 | 1464 行，unhealthy 0 | PASS |
+| GPU 温度 | 各 run 最高温度范围 48–50 °C，均低于 82 °C | PASS |
+| missed deadlines | 合计 2，集中在单个 run；未造成覆盖率/CV 失败 | 记录 |
+| stderr | 24/24 为空 | PASS |
+| plan SHA-256 | 24/24 均为 `94ea3272...369a` | PASS |
+| execution source tree | 24/24 均为 `5446cf24...a6a3` | PASS |
+| 进程清理 | 记录 24 个受管 PID，验收时存活 0；global kill 未使用 | PASS |
+
+计划是在 clean S5 commit 上生成的；实际采集发生在 Step 6 实现尚未提交时，所以 attempt 如实记录 `execution_root_dirty=true`。这不被伪装成 clean execution：24 个 attempt 均保存相同的逐文件哈希和 source-tree SHA-256 `5446cf24d8334e3d6f85e1c1142690ef21325c0f0988efb6861da53ea7f5a6a3`，且都基于 commit `71ed4d4...`。本阶段完成后提交的 `gaugur_lite` 源码应与该哈希对应，形成 commit + 精确源码树的双重 provenance。
+
+机器可读产物：
+
+- clean-commit 全阶段计划：[`formal-v1.csv`](artifacts/plans/formal-v1.csv)，SHA-256 `94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a`；
+- plan manifest：[`formal-v1-manifest.json`](artifacts/plans/formal-v1-manifest.json)；组合与 split：[`formal-v1-combinations.json`](artifacts/plans/formal-v1-combinations.json)；计划验证：[`formal-v1-verification.json`](artifacts/plans/formal-v1-verification.json)；
+- 24 个原始 run：[`data/raw/formal-v1/`](data/raw/formal-v1)；runner invocation：[`invocation-001-run.json`](artifacts/baselines/step6/invocations/invocation-001-run.json)；
+- run-level 指标：[`solo-runs.jsonl`](data/interim/formal-v1/solo-runs.jsonl)，SHA-256 `d2cc475c1850da01e319f8eb58f861635510d89e1289c11f946e6ad1ea3b7735`；
+- 唯一 baseline：[`solo-baselines.json`](data/interim/formal-v1/solo-baselines.json)，SHA-256 `965d4e5a68df4293442f0272422b1f38a67b8595f2bcc7c02c939196aaf096e6`；
+- 重复稳定性图：[`formal-solo-baselines.png`](artifacts/baselines/step6/formal-solo-baselines.png)，SHA-256 `8ec9eee5931906fc6602a3b8254d0bf8fd1a4c5b8fe8a1e3ac61174ad7dc037c`；
+- 独立重算验证：[`formal-solo-verification.json`](artifacts/baselines/step6/formal-solo-verification.json)，6/6 项通过。
+
+本阶段证明的是“八个真实游戏在当前 Windows 主机上拥有稳定、可追溯且可精确引用的独占 FPS 基线”。尚未施加资源压力，也未测得敏感度或干扰强度；Step 7 才会执行 480 个 profile run 并计算 GAugur 的 $S$ 与 $I$。
 
 ### Step 7：采集敏感度与强度 profile
 

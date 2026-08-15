@@ -9,6 +9,11 @@ from pathlib import Path
 import typer
 
 from . import __version__
+from .baselines import (
+    BaselineError,
+    build_solo_baselines,
+    verify_solo_baselines,
+)
 from .benchmarks.calibration import (
     CalibrationRequest,
     format_calibration_result,
@@ -26,7 +31,7 @@ from .config import (
 from .doctor import build_doctor_report
 from .metrics.telemetry import format_result, run_overhead, run_probe
 from .metrics.writer import write_json_atomic
-from .runner.plan import PLAN_STAGES, build_plan, verify_plan
+from .runner.plan import PLAN_STAGES, build_plan, load_plan_rows, verify_plan
 from .runner.runner import run_plan
 from .workloads.launcher import build_step3_acceptance, launch_smoke
 from .workloads.pyxel_game import GameRunConfig, execute_game_child
@@ -302,6 +307,11 @@ def experiment_run(
         help="由 plan 命令生成且可通过哈希复核的 CSV。",
     ),
     resume: bool = typer.Option(False, "--resume", help="只跳过完整、有效且哈希一致的 attempt。"),
+    stage: str | None = typer.Option(
+        None,
+        "--stage",
+        help="只执行 solo/profile/colocation-main/colocation-extra-test；默认执行整表。",
+    ),
     max_runs: int | None = typer.Option(None, "--max-runs", min=1, help="仅调试/分批执行前 N 个计划行。"),
     report: Path | None = typer.Option(None, "--report", help="可选的独占运行报告 JSON。"),
     dry_run: bool = typer.Option(False, "--dry-run", help="只复核计划和 resume 决策。"),
@@ -316,6 +326,7 @@ def experiment_run(
             repo_root=repo_root,
             plan_file=plan,
             resume=resume,
+            stage=stage,
             max_runs=max_runs,
             dry_run=_effective_dry_run(ctx, dry_run),
         )
@@ -326,6 +337,116 @@ def experiment_run(
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] == "failed":
+        raise typer.Exit(code=3)
+
+
+@app.command("summarize")
+def experiment_summarize(
+    ctx: typer.Context,
+    plan: Path = typer.Option(
+        ...,
+        "--plan",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="包含已完成 solo 行的不可变正式计划。",
+    ),
+    stage: str = typer.Option("solo", "--stage", help="Step 6 当前只支持 solo。"),
+    output: Path = typer.Option(..., "--out", help="独占创建的 workload baseline JSON。"),
+    runs_output: Path = typer.Option(..., "--runs-out", help="独占创建的 run-level JSONL。"),
+    plot: Path = typer.Option(..., "--plot", help="独占创建的重复稳定性 PNG。"),
+    fps_cv_threshold_pct: float = typer.Option(
+        5.0,
+        "--fps-cv-threshold-pct",
+        min=0.001,
+        help="三次 run mean FPS 的样本 CV 上限。",
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="只验证参数和计划规模。"),
+) -> None:
+    """从 24 个有效 solo attempt 构建后续 retention 的唯一基线。"""
+
+    try:
+        if stage != "solo":
+            raise ValueError("Step 6 summarize 只支持 --stage solo")
+        repo_root = discover_repo_root(Path.cwd())
+        if _effective_dry_run(ctx, dry_run):
+            verification = verify_plan(repo_root=repo_root, plan_file=plan)
+            solo_count = sum(
+                row["stage"] == "solo" for row in load_plan_rows(plan)
+            )
+            result = {
+                "schema_version": 1,
+                "status": "planned",
+                "dry_run": True,
+                "stage": stage,
+                "plan_sha256": verification["plan_sha256"],
+                "solo_plan_rows": solo_count,
+                "fps_cv_threshold_pct": fps_cv_threshold_pct,
+                "mutations_planned": [
+                    output.as_posix(),
+                    runs_output.as_posix(),
+                    plot.as_posix(),
+                ],
+            }
+        else:
+            result = build_solo_baselines(
+                repo_root=repo_root,
+                plan_file=plan,
+                output_file=output,
+                runs_output_file=runs_output,
+                plot_file=plot,
+                fps_cv_threshold_pct=fps_cv_threshold_pct,
+            )
+    except (
+        BaselineError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        typer.echo(f"SUMMARY_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+
+
+@app.command("summarize-verify")
+def experiment_summarize_verify(
+    plan: Path = typer.Option(..., "--plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    summary: Path = typer.Option(..., "--summary", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    runs: Path = typer.Option(..., "--runs", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    plot: Path = typer.Option(..., "--plot", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    output: Path | None = typer.Option(None, "--output", help="可选的独占验证 JSON。"),
+) -> None:
+    """从原始 attempts 重算并复核 solo baseline、run JSONL 和图表哈希。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        if output is not None and output.exists():
+            raise FileExistsError(f"验证输出已存在，拒绝覆盖: {output}")
+        result = verify_solo_baselines(
+            repo_root=repo_root,
+            plan_file=plan,
+            summary_file=summary,
+            runs_file=runs,
+            plot_file=plot,
+        )
+        if output is not None:
+            write_json_atomic(output, result)
+    except (
+        BaselineError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        typer.echo(f"SUMMARY_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
         raise typer.Exit(code=3)
 
 

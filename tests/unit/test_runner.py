@@ -8,7 +8,11 @@ import pytest
 
 from gaugur_lite.runner import runner
 from gaugur_lite.runner import window_layout
-from gaugur_lite.runner.runner import ParsedPlanRow, inspect_resume
+from gaugur_lite.runner.runner import (
+    ParsedPlanRow,
+    build_execution_provenance,
+    inspect_resume,
+)
 from gaugur_lite.runner.window_layout import (
     grid_rectangles,
     rectangles_overlap,
@@ -169,3 +173,46 @@ def test_run_plan_continues_after_one_isolated_failure(tmp_path: Path, monkeypat
     assert result["completed"] == 1
     assert result["failed_or_invalid"] == 1
     assert len(result["results"]) == 2
+
+
+def test_run_plan_filters_stage_before_max_runs(tmp_path: Path, monkeypatch: object) -> None:
+    solo = _row("data/raw/test-exp/solo", "test-exp__solo__game_0__r01").raw
+    profile = dict(_row("data/raw/test-exp/profile", "test-exp__profile__game_1__r01").raw)
+    profile["stage"] = "profile"
+    profile["mode"] = "pressure_profile"
+    profile["resource"] = "cpu_compute"
+    profile["pressure_requested"] = "0.5"
+    monkeypatch.setattr(runner, "verify_plan", lambda **_: {"status": "passed", "plan_sha256": "c" * 64})
+    monkeypatch.setattr(runner, "load_plan_rows", lambda _: [profile, solo])
+    monkeypatch.setattr(runner, "inspect_resume", lambda **_: {"action": "run", "attempt": 1})
+    plan = tmp_path / "plan.csv"
+    plan.write_text("placeholder\n", encoding="utf-8")
+
+    result = runner.run_plan(
+        repo_root=tmp_path,
+        plan_file=plan,
+        resume=True,
+        stage="solo",
+        max_runs=1,
+        dry_run=True,
+    )
+
+    assert result["stage"] == "solo"
+    assert result["selected_runs"] == 1
+    assert result["decisions"][0]["run_id"] == solo["run_id"]
+
+
+def test_execution_provenance_changes_with_source_tree(tmp_path: Path) -> None:
+    package = tmp_path / "gaugur_lite"
+    package.mkdir()
+    source = package / "module.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
+
+    first = build_execution_provenance(tmp_path)
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+    second = build_execution_provenance(tmp_path)
+
+    assert len(first["source_tree_sha256"]) == 64
+    assert first["source_tree_sha256"] != second["source_tree_sha256"]
+    assert "gaugur_lite/module.py" in first["source_files"]

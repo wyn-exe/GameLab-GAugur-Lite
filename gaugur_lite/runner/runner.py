@@ -113,6 +113,55 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def build_execution_provenance(repo_root: Path) -> dict[str, Any]:
+    """记录实际采集代码，而不把尚未提交的工作树伪装成 clean commit。"""
+
+    root = repo_root.resolve()
+    source_paths = sorted((root / "gaugur_lite").rglob("*.py"))
+    pyproject = root / "pyproject.toml"
+    if pyproject.is_file():
+        source_paths.append(pyproject)
+    source_hashes = {
+        path.relative_to(root).as_posix(): _file_sha256(path) for path in source_paths
+    }
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+            shell=False,
+        ).stdout.strip()
+        dirty = bool(
+            subprocess.run(
+                [
+                    "git",
+                    "status",
+                    "--porcelain",
+                    "--untracked-files=all",
+                    "--",
+                    "gaugur_lite",
+                    "pyproject.toml",
+                ],
+                cwd=root,
+                check=True,
+                capture_output=True,
+                text=True,
+                shell=False,
+            ).stdout.strip()
+        )
+    except (OSError, subprocess.SubprocessError):
+        commit = None
+        dirty = None
+    return {
+        "root_commit": commit,
+        "root_dirty_at_execution": dirty,
+        "source_tree_sha256": config_sha256(source_hashes),
+        "source_files": source_hashes,
+    }
+
+
 def _inside_repo(repo_root: Path, relative: str | Path) -> Path:
     root = repo_root.resolve()
     candidate = (root / relative).resolve() if not Path(relative).is_absolute() else Path(relative).resolve()
@@ -491,6 +540,7 @@ def run_one(
     repo_root: Path,
     row: ParsedPlanRow,
     plan_sha256: str,
+    execution_provenance: dict[str, Any],
     resume: bool,
     headless: bool = False,
     startup_timeout_s: float = 30.0,
@@ -540,6 +590,7 @@ def run_one(
                 "plan_sha256": plan_sha256,
                 "config_sha256": row.config_sha256,
                 "row_sha256": row.row_sha256,
+                "execution_provenance": execution_provenance,
                 "plan_row": row.raw,
             },
         )
@@ -943,6 +994,7 @@ def run_plan(
     repo_root: Path,
     plan_file: Path,
     resume: bool,
+    stage: str | None = None,
     max_runs: int | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
@@ -950,17 +1002,27 @@ def run_plan(
     if verification["status"] != "passed":
         raise ValueError("计划 verify 未通过，拒绝执行")
     rows = [ParsedPlanRow.from_csv(item) for item in load_plan_rows(plan_file)]
+    if stage is not None:
+        allowed_stages = {"solo", "profile", "colocation-main", "colocation-extra-test"}
+        if stage not in allowed_stages:
+            raise ValueError(f"未知执行 stage: {stage}")
+        rows = [row for row in rows if row.stage == stage]
+        if not rows:
+            raise ValueError(f"计划中没有 stage={stage} 的行")
     if max_runs is not None:
         if max_runs < 1:
             raise ValueError("max_runs 必须 >= 1")
         rows = rows[:max_runs]
     decisions = [inspect_resume(repo_root=repo_root, row=row) for row in rows]
+    execution_provenance = build_execution_provenance(repo_root)
     if dry_run:
         return {
             "schema_version": 1,
             "status": "planned",
             "dry_run": True,
             "plan_sha256": verification["plan_sha256"],
+            "stage": stage or "all",
+            "execution_provenance": execution_provenance,
             "selected_runs": len(rows),
             "would_run": sum(item["action"] == "run" for item in decisions),
             "would_skip": sum(item["action"] == "skip" for item in decisions),
@@ -977,6 +1039,7 @@ def run_plan(
                 repo_root=repo_root,
                 row=row,
                 plan_sha256=verification["plan_sha256"],
+                execution_provenance=execution_provenance,
                 resume=resume,
             )
         )
@@ -988,6 +1051,8 @@ def run_plan(
         "status": "passed" if failed == 0 else "failed",
         "plan": plan_file.resolve().relative_to(repo_root.resolve()).as_posix(),
         "plan_sha256": verification["plan_sha256"],
+        "stage": stage or "all",
+        "execution_provenance": execution_provenance,
         "selected_runs": len(rows),
         "completed": completed,
         "skipped": skipped,
