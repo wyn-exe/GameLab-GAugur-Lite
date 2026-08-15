@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import json
 import math
 import os
 import time
@@ -28,11 +29,15 @@ _DUTY_CYCLE_S = 0.25
 
 @dataclass(frozen=True)
 class BenchmarkWorkerConfig:
-    """单个 worker 的不可变配置；runtime 包含 warmup 与测量窗口。"""
+    """单个 worker 的不可变配置；默认保持 Step 4 的单测量窗口语义。"""
 
     resource: BenchmarkResource
     pressure: float
     runtime_s: float
+    warmup_s: float = 0.0
+    barrier_file: Path | None = None
+    barrier_timeout_s: float = 30.0
+    gpu_index: int = 0
     cpu_workers: int = 8
     memory_buffer_mib: int = 64
     gpu_matrix_size: int = 1024
@@ -45,6 +50,12 @@ class BenchmarkWorkerConfig:
             raise ValueError("pressure 必须位于 [0, 1]")
         if not math.isfinite(self.runtime_s) or self.runtime_s <= 0:
             raise ValueError("runtime_s 必须大于 0")
+        if not math.isfinite(self.warmup_s) or self.warmup_s < 0:
+            raise ValueError("warmup_s 必须 >= 0")
+        if not math.isfinite(self.barrier_timeout_s) or self.barrier_timeout_s <= 0:
+            raise ValueError("barrier_timeout_s 必须大于 0")
+        if self.gpu_index < 0:
+            raise ValueError("gpu_index 必须 >= 0")
         if not 1 <= self.cpu_workers <= 64:
             raise ValueError("cpu_workers 必须位于 [1, 64]")
         if not 8 <= self.memory_buffer_mib <= 4096:
@@ -131,7 +142,7 @@ class _GpuComputeLoad:
     allocated_bytes = 0
     capacity_bytes = 0
 
-    def __init__(self, matrix_size: int) -> None:
+    def __init__(self, matrix_size: int, gpu_index: int) -> None:
         try:
             import torch
         except ImportError as exc:  # pragma: no cover - 依赖由运行环境决定。
@@ -139,9 +150,10 @@ class _GpuComputeLoad:
         if not torch.cuda.is_available():
             raise RuntimeError("gpu_compute 需要可用的 CUDA GPU")
         self._torch = torch
-        torch.cuda.set_device(0)
-        self._left = torch.randn((matrix_size, matrix_size), device="cuda", dtype=torch.float32)
-        self._right = torch.randn((matrix_size, matrix_size), device="cuda", dtype=torch.float32)
+        torch.cuda.set_device(gpu_index)
+        device = f"cuda:{gpu_index}"
+        self._left = torch.randn((matrix_size, matrix_size), device=device, dtype=torch.float32)
+        self._right = torch.randn((matrix_size, matrix_size), device=device, dtype=torch.float32)
         self._output = torch.empty_like(self._left)
         torch.cuda.synchronize()
 
@@ -156,7 +168,7 @@ class _GpuComputeLoad:
 
 
 class _GpuMemoryLoad:
-    def __init__(self, pressure: float, max_mib: int) -> None:
+    def __init__(self, pressure: float, max_mib: int, gpu_index: int) -> None:
         try:
             import torch
         except ImportError as exc:  # pragma: no cover - 依赖由运行环境决定。
@@ -164,7 +176,8 @@ class _GpuMemoryLoad:
         if not torch.cuda.is_available():
             raise RuntimeError("gpu_memory 需要可用的 CUDA GPU")
         self._torch = torch
-        torch.cuda.set_device(0)
+        torch.cuda.set_device(gpu_index)
+        device = f"cuda:{gpu_index}"
         self.capacity_bytes = max_mib * 1024 * 1024
         requested_bytes = int(round(self.capacity_bytes * pressure))
         if requested_bytes == 0:
@@ -172,7 +185,7 @@ class _GpuMemoryLoad:
             self.allocated_bytes = 0
         else:
             count = max(1, requested_bytes // 4)
-            self._buffer = torch.empty(count, device="cuda", dtype=torch.float32)
+            self._buffer = torch.empty(count, device=device, dtype=torch.float32)
             self._buffer.fill_(1.0)
             self.allocated_bytes = int(self._buffer.numel() * self._buffer.element_size())
         torch.cuda.synchronize()
@@ -198,8 +211,43 @@ def _create_load(config: BenchmarkWorkerConfig) -> _Load:
     if config.resource == "memory_bandwidth":
         return _MemoryBandwidthLoad(config.cpu_workers, config.memory_buffer_mib)
     if config.resource == "gpu_compute":
-        return _GpuComputeLoad(config.gpu_matrix_size)
-    return _GpuMemoryLoad(config.pressure, config.gpu_memory_max_mib)
+        return _GpuComputeLoad(config.gpu_matrix_size, config.gpu_index)
+    return _GpuMemoryLoad(config.pressure, config.gpu_memory_max_mib, config.gpu_index)
+
+
+def _drive_until(
+    *, load: _Load, pressure: float, deadline: float
+) -> tuple[float, float, int]:
+    """在绝对 deadline 前送达 duty，返回 active/sleep/operation 计数。"""
+
+    active_s = 0.0
+    sleep_s = 0.0
+    operations = 0
+    while time.perf_counter() < deadline:
+        cycle_started = time.perf_counter()
+        active_deadline = min(deadline, cycle_started + _DUTY_CYCLE_S * pressure)
+        while time.perf_counter() < active_deadline:
+            work_started = time.perf_counter()
+            operations += load.work_once()
+            active_s += time.perf_counter() - work_started
+        remaining = min(deadline, cycle_started + _DUTY_CYCLE_S) - time.perf_counter()
+        if remaining > 0:
+            time.sleep(remaining)
+            sleep_s += remaining
+    return active_s, sleep_s, operations
+
+
+def _wait_for_barrier(path: Path, *, timeout_s: float) -> tuple[dict[str, object], float]:
+    started = time.perf_counter()
+    deadline = started + timeout_s
+    while time.perf_counter() < deadline:
+        if path.is_file():
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if payload.get("status") != "released":
+                raise RuntimeError("barrier 文件状态不是 released")
+            return payload, time.perf_counter() - started
+        time.sleep(0.02)
+    raise TimeoutError("等待 runner barrier 超时")
 
 
 def run_benchmark_worker(
@@ -227,22 +275,37 @@ def run_benchmark_worker(
                 "wall_time_ns": time.time_ns(),
             },
         )
+        barrier_wait_s = 0.0
+        barrier_payload: dict[str, object] | None = None
+        if config.barrier_file is not None:
+            barrier_payload, barrier_wait_s = _wait_for_barrier(
+                config.barrier_file, timeout_s=config.barrier_timeout_s
+            )
+
+        warmup_started = time.perf_counter()
+        planned_measurement_start_ns = (
+            int(barrier_payload["measurement_start_monotonic_ns"])
+            if barrier_payload is not None
+            else time.perf_counter_ns() + int(config.warmup_s * 1_000_000_000)
+        )
+        warmup_deadline = planned_measurement_start_ns / 1_000_000_000
+        warmup_active_s, warmup_sleep_s, warmup_operations = _drive_until(
+            load=load,
+            pressure=config.pressure,
+            deadline=warmup_deadline,
+        )
         started = time.perf_counter()
-        deadline = started + config.runtime_s
-        active_s = 0.0
-        sleep_s = 0.0
-        operations = 0
-        while time.perf_counter() < deadline:
-            cycle_started = time.perf_counter()
-            active_deadline = min(deadline, cycle_started + _DUTY_CYCLE_S * config.pressure)
-            while time.perf_counter() < active_deadline:
-                work_started = time.perf_counter()
-                operations += load.work_once()
-                active_s += time.perf_counter() - work_started
-            remaining = min(deadline, cycle_started + _DUTY_CYCLE_S) - time.perf_counter()
-            if remaining > 0:
-                time.sleep(remaining)
-                sleep_s += remaining
+        planned_measurement_end_ns = (
+            int(barrier_payload["measurement_end_monotonic_ns"])
+            if barrier_payload is not None
+            else time.perf_counter_ns() + int(config.runtime_s * 1_000_000_000)
+        )
+        deadline = planned_measurement_end_ns / 1_000_000_000
+        active_s, sleep_s, operations = _drive_until(
+            load=load,
+            pressure=config.pressure,
+            deadline=deadline,
+        )
         elapsed_s = time.perf_counter() - started
         result: dict[str, object] = {
             "schema_version": 1,
@@ -253,6 +316,16 @@ def run_benchmark_worker(
             "started_wall_time_ns": started_wall_ns,
             "finished_wall_time_ns": time.time_ns(),
             "elapsed_s": elapsed_s,
+            "warmup_elapsed_s": started - warmup_started,
+            "warmup_active_s": warmup_active_s,
+            "warmup_sleep_s": warmup_sleep_s,
+            "warmup_operations": warmup_operations,
+            "barrier_wait_s": barrier_wait_s,
+            "barrier_used": config.barrier_file is not None,
+            "measurement_start_monotonic_ns": int(started * 1_000_000_000),
+            "measurement_end_monotonic_ns": time.perf_counter_ns(),
+            "planned_measurement_start_monotonic_ns": planned_measurement_start_ns,
+            "planned_measurement_end_monotonic_ns": planned_measurement_end_ns,
             "active_s": active_s,
             "sleep_s": sleep_s,
             "active_fraction": active_s / elapsed_s if elapsed_s else 0.0,

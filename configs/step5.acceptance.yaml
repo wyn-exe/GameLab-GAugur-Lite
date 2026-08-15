@@ -1,0 +1,27 @@
+schema_version: 1
+
+host:
+  id: "windows-rtx4060"
+  platform: "windows"
+  gpu_index: 0
+  display_index: 0
+  dpi_awareness: "per_monitor_v2"
+  window_layout: "grid_2x2"
+  require_visible_windows: true
+  cpu_affinity: null
+  cooldown_s: 2
+  max_gpu_temp_c: 82
+
+measurement:
+  warmup_s: 2
+  duration_s: 8
+  sample_interval_s: 1.0
+  repeats: 1
+  qos_ratios: [0.70, 0.80, 0.90]
+  random_seed: 20260815
+
+paths:
+  raw: "artifacts/runner/step5/formal-runs"
+  interim: "data/interim"
+  processed: "data/processed"
+  artifacts: "artifacts"

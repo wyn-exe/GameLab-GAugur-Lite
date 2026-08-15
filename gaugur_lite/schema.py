@@ -243,6 +243,132 @@ class LocalConfig(StrictModel):
     paths: PathsSpec
 
 
+class PairCombinationSpec(StrictModel):
+    mode: Literal["all", "none"] = "all"
+    expected_count: int = Field(ge=0, le=10_000)
+
+
+class TripleCombinationSpec(StrictModel):
+    mode: Literal["all", "none", "balanced_subset_v1"] = "balanced_subset_v1"
+    expected_count: int = Field(ge=0, le=10_000)
+    seed: int | None = Field(default=None, ge=0)
+
+
+class MainCombinationSpec(StrictModel):
+    pairs: PairCombinationSpec
+    triples: TripleCombinationSpec
+
+
+class ExtraTestSpec(StrictModel):
+    size: int = Field(default=4, ge=2, le=8)
+    mode: Literal["all", "none", "balanced_binary_design_v1"]
+    expected_count: int = Field(ge=0, le=10_000)
+    trainable: Literal[False] = False
+
+
+class SplitSpec(StrictModel):
+    group_by: Literal["combination_key"] = "combination_key"
+    seed: int = Field(ge=0)
+    train_groups: int = Field(ge=0)
+    validation_groups: int = Field(ge=0)
+    test_groups: int = Field(ge=0)
+
+
+class ExperimentSpec(StrictModel):
+    """Step 5 计划生成所需的完整实验配置。"""
+
+    schema_version: Literal[1] = SCHEMA_VERSION
+    name: str
+    workload_ids: tuple[str, ...]
+    resources: tuple[
+        Literal["cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"], ...
+    ]
+    pressure_levels: tuple[float, ...]
+    repeats: int = Field(ge=1, le=100)
+    randomize_order: bool = True
+    main_combinations: MainCombinationSpec
+    extra_test: ExtraTestSpec
+    split: SplitSpec
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        return validate_identifier(value, field_name="experiment.name")
+
+    @field_validator("workload_ids")
+    @classmethod
+    def validate_workload_ids(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) < 2 or len(value) > 8:
+            raise ValueError("workload_ids 数量必须位于 [2, 8]")
+        for workload_id in value:
+            validate_identifier(workload_id, field_name="workload_ids")
+        if len(set(value)) != len(value):
+            raise ValueError("workload_ids 不允许重复")
+        return value
+
+    @field_validator("resources")
+    @classmethod
+    def validate_resources(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if not value or len(set(value)) != len(value):
+            raise ValueError("resources 必须非空且不重复")
+        return value
+
+    @field_validator("pressure_levels")
+    @classmethod
+    def validate_pressure_levels(cls, value: tuple[float, ...]) -> tuple[float, ...]:
+        if (
+            not value
+            or any(not math.isfinite(level) or not 0.0 <= level <= 1.0 for level in value)
+            or tuple(sorted(value)) != value
+            or len(set(value)) != len(value)
+        ):
+            raise ValueError("pressure_levels 必须是 [0, 1] 内严格递增且不重复的有限数")
+        return value
+
+    @model_validator(mode="after")
+    def validate_combination_counts(self) -> "ExperimentSpec":
+        workload_count = len(self.workload_ids)
+        expected_pairs = math.comb(workload_count, 2)
+        pair_count = self.main_combinations.pairs.expected_count
+        pair_mode = self.main_combinations.pairs.mode
+        if pair_count != (expected_pairs if pair_mode == "all" else 0):
+            raise ValueError("pairs.expected_count 与 mode/workload 数量不一致")
+
+        triple = self.main_combinations.triples
+        if triple.mode == "all":
+            expected_triples = math.comb(workload_count, 3)
+        elif triple.mode == "none":
+            expected_triples = 0
+        else:
+            if workload_count != 8 or triple.expected_count != 32 or triple.seed is None:
+                raise ValueError("balanced_subset_v1 固定要求 8 个 workload、32 个组合和 seed")
+            expected_triples = 32
+        if triple.expected_count != expected_triples:
+            raise ValueError("triples.expected_count 与 mode/workload 数量不一致")
+
+        extra = self.extra_test
+        if extra.size > workload_count:
+            raise ValueError("extra_test.size 不得超过 workload 数量")
+        if extra.mode == "all":
+            expected_extra = math.comb(workload_count, extra.size)
+        elif extra.mode == "none":
+            expected_extra = 0
+        else:
+            if workload_count != 8 or extra.size != 4 or extra.expected_count != 12:
+                raise ValueError("balanced_binary_design_v1 固定要求 8 个 workload、四元、12 个组合")
+            expected_extra = 12
+        if extra.expected_count != expected_extra:
+            raise ValueError("extra_test.expected_count 与 mode/workload 数量不一致")
+
+        main_group_count = pair_count + triple.expected_count
+        split_group_count = (
+            self.split.train_groups + self.split.validation_groups + self.split.test_groups
+        )
+        if split_group_count != main_group_count:
+            raise ValueError("split 的 group 数之和必须等于主组合数")
+        return self
+
+
 class RunSpec(StrictModel):
     schema_version: Literal[1] = SCHEMA_VERSION
     run_id: str | None = None

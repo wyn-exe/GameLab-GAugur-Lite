@@ -11,7 +11,7 @@ from typing import Any, TypeVar
 import yaml
 from pydantic import BaseModel, ValidationError
 
-from .schema import LocalConfig, WorkloadCatalog
+from .schema import ExperimentSpec, LocalConfig, WorkloadCatalog
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -102,6 +102,10 @@ def load_workload_catalog(path: str | Path) -> WorkloadCatalog:
     return load_model(path, WorkloadCatalog)
 
 
+def load_experiment_config(path: str | Path) -> ExperimentSpec:
+    return load_model(path, ExperimentSpec)
+
+
 def discover_repo_root(start: str | Path) -> Path:
     current = Path(start).resolve()
     if current.is_file():
@@ -125,4 +129,3 @@ def resolved_output_paths(config: LocalConfig, repo_root: str | Path) -> dict[st
         name: resolve_repo_path(repo_root, value)
         for name, value in config.paths.model_dump().items()
     }
-

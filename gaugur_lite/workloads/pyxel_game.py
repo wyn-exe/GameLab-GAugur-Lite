@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import random
 import re
@@ -58,6 +59,9 @@ class GameRunConfig:
     audio_mode: str
     metric_window_s: float = 1.0
     batch_size: int = 5
+    warmup_s: float = 0.0
+    barrier_file: Path | None = None
+    barrier_timeout_s: float = 30.0
 
 
 class _StopPyxelLoop(Exception):
@@ -149,6 +153,12 @@ class PyxelGameHarness:
         self.started_wall_time_ns: int | None = None
         self.started_monotonic_ns: int | None = None
         self.finished_monotonic_ns: int | None = None
+        self.measurement_started_monotonic_ns: int | None = None
+        self.measurement_finished_monotonic_ns: int | None = None
+        self.planned_measurement_start_monotonic_ns: int | None = None
+        self.planned_measurement_end_monotonic_ns: int | None = None
+        self.barrier_wait_s = 0.0
+        self.phase = "measurement" if config.barrier_file is None else "waiting"
         self.update_count = 0
         self.draw_count = 0
         self.stop_reason: str | None = None
@@ -158,6 +168,10 @@ class PyxelGameHarness:
         self.draw_ms: list[float] = []
         self.draw_intervals_ms: list[float] = []
         self.deadline_misses = 0
+        self.measurement_update_ms: list[float] = []
+        self.measurement_draw_ms: list[float] = []
+        self.measurement_draw_intervals_ms: list[float] = []
+        self.measurement_deadline_misses = 0
         self.window_started_ns: int | None = None
         self.window_update_start = 0
         self.window_draw_start = 0
@@ -222,11 +236,21 @@ class PyxelGameHarness:
         self.game_object = getattr(update, "__self__", None)
         self.started_wall_time_ns = time.time_ns()
         self.started_monotonic_ns = time.perf_counter_ns()
-        self.window_started_ns = self.started_monotonic_ns
         self._write_ready()
+        self._await_barrier()
+        self.window_started_ns = time.perf_counter_ns()
+        self.phase = (
+            "warmup"
+            if self.planned_measurement_start_monotonic_ns is not None
+            and self.window_started_ns < self.planned_measurement_start_monotonic_ns
+            else "measurement"
+        )
+        if self.phase == "measurement":
+            self._start_measurement(self.window_started_ns)
         try:
             while self.stop_reason is None:
                 try:
+                    self._maybe_start_measurement(time.perf_counter_ns())
                     self._update(update)
                     self._draw(draw)
                 except _StopPyxelLoop:
@@ -248,6 +272,8 @@ class PyxelGameHarness:
         self.update_count += 1
         self.update_ms.append(elapsed_ms)
         self.window_update_ms.append(elapsed_ms)
+        if self.phase == "measurement":
+            self.measurement_update_ms.append(elapsed_ms)
 
     def _draw(self, callback: Callable[[], None]) -> None:
         started = time.perf_counter_ns()
@@ -257,22 +283,33 @@ class PyxelGameHarness:
         self.draw_count += 1
         self.draw_ms.append(elapsed_ms)
         self.window_draw_ms.append(elapsed_ms)
+        if self.phase == "measurement":
+            self.measurement_draw_ms.append(elapsed_ms)
 
         if self.last_draw_ns is not None:
             interval_ms = (ended - self.last_draw_ns) / 1_000_000
             self.draw_intervals_ms.append(interval_ms)
             self.window_intervals_ms.append(interval_ms)
+            if self.phase == "measurement":
+                self.measurement_draw_intervals_ms.append(interval_ms)
             deadline_ms = 1000.0 / self.target_fps
             if interval_ms > deadline_ms * 1.5:
                 missed = max(1, int(interval_ms // deadline_ms) - 1)
                 self.deadline_misses += missed
                 self.window_deadline_misses += missed
+                if self.phase == "measurement":
+                    self.measurement_deadline_misses += missed
         self.last_draw_ns = ended
         self._flush_window(ended)
 
         if self.config.max_frames > 0 and self.draw_count >= self.config.max_frames:
             self.stop_reason = "max_frames_reached"
-        elif self.config.max_frames == 0 and self.elapsed_s(ended) >= self.config.duration_s:
+        elif (
+            self.config.max_frames == 0
+            and self.planned_measurement_end_monotonic_ns is not None
+            and ended >= self.planned_measurement_end_monotonic_ns
+        ):
+            self.measurement_finished_monotonic_ns = ended
             self.stop_reason = "duration_reached"
 
     def _game_quit(self) -> Any:
@@ -285,6 +322,80 @@ class PyxelGameHarness:
             return 0.0
         end = now_ns or self.finished_monotonic_ns or time.perf_counter_ns()
         return (end - self.started_monotonic_ns) / 1_000_000_000
+
+    def _await_barrier(self) -> None:
+        """ready 后等待父进程统一释放；所有进程共享 Windows monotonic clock。"""
+
+        if self.config.barrier_file is None:
+            now_ns = time.perf_counter_ns()
+            self.planned_measurement_start_monotonic_ns = now_ns + int(
+                self.config.warmup_s * 1_000_000_000
+            )
+            self.planned_measurement_end_monotonic_ns = (
+                self.planned_measurement_start_monotonic_ns
+                + int(self.config.duration_s * 1_000_000_000)
+            )
+            return
+        started = time.perf_counter()
+        deadline = started + self.config.barrier_timeout_s
+        last_heartbeat = started
+        while time.perf_counter() < deadline:
+            if self.config.barrier_file.is_file():
+                payload = json.loads(self.config.barrier_file.read_text(encoding="utf-8"))
+                if payload.get("status") != "released":
+                    raise RuntimeError("runner barrier 状态不是 released")
+                if payload.get("run_id") != self.config.run_id:
+                    raise RuntimeError("runner barrier 的 run_id 不匹配")
+                self.planned_measurement_start_monotonic_ns = int(
+                    payload["measurement_start_monotonic_ns"]
+                )
+                self.planned_measurement_end_monotonic_ns = int(
+                    payload["measurement_end_monotonic_ns"]
+                )
+                self.barrier_wait_s = time.perf_counter() - started
+                return
+            now = time.perf_counter()
+            if now - last_heartbeat >= 1.0:
+                self._write_heartbeat()
+                last_heartbeat = now
+            time.sleep(0.02)
+        raise TimeoutError("等待 runner barrier 超时")
+
+    def _start_measurement(self, now_ns: int) -> None:
+        if self.measurement_started_monotonic_ns is not None:
+            return
+        if self.phase == "warmup":
+            self._flush_window(now_ns, force=True)
+        self.phase = "measurement"
+        self.measurement_started_monotonic_ns = now_ns
+        self.window_started_ns = now_ns
+        self.window_update_start = self.update_count
+        self.window_draw_start = self.draw_count
+        self.window_update_ms = []
+        self.window_draw_ms = []
+        self.window_intervals_ms = []
+        self.window_deadline_misses = 0
+        self.last_draw_ns = None
+        write_json_atomic(
+            self.output_directory / "measurement-start.json",
+            {
+                "schema_version": 1,
+                "run_id": self.config.run_id,
+                "status": "measurement",
+                "pid": os.getpid(),
+                "wall_time_ns": time.time_ns(),
+                "monotonic_time_ns": now_ns,
+                "planned_monotonic_time_ns": self.planned_measurement_start_monotonic_ns,
+            },
+        )
+
+    def _maybe_start_measurement(self, now_ns: int) -> None:
+        if (
+            self.measurement_started_monotonic_ns is None
+            and self.planned_measurement_start_monotonic_ns is not None
+            and now_ns >= self.planned_measurement_start_monotonic_ns
+        ):
+            self._start_measurement(now_ns)
 
     def _flush_window(self, now_ns: int, *, force: bool = False) -> None:
         if self.window_started_ns is None:
@@ -301,6 +412,7 @@ class PyxelGameHarness:
             "wall_time_ns": time.time_ns(),
             "monotonic_time_ns": now_ns,
             "sequence": len(self.events),
+            "phase": self.phase,
             "elapsed_s": self.elapsed_s(now_ns),
             "window_duration_s": duration_s,
             "update_count": self.update_count - self.window_update_start,
@@ -341,6 +453,7 @@ class PyxelGameHarness:
                 "title": self.title,
                 "target_fps": self.target_fps,
                 "headless": self.config.headless,
+                "barrier_required": self.config.barrier_file is not None,
             },
         )
         self._write_heartbeat()
@@ -379,12 +492,13 @@ class PyxelGameHarness:
         )
 
     def summary(self) -> dict[str, Any]:
+        measurement_events = [event for event in self.events if event.get("phase") == "measurement"]
         fps_values = [
             float(event["game_fps"])
-            for event in self.events
+            for event in measurement_events
             if float(event["window_duration_s"]) >= self.config.metric_window_s * 0.8
         ]
-        window_rows = [event["window"] for event in self.events]
+        window_rows = [event["window"] for event in measurement_events]
         visible_rows = [row for row in window_rows if not row.get("headless", False)]
         planned_stop = self.stop_reason in {"duration_reached", "max_frames_reached"}
         count_consistent = (
@@ -398,6 +512,11 @@ class PyxelGameHarness:
             and all(row.get("minimized") is False for row in visible_rows)
         )
         expected_frames_ok = self.config.max_frames == 0 or self.draw_count == self.config.max_frames
+        measurement_coverage_s = sum(
+            float(event["window_duration_s"]) for event in measurement_events
+        )
+        measurement_coverage_ratio = min(1.0, measurement_coverage_s / self.config.duration_s)
+        coverage_ok = self.config.max_frames > 0 or measurement_coverage_ratio >= 0.95
         checks = [
             {"name": "planned_stop", "passed": planned_stop, "actual": self.stop_reason},
             {"name": "draw_count_positive", "passed": self.draw_count > 0, "actual": self.draw_count},
@@ -406,6 +525,7 @@ class PyxelGameHarness:
             {"name": "expected_frames", "passed": expected_frames_ok, "actual": self.draw_count, "threshold": self.config.max_frames or None},
             {"name": "target_fps_matches_registry", "passed": self.target_fps == self.game.target_fps, "actual": self.target_fps, "threshold": self.game.target_fps},
             {"name": "window_healthy", "passed": window_ok, "actual": window_ok, "skipped": self.config.headless},
+            {"name": "measurement_coverage", "passed": coverage_ok, "actual": measurement_coverage_ratio, "threshold": 0.95, "skipped": self.config.max_frames > 0},
         ]
         passed = all(bool(item["passed"]) for item in checks)
         return {
@@ -425,21 +545,31 @@ class PyxelGameHarness:
             "logical_height": self.logical_height,
             "target_fps": self.target_fps,
             "duration_requested_s": self.config.duration_s,
+            "warmup_requested_s": self.config.warmup_s,
+            "barrier_used": self.config.barrier_file is not None,
+            "barrier_wait_s": self.barrier_wait_s,
+            "planned_measurement_start_monotonic_ns": self.planned_measurement_start_monotonic_ns,
+            "planned_measurement_end_monotonic_ns": self.planned_measurement_end_monotonic_ns,
+            "measurement_started_monotonic_ns": self.measurement_started_monotonic_ns,
+            "measurement_finished_monotonic_ns": self.measurement_finished_monotonic_ns,
+            "measurement_coverage_s": measurement_coverage_s,
+            "measurement_coverage_ratio": measurement_coverage_ratio,
             "max_frames": self.config.max_frames,
             "elapsed_s": self.elapsed_s(),
             "stop_reason": self.stop_reason,
             "update_count": self.update_count,
             "draw_count": self.draw_count,
             "metric_rows": len(self.events),
+            "measurement_metric_rows": len(measurement_events),
             "game_fps": {
                 **describe(fps_values),
                 "p05": percentile(fps_values, 0.05),
                 "windows_used": len(fps_values),
             },
-            "update_time_ms": describe(self.update_ms),
-            "draw_time_ms": describe(self.draw_ms),
-            "draw_interval_ms": describe(self.draw_intervals_ms),
-            "missed_deadline_count": self.deadline_misses,
+            "update_time_ms": describe(self.measurement_update_ms),
+            "draw_time_ms": describe(self.measurement_draw_ms),
+            "draw_interval_ms": describe(self.measurement_draw_intervals_ms),
+            "missed_deadline_count": self.measurement_deadline_misses,
             "window_observations": len(visible_rows),
             "quality_gate": {
                 "status": "passed" if passed else "failed",

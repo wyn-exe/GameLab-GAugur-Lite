@@ -1,0 +1,28 @@
+schema_version: 1
+name: "step5-acceptance"
+workload_ids:
+  - "pyxel_jump"
+  - "pyxel_bubbles"
+  - "pyxel_snake"
+  - "pyxel_shooter"
+resources: ["cpu_compute"]
+pressure_levels: [0.0]
+repeats: 1
+randomize_order: true
+
+main_combinations:
+  pairs: {mode: "all", expected_count: 6}
+  triples: {mode: "all", expected_count: 4, seed: 20260811}
+
+extra_test:
+  size: 4
+  mode: "all"
+  expected_count: 1
+  trainable: false
+
+split:
+  group_by: "combination_key"
+  seed: 20260811
+  train_groups: 6
+  validation_groups: 2
+  test_groups: 2

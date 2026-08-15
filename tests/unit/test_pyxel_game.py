@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -121,6 +122,7 @@ def test_harness_stops_at_exact_frame_count_and_writes_metrics(tmp_path: Path) -
 
     rows = [json.loads(line) for line in metrics.read_text(encoding="utf-8").splitlines()]
     assert callbacks.updates == callbacks.draws == 5
+    assert summary["quality_gate"]["failed_checks"] == []
     assert summary["status"] == "completed"
     assert summary["stop_reason"] == "max_frames_reached"
     assert summary["draw_count"] == 5
@@ -131,3 +133,54 @@ def test_harness_stops_at_exact_frame_count_and_writes_metrics(tmp_path: Path) -
     assert (tmp_path / "ready.json").is_file()
     assert (tmp_path / "heartbeat.json").is_file()
     assert (tmp_path / "stop.json").is_file()
+
+
+def test_harness_uses_shared_barrier_and_reports_measurement_coverage(tmp_path: Path) -> None:
+    pyxel = FakePyxel()
+    game = get_game("pyxel_jump")
+    barrier = tmp_path / "barrier.json"
+    # 给 harness/假 Pyxel 初始化留出余量，模拟父进程在 ready 后发布未来 barrier。
+    start_ns = time.perf_counter_ns() + 100_000_000
+    end_ns = start_ns + 60_000_000
+    barrier.write_text(
+        json.dumps(
+            {
+                "status": "released",
+                "run_id": "runner-barrier-test",
+                "measurement_start_monotonic_ns": start_ns,
+                "measurement_end_monotonic_ns": end_ns,
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = GameRunConfig(
+        run_id="runner-barrier-test",
+        duration_s=0.06,
+        warmup_s=0.1,
+        max_frames=0,
+        headless=True,
+        audio_mode="muted",
+        metric_window_s=0.005,
+        barrier_file=barrier,
+    )
+
+    with JsonlWriter(tmp_path / "game_metrics.jsonl", batch_size=2) as writer:
+        harness = PyxelGameHarness(
+            pyxel=pyxel,
+            game=game,
+            config=config,
+            working_directory=tmp_path,
+            output_directory=tmp_path,
+            writer=writer,
+        )
+        with harness.installed():
+            pyxel.init(128, 128, title=game.title)
+            pyxel.run(lambda: None, lambda: None)
+        summary = harness.summary()
+
+    assert summary["quality_gate"]["failed_checks"] == []
+    assert summary["status"] == "completed"
+    assert summary["barrier_used"] is True
+    assert summary["measurement_coverage_ratio"] >= 0.95
+    assert summary["measurement_metric_rows"] > 0
+    assert (tmp_path / "measurement-start.json").is_file()

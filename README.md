@@ -15,8 +15,9 @@
 | Step 2 指标与系统采样    | 已完成       | [60 秒探针](artifacts/telemetry/step2/formal-probe/summary.json)、[120 秒开销实验](artifacts/telemetry/step2/formal-overhead.json) |
 | Step 3 真实 Pyxel workload | 已完成     | [24 run 验收汇总](artifacts/workloads/step3/acceptance.json)、[上游校验](artifacts/workloads/step3/upstream-verification.json) |
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
-| Python 实现              | 分阶段实现中 | Step 0–4 已完成，下一阶段实现实验计划与 Windows Runner          |
-| 正式实验数据、模型与报告 | 分阶段生成中 | Step 3 workload 与 Step 4 校准验收数据已生成；模型与最终报告待后续阶段 |
+| Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
+| Python 实现              | 分阶段实现中 | Step 0–5 已完成，下一阶段采集独占基线                            |
+| 正式实验数据、模型与报告 | 分阶段生成中 | Step 3 workload、Step 4 校准及 Step 5 不可变计划/Runner 验收数据已生成；720 个正式 run、模型与最终报告待后续阶段 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -1279,24 +1280,24 @@ PENDING
 → WARMUP
 → MEASURING
 → STOPPING
+→ COOLDOWN
 → COMPLETED / INVALID / FAILED
 ```
 
-#### 实现
+#### 已实现
 
-1. 展开配置为不可变 CSV/Parquet plan；
-2. 随机化执行顺序并保存最终顺序；
-3. 按 run 创建独立目录；
-4. 启动系统采样器；
-5. 启动游戏/benchmark；
-6. 获取每个 Pyxel 窗口句柄并按 `grid_2x2` 排列，保证客户区不重叠且全部可见；
-7. ready barrier；
-8. warmup 后清零正式统计窗口；
-9. 正式采样并持续检查窗口未最小化、未遮挡、未迁移显示器；
-10. 精确停止本次进程树；
-11. cooldown/温度恢复；
-12. 写最终状态；
-13. 支持安全 `--resume`。
+1. 严格解析 local、workload 与 experiment YAML，把计划独占写入不可变 CSV；同时生成 plan manifest、组合 manifest、逐行 SHA-256 和整表 SHA-256；
+2. 用固定 seed `20260811` 和稳定 SHA-256 顺序展开 720 行正式计划，保存实际执行顺序，不依赖 Python 的进程内随机哈希；
+3. 固定生成 28 个 pair、平衡选择 32 个 triple、生成 12 个额外 quad，并把主组合按 `combination_key` 固定切成 36/12/12 个 train/validation/test key；
+4. 每个 run 使用独立根目录和只增不改的 `attempts/aNNN`；失败 attempt、日志和原始文件不删除，恢复运行只追加新 attempt；
+5. 游戏和 benchmark 都是受管子进程；记录 PID 与 create time，输出各自的 ready/status/stdout/stderr，禁止按进程名全局终止；
+6. 等待所有子进程 ready 后，把窗口标题命中的 HWND 绑定到本次受管 PID；释放共享 barrier 后，在 warmup 内使用异步 `SetWindowPos` 完成 `grid_2x2` 排列，避免阻塞尚未泵送窗口消息的 Pyxel 主线程；
+7. barrier 写入统一的 monotonic 测量起止时间；游戏、benchmark、系统采样器共享同一正式窗口，warmup 数据不进入正式统计；
+8. 正式测量期间持续采集系统指标和四窗口状态，检查窗口存在、可见、未最小化、仍属于预期 PID、客户区有效且两两不重叠；
+9. 每个阶段检查心跳、子进程退出和 GPU 温度，随后执行 cooldown；温度超过计划门槛时把 run 标为 invalid；
+10. 结束或异常时仅终止 PID/create-time 已核对的本次进程树，记录清理动作和 `global_kill_used=false`；
+11. 汇总生命周期、覆盖率、workload 重叠率、窗口样本、温度、artifact SHA-256 及最终状态；
+12. `--resume` 只跳过完整、有效且哈希一致的 attempt，损坏、失败或不完整的 attempt 会被保留并追加下一编号。
 
 #### Resume 规则
 
@@ -1304,30 +1305,98 @@ PENDING
 
 - `status=completed`；
 - `valid=true`；
-- 配置哈希一致；
-- 原始文件存在且通过 schema；
-- 正式采样覆盖率达标。
+- 配置哈希和 plan row 哈希一致；
+- manifest、summary、status 及 summary 声明的原始文件全部存在；
+- 每个 artifact 的 SHA-256 重新计算后匹配；
+- 系统采样与 workload 重叠覆盖率都至少为 0.95。
 
-#### 计划命令
+#### 正式计划与验收命令
 
 ```powershell
-python -m gaugur_lite plan `
-  --experiment configs\experiments\smoke.yaml `
-  --stage all `
-  --out artifacts\plans\smoke.csv
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
 
-python -m gaugur_lite run `
-  --plan artifacts\plans\smoke.csv `
-  --resume
+python -m gaugur_lite plan `
+  --config configs\local.example.yaml `
+  --experiment configs\experiments\formal.yaml `
+  --workloads configs\workloads.yaml `
+  --stage all `
+  --out artifacts\runner\step5\formal-plan.csv
+
+python -m gaugur_lite plan-verify `
+  --plan artifacts\runner\step5\formal-plan.csv
+
+# 仅在 Step 5 正式产物尚不存在的新检出中运行一次。
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step5_acceptance.ps1
 ```
 
-#### 验收
+验收脚本先执行单元测试，生成并复核 720 行正式计划，再运行一个包含四个可见 Pyxel 窗口的额外测试组合，最后用第二次 `--resume` 证明有效数据不会被覆盖。所有正式输出使用独占创建；本仓库已经包含验收产物，**不得再次运行初始脚本覆盖它们**。
 
-- 一次失败不会破坏其他 run；
-- 退出后无本项目遗留 Python 子进程；
-- 重复 `--resume` 不覆盖有效数据；
-- 不使用全局 kill 命令。
-- 四元共置时四个游戏窗口可见且客户区不重叠。
+#### 真实验收结果（2026-08-15）
+
+结论：**通过**。当前实现的 57 个单元测试全部通过；720 行不可变计划通过 7 项结构/哈希复核；四窗口 `a002` 完成并有效；随后 `--resume` 只跳过有效 `a002`，没有创建 `a003`；最终独立验证 31/31 项全部通过。
+
+最终恢复与验证输出：
+
+```text
+[Step 5 recovery] Running unit tests...
+.........................................................                [100%]
+57 passed in 2.20s
+[Step 5 recovery] Read-only verification of the existing immutable plans...
+PASS immutable plans: formal rows=720, quad rows=1
+[Step 5 recovery] Running a002 with four visible Pyxel windows (do not minimize or cover them)...
+PASS recovery: attempt=2, completed=1, elapsed=14.13s
+[Step 5 recovery] Re-running with --resume; no child or window may be created...
+PASS resume: skipped=1, completed=0
+
+[Step 5 finalization] Running independent read-only checks; no game window will be opened...
+PASS independent verification: 31/31 checks, formal plan SHA-256=97f39a41e830ccbe588e37cd8220c144845d8c043082c1ba1730ef2c912cd8c4
+```
+
+正式计划结构：
+
+| 阶段 | 组合方式 | 物理 run 数 | 实测检查 |
+| ---- | -------- | ----------: | -------- |
+| solo | 8 workload × 3 repeats | 24 | PASS |
+| profile | 8 workload × 4 resources × 5 levels × 3 repeats | 480 | PASS |
+| colocation-main | 28 pair + 32 triple，各 3 repeats | 180 | PASS |
+| colocation-extra-test | 12 quad × 3 repeats | 36 | PASS |
+| 合计 | 固定执行顺序 | **720** | PASS |
+
+32 个 triple 从 56 个候选中由 `balanced_subset_v1` 确定性选择：每个 workload 恰出现 12 次，任意 workload pair 共现 3 或 4 次。12 个额外 quad 中每个 workload 恰出现 6 次，任意 pair 共现 2 或 3 次；主组合与额外组合 key 无交集。60 个主组合按 key 固定切分为 train 36、validation 12、test 12，避免同一组合的重复或目标样本跨 split 泄漏。
+
+四窗口 `a002` 的真实质量门：
+
+| 检查项 | 实测结果 | 门槛 | 状态 |
+| ------ | -------- | ---- | ---- |
+| 生命周期 | `PREPARING → STARTING → READY → WARMUP → MEASURING → STOPPING → COOLDOWN → COMPLETED` | 顺序完全一致 | PASS |
+| 四 workload barrier | 4/4 使用共享 barrier 且完成 | 4/4 | PASS |
+| workload 正式覆盖率 | 4/4 均为 1.0 | `>=0.95` | PASS |
+| workload 重叠 | 0.995886；启动 skew 33.2646 ms | `>=0.95` | PASS |
+| 系统采样 | 9 个样本，覆盖率 1.0 | 9 个、`>=0.95` | PASS |
+| GPU 温度 | 最高 49 °C | `<=82 °C` | PASS |
+| 窗口采样 | 9/9 healthy；每次 4 窗口可见、未最小化、PID 匹配且两两不重叠 | 9/9 | PASS |
+| workload stderr | 4/4 为空 | 全部为空 | PASS |
+| artifact 哈希 | 不匹配 0 项 | 0 | PASS |
+| 进程清理 | 遗留受管 PID 0；global kill 未使用 | 0 / `false` | PASS |
+
+主显示器工作区为 1707×1019。布局证据记录四个外窗分别位于 `(8,8,837,493)`、`(861,8,837,493)`、`(8,517,837,493)`、`(861,517,837,493)`；四个 HWND 都绑定到各自受管 PID。`external_occlusion_checked=false` 被显式记录：本阶段能自动证明窗口自身可见、未最小化、位于目标显示器且互不重叠，**不能证明没有其他外部应用窗口覆盖它们**，所以验收时仍要求用户不要遮挡。
+
+失败与恢复记录也原样保留。`a001` 的四个游戏均成功 ready，但旧实现先同步移动窗口、后释放 barrier；Pyxel GUI 线程等待 barrier 时没有泵送窗口消息，造成窗口操作阻塞并最终报告“找不到已 ready 的窗口: Pyxel Jump”。修复后改为“HWND/PID 复核 → 释放 barrier → warmup 内异步排布”，并增加错误 PID 回归测试。`a001` 保持 `failed/valid=false`，`a002` 为 `completed/valid=true`；恢复没有删除失败现场，也没有使用全局 kill。随后一次 `--resume` 在 0.0238 秒内跳过 `a002`，证明不会覆盖或重复启动。
+
+机器可读产物：
+
+- 正式计划：[`formal-plan.csv`](artifacts/runner/step5/formal-plan.csv)，720 行，SHA-256 `97f39a41e830ccbe588e37cd8220c144845d8c043082c1ba1730ef2c912cd8c4`；
+- 组合与切分：[`formal-plan-combinations.json`](artifacts/runner/step5/formal-plan-combinations.json)，SHA-256 `80f76bc4e548eac3e3486cc1f4f61486ec400ea121bb3c5782ce333a16930c12`；
+- 计划 manifest：[`formal-plan-manifest.json`](artifacts/runner/step5/formal-plan-manifest.json)；计划独立复核：[`formal-plan-verification.json`](artifacts/runner/step5/formal-plan-verification.json)；
+- 首次失败报告：[`first-run.json`](artifacts/runner/step5/first-run.json)；恢复成功报告：[`recovery-run.json`](artifacts/runner/step5/recovery-run.json)；安全跳过报告：[`resume-run.json`](artifacts/runner/step5/resume-run.json)；
+- 完整 attempt 历史：[`formal-runs/step5-acceptance/`](artifacts/runner/step5/formal-runs/step5-acceptance)，其中 `a001` 失败现场和 `a002` 成功原始数据均保留；
+- 最终独立复核：[`formal-acceptance-verification.json`](artifacts/runner/step5/formal-acceptance-verification.json)，31/31 项通过，文件 SHA-256 `b5f4695174418b28cbf676b61d4d085ea0c35754d9a494a80bc79ec06585b545`。
+
+该 720 行计划在 Step 5 代码提交前生成，因此 manifest 如实记录 `root_commit=ed5c9df...` 与 `root_dirty_at_generation=true`。它是本阶段不可变的结构与 Runner 验收证据，720 行并未在本阶段执行；用户上传 Step 5 提交后，Step 6 会从干净 commit 生成新的版本化采集计划，再开始独占基线，避免把 dirty worktree 的 provenance 当作最终实验环境。
+
+本阶段证明的是“正式组合可以确定性展开、四个真实游戏能由 Windows Runner 同步启动/测量/排布/停止、失败 attempt 可审计且 resume 安全”。它没有执行 720 个正式 run，也没有生成 solo retention、敏感度/强度特征或模型结果；这些仍属于 Step 6 及以后阶段。
 
 ### Step 6：采集独占基线
 
@@ -1978,7 +2047,7 @@ Run 进入模型前必须满足：
 - [X] 八个 MIT 许可小游戏及上游校验记录；
 - [X] Pyxel 适配器与八个固定 controller；
 - [X] JSONL 遥测；
-- [ ] 完整 Windows Runner（Step 5 多进程共置、窗口排列与恢复）；
+- [X] 完整 Windows Runner（Step 5 多进程共置、窗口排列与恢复）；
 - [X] 三次独占重复稳定。
 
 ### M2：GAugur 特征

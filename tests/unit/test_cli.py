@@ -18,6 +18,8 @@ def test_help_and_version() -> None:
     assert "doctor" in help_result.stdout
     assert "benchmark" in help_result.stdout
     assert "workload" in help_result.stdout
+    assert "plan" in help_result.stdout
+    assert "run" in help_result.stdout
     assert "--dry-run" in help_result.stdout
     assert version_result.exit_code == 0
     assert version_result.stdout.strip() == "0.1.0"

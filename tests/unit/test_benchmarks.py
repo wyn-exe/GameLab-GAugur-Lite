@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 import warnings
 from pathlib import Path
 
@@ -58,6 +59,40 @@ def test_worker_zero_pressure_writes_ready_and_completed_status(tmp_path: Path) 
     assert result["active_fraction"] == 0.0
     assert json.loads(ready.read_text(encoding="utf-8"))["status"] == "ready"
     assert json.loads(status.read_text(encoding="utf-8"))["status"] == "completed"
+
+
+def test_worker_waits_for_shared_barrier_and_separates_warmup(tmp_path: Path) -> None:
+    ready = tmp_path / "ready.json"
+    status = tmp_path / "status.json"
+    barrier = tmp_path / "barrier.json"
+    start_ns = time.perf_counter_ns() + 10_000_000
+    end_ns = start_ns + 60_000_000
+    barrier.write_text(
+        json.dumps(
+            {
+                "status": "released",
+                "measurement_start_monotonic_ns": start_ns,
+                "measurement_end_monotonic_ns": end_ns,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_benchmark_worker(
+        config=BenchmarkWorkerConfig(
+            resource="cpu_compute",
+            pressure=0.0,
+            runtime_s=0.06,
+            warmup_s=0.01,
+            barrier_file=barrier,
+        ),
+        ready_file=ready,
+        status_file=status,
+    )
+
+    assert result["barrier_used"] is True
+    assert result["warmup_elapsed_s"] > 0
+    assert 0.04 <= float(result["elapsed_s"]) <= 0.15
 
 
 def test_worker_config_rejects_invalid_pressure_and_resource() -> None:

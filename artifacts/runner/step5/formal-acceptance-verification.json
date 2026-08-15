@@ -1,0 +1,353 @@
+{
+  "attempt_directory": "artifacts/runner/step5/formal-runs/step5-acceptance/step5-acceptance__extra__pyxel_bubbles+pyxel_jump+pyxel_shooter+pyxel_snake__r01/attempts/a002",
+  "check_count": 31,
+  "checks": [
+    {
+      "actual": "passed",
+      "expected": "passed",
+      "name": "formal_plan_verify",
+      "passed": true
+    },
+    {
+      "actual": 720,
+      "expected": 720,
+      "name": "formal_plan_row_count",
+      "passed": true
+    },
+    {
+      "actual": {
+        "colocation-extra-test": 36,
+        "colocation-main": 180,
+        "profile": 480,
+        "solo": 24
+      },
+      "expected": {
+        "colocation-extra-test": 36,
+        "colocation-main": 180,
+        "profile": 480,
+        "solo": 24
+      },
+      "name": "formal_stage_counts",
+      "passed": true
+    },
+    {
+      "actual": [
+        28,
+        32,
+        60
+      ],
+      "expected": [
+        28,
+        32,
+        60
+      ],
+      "name": "main_combinations",
+      "passed": true
+    },
+    {
+      "actual": {
+        "daylight": 12,
+        "mega_wing": 12,
+        "pyxel_bubbles": 12,
+        "pyxel_jump": 12,
+        "pyxel_platformer": 12,
+        "pyxel_shooter": 12,
+        "pyxel_snake": 12,
+        "space_rescue": 12
+      },
+      "expected": "each workload occurs 12 times",
+      "name": "triple_balance",
+      "passed": true
+    },
+    {
+      "actual": {
+        "test": 12,
+        "train": 36,
+        "validation": 12
+      },
+      "expected": {
+        "test": 12,
+        "train": 36,
+        "validation": 12
+      },
+      "name": "main_split_counts",
+      "passed": true
+    },
+    {
+      "actual": 12,
+      "expected": 12,
+      "name": "extra_combinations",
+      "passed": true
+    },
+    {
+      "actual": {
+        "pair_count_values": [
+          2,
+          3
+        ],
+        "workloads": {
+          "daylight": 6,
+          "mega_wing": 6,
+          "pyxel_bubbles": 6,
+          "pyxel_jump": 6,
+          "pyxel_platformer": 6,
+          "pyxel_shooter": 6,
+          "pyxel_snake": 6,
+          "space_rescue": 6
+        }
+      },
+      "expected": "workload=6 and pair in {2,3}",
+      "name": "extra_balance",
+      "passed": true
+    },
+    {
+      "actual": {
+        "extra_keys_unique": true,
+        "main_extra_disjoint": true,
+        "main_keys_unique": true,
+        "split_complete": true
+      },
+      "expected": true,
+      "name": "combination_disjoint",
+      "passed": true
+    },
+    {
+      "actual": "passed",
+      "expected": "passed",
+      "name": "quad_plan_verify",
+      "passed": true
+    },
+    {
+      "actual": 1,
+      "expected": 1,
+      "name": "quad_plan_row_count",
+      "passed": true
+    },
+    {
+      "actual": {
+        "attempt": 1,
+        "attempt_status": "failed",
+        "directory": "artifacts/runner/step5/formal-runs/step5-acceptance/step5-acceptance__extra__pyxel_bubbles+pyxel_jump+pyxel_shooter+pyxel_snake__r01/attempts/a001",
+        "failed_or_invalid": 1,
+        "report_status": "failed"
+      },
+      "expected": "failed a001 preserved without global kill",
+      "name": "failed_a001_preserved",
+      "passed": true
+    },
+    {
+      "actual": {
+        "attempt": 2,
+        "completed": 1,
+        "failed_or_invalid": 0,
+        "status": "passed"
+      },
+      "expected": {
+        "attempt": 2,
+        "completed": 1,
+        "failed_or_invalid": 0,
+        "status": "passed"
+      },
+      "name": "recovery_run_completed",
+      "passed": true
+    },
+    {
+      "actual": {
+        "completed": 0,
+        "skipped": 1,
+        "status": "passed"
+      },
+      "expected": {
+        "completed": 0,
+        "skipped": 1,
+        "status": "passed"
+      },
+      "name": "resume_skipped_without_rerun",
+      "passed": true
+    },
+    {
+      "actual": 2,
+      "expected": 2,
+      "name": "attempt_history_after_resume",
+      "passed": true
+    },
+    {
+      "actual": {
+        "failure_json_exists": true,
+        "statuses": [
+          "failed",
+          "completed"
+        ]
+      },
+      "expected": {
+        "failure_json_exists": true,
+        "statuses": [
+          "failed",
+          "completed"
+        ]
+      },
+      "name": "failed_attempt_artifact_preserved",
+      "passed": true
+    },
+    {
+      "actual": [
+        "PREPARING",
+        "STARTING",
+        "READY",
+        "WARMUP",
+        "MEASURING",
+        "STOPPING",
+        "COOLDOWN",
+        "COMPLETED"
+      ],
+      "expected": [
+        "PREPARING",
+        "STARTING",
+        "READY",
+        "WARMUP",
+        "MEASURING",
+        "STOPPING",
+        "COOLDOWN",
+        "COMPLETED"
+      ],
+      "name": "lifecycle_order",
+      "passed": true
+    },
+    {
+      "actual": {
+        "status": "completed",
+        "valid": true
+      },
+      "expected": {
+        "status": "completed",
+        "valid": true
+      },
+      "name": "final_status",
+      "passed": true
+    },
+    {
+      "actual": 4,
+      "expected": 4,
+      "name": "four_workloads",
+      "passed": true
+    },
+    {
+      "actual": [
+        {
+          "barrier": true,
+          "coverage": 1.0,
+          "id": "pyxel_bubbles",
+          "status": "completed"
+        },
+        {
+          "barrier": true,
+          "coverage": 1.0,
+          "id": "pyxel_jump",
+          "status": "completed"
+        },
+        {
+          "barrier": true,
+          "coverage": 1.0,
+          "id": "pyxel_shooter",
+          "status": "completed"
+        },
+        {
+          "barrier": true,
+          "coverage": 1.0,
+          "id": "pyxel_snake",
+          "status": "completed"
+        }
+      ],
+      "expected": "all barrier=true, coverage>=0.95, completed",
+      "name": "workload_barrier_and_coverage",
+      "passed": true
+    },
+    {
+      "actual": {
+        "ratio": 0.9958863375,
+        "start_skew_ms": 33.2646
+      },
+      "expected": "ratio>=0.95",
+      "name": "workload_overlap",
+      "passed": true
+    },
+    {
+      "actual": 9,
+      "expected": 9,
+      "name": "system_samples",
+      "passed": true
+    },
+    {
+      "actual": 1.0,
+      "expected": ">=0.95",
+      "name": "system_coverage",
+      "passed": true
+    },
+    {
+      "actual": {
+        "limit": 82.0,
+        "max": 49.0
+      },
+      "expected": "max<=limit",
+      "name": "temperature_gate",
+      "passed": true
+    },
+    {
+      "actual": 9,
+      "expected": 9,
+      "name": "window_sample_count",
+      "passed": true
+    },
+    {
+      "actual": {
+        "healthy": 9,
+        "samples": 9
+      },
+      "expected": {
+        "healthy": 9,
+        "samples": 9
+      },
+      "name": "four_visible_nonoverlapping_windows",
+      "passed": true
+    },
+    {
+      "actual": false,
+      "expected": false,
+      "name": "external_occlusion_limitation_recorded",
+      "passed": true
+    },
+    {
+      "actual": [],
+      "expected": [],
+      "name": "workload_stderr_empty",
+      "passed": true
+    },
+    {
+      "actual": [],
+      "expected": [],
+      "name": "artifact_sha256",
+      "passed": true
+    },
+    {
+      "actual": [],
+      "expected": [],
+      "name": "no_managed_child_alive",
+      "passed": true
+    },
+    {
+      "actual": {
+        "execution_report": false,
+        "first_report": false,
+        "summary": false
+      },
+      "expected": false,
+      "name": "no_global_kill",
+      "passed": true
+    }
+  ],
+  "formal_plan_sha256": "97f39a41e830ccbe588e37cd8220c144845d8c043082c1ba1730ef2c912cd8c4",
+  "passed_count": 31,
+  "quad_plan_sha256": "9f29fdf11b8b637e416f9016ed53d6f70ddd274db012d4cf4d293106cd047b21",
+  "schema_version": 1,
+  "status": "passed"
+}

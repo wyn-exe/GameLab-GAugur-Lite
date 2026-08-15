@@ -1,0 +1,35 @@
+schema_version: 1
+name: "formal-v1"
+workload_ids:
+  - "pyxel_jump"
+  - "pyxel_bubbles"
+  - "pyxel_snake"
+  - "pyxel_shooter"
+  - "pyxel_platformer"
+  - "daylight"
+  - "mega_wing"
+  - "space_rescue"
+resources: ["cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"]
+pressure_levels: [0.0, 0.25, 0.5, 0.75, 1.0]
+repeats: 3
+randomize_order: true
+
+main_combinations:
+  pairs: {mode: "all", expected_count: 28}
+  triples:
+    mode: "balanced_subset_v1"
+    expected_count: 32
+    seed: 20260811
+
+extra_test:
+  size: 4
+  mode: "balanced_binary_design_v1"
+  expected_count: 12
+  trainable: false
+
+split:
+  group_by: "combination_key"
+  seed: 20260811
+  train_groups: 36
+  validation_groups: 12
+  test_groups: 12

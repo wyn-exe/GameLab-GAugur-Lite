@@ -23,6 +23,7 @@ def _empty(title: str, *, supported: bool) -> dict[str, Any]:
         "title": title,
         "found": False,
         "hwnd": None,
+        "process_pid": None,
         "visible": None,
         "minimized": None,
         "foreground": None,
@@ -44,6 +45,11 @@ def capture_window(title: str) -> dict[str, Any]:
     user32.FindWindowW.argtypes = (wintypes.LPCWSTR, wintypes.LPCWSTR)
     user32.FindWindowW.restype = wintypes.HWND
     user32.GetForegroundWindow.restype = wintypes.HWND
+    user32.GetWindowThreadProcessId.argtypes = (
+        wintypes.HWND,
+        ctypes.POINTER(wintypes.DWORD),
+    )
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
     user32.MonitorFromWindow.argtypes = (wintypes.HWND, wintypes.DWORD)
     user32.MonitorFromWindow.restype = wintypes.HANDLE
     hwnd = int(user32.FindWindowW(None, title) or 0)
@@ -58,12 +64,15 @@ def capture_window(title: str) -> dict[str, Any]:
         dpi = int(user32.GetDpiForWindow(hwnd))
     except AttributeError:
         dpi = None
+    process_pid = wintypes.DWORD()
+    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(process_pid))
     monitor = int(user32.MonitorFromWindow(hwnd, 2) or 0)
     return {
         "supported": True,
         "title": title,
         "found": True,
         "hwnd": hwnd,
+        "process_pid": int(process_pid.value) or None,
         "visible": bool(user32.IsWindowVisible(hwnd)),
         "minimized": bool(user32.IsIconic(hwnd)),
         "foreground": int(user32.GetForegroundWindow() or 0) == hwnd,

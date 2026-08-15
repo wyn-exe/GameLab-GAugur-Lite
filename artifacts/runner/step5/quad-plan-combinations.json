@@ -1,0 +1,77 @@
+{
+  "checks": {
+    "extra_keys_unique": true,
+    "main_extra_disjoint": true,
+    "main_keys_unique": true,
+    "split_complete": true
+  },
+  "config_sha256": "706b6a952ad224f456ca866d66755775f93597a4b0cd5458e3c7169a79e580ea",
+  "experiment_id": "step5-acceptance",
+  "extra_test": {
+    "algorithm": "all",
+    "combinations": [
+      "pyxel_bubbles+pyxel_jump+pyxel_shooter+pyxel_snake"
+    ],
+    "count": 1,
+    "pair_cooccurrence": {
+      "pyxel_bubbles+pyxel_jump": 1,
+      "pyxel_bubbles+pyxel_shooter": 1,
+      "pyxel_bubbles+pyxel_snake": 1,
+      "pyxel_jump+pyxel_shooter": 1,
+      "pyxel_jump+pyxel_snake": 1,
+      "pyxel_shooter+pyxel_snake": 1
+    },
+    "trainable": false,
+    "workload_occurrences": {
+      "pyxel_bubbles": 1,
+      "pyxel_jump": 1,
+      "pyxel_shooter": 1,
+      "pyxel_snake": 1
+    }
+  },
+  "main": {
+    "pair_count": 6,
+    "pairs": [
+      "pyxel_bubbles+pyxel_jump",
+      "pyxel_bubbles+pyxel_shooter",
+      "pyxel_bubbles+pyxel_snake",
+      "pyxel_jump+pyxel_shooter",
+      "pyxel_jump+pyxel_snake",
+      "pyxel_shooter+pyxel_snake"
+    ],
+    "split": {
+      "algorithm": "sha256_group_v1",
+      "assignments": {
+        "pyxel_bubbles+pyxel_jump": "train",
+        "pyxel_bubbles+pyxel_jump+pyxel_shooter": "test",
+        "pyxel_bubbles+pyxel_jump+pyxel_snake": "train",
+        "pyxel_bubbles+pyxel_shooter": "validation",
+        "pyxel_bubbles+pyxel_shooter+pyxel_snake": "train",
+        "pyxel_bubbles+pyxel_snake": "test",
+        "pyxel_jump+pyxel_shooter": "train",
+        "pyxel_jump+pyxel_shooter+pyxel_snake": "train",
+        "pyxel_jump+pyxel_snake": "validation",
+        "pyxel_shooter+pyxel_snake": "train"
+      },
+      "counts": {
+        "test": 2,
+        "train": 6,
+        "validation": 2
+      },
+      "seed": 20260811
+    },
+    "total_count": 10,
+    "triple_count": 4,
+    "triple_selection": {
+      "algorithm": "all",
+      "selected_count": 4
+    },
+    "triples": [
+      "pyxel_bubbles+pyxel_jump+pyxel_shooter",
+      "pyxel_bubbles+pyxel_jump+pyxel_snake",
+      "pyxel_bubbles+pyxel_shooter+pyxel_snake",
+      "pyxel_jump+pyxel_shooter+pyxel_snake"
+    ]
+  },
+  "schema_version": 1
+}
