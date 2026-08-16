@@ -10,6 +10,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+from .benchmarks.calibration import CALIBRATION_TIMING_SEMANTICS
 from .config import config_sha256, stable_json_dumps
 from .runner.plan import load_plan_rows, verify_plan
 from .runner.runner import ParsedPlanRow, inspect_resume
@@ -510,6 +511,14 @@ def _load_standalone_benchmarks(
     if actual_caps != pressure_caps:
         raise ProfileError(
             f"calibration pressure_caps 不兼容: {actual_caps} != {pressure_caps}"
+        )
+    if (
+        pressure_caps != _IDENTITY_PRESSURE_CAPS
+        and request.get("timing_semantics") != CALIBRATION_TIMING_SEMANTICS
+    ):
+        raise ProfileError(
+            "Safety-v2 calibration timing_semantics 不兼容: "
+            f"{request.get('timing_semantics')} != {CALIBRATION_TIMING_SEMANTICS}"
         )
     grouped: dict[tuple[str, float], list[dict[str, Any]]] = defaultdict(list)
     for run in payload.get("runs", []):

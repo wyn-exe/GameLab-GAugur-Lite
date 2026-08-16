@@ -18,7 +18,7 @@ else {
 $plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-safety-v2-s30.csv'
 $baselinePlan = Join-Path $repoRoot 'artifacts\plans\formal-v1.csv'
 $solo = Join-Path $repoRoot 'data\interim\formal-v1\solo-baselines.json'
-$calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration.json'
+$calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-warmup-v1.json'
 $artifactRoot = Join-Path $repoRoot 'artifacts\profiles\step7\safety-v2'
 $invocationRoot = Join-Path $artifactRoot 'invocations'
 $plotRoot = Join-Path $artifactRoot 'plots'

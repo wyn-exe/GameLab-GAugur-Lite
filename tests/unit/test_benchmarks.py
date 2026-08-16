@@ -9,7 +9,9 @@ from pathlib import Path
 import pytest
 
 from gaugur_lite.benchmarks.calibration import (
+    CALIBRATION_TIMING_SEMANTICS,
     CalibrationRequest,
+    _build_worker_command,
     summarize_calibration_records,
     verify_calibration,
 )
@@ -133,6 +135,23 @@ def test_request_rejects_existing_output_and_bad_levels(tmp_path: Path) -> None:
         invalid.validate(repo_root)
 
 
+def test_calibration_worker_excludes_warmup_from_measurement(tmp_path: Path) -> None:
+    repo_root = _make_repo_root(tmp_path)
+    request = _request(repo_root)
+
+    command = _build_worker_command(
+        request=request,
+        resource="cpu_compute",
+        pressure_applied=0.25,
+        ready_file=tmp_path / "ready.json",
+        worker_status=tmp_path / "status.json",
+    )
+
+    assert command[command.index("--warmup-s") + 1] == "1.0"
+    assert command[command.index("--runtime-s") + 1] == "2.5"
+    assert request.public_plan(repo_root)["timing_semantics"] == CALIBRATION_TIMING_SEMANTICS
+
+
 def test_summary_builds_monotonic_requested_to_observed_curve(tmp_path: Path) -> None:
     repo_root = _make_repo_root(tmp_path)
     request = _request(repo_root)
@@ -168,6 +187,7 @@ def test_summary_builds_monotonic_requested_to_observed_curve(tmp_path: Path) ->
 
     assert result["status"] == "passed"
     assert result["cell_count"] == 12
+    assert result["request"]["timing_semantics"] == CALIBRATION_TIMING_SEMANTICS
     assert all(item["checks"]["observed_pressure_monotonic"] for item in result["resources"])
     assert result["resources"][0]["points"][1]["observed_pressure_mean"] == pytest.approx(0.5)
 

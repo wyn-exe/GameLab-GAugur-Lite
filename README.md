@@ -1743,8 +1743,8 @@ Step 4 的旧 GPU Compute 吞吐分母对应实际压力 `0/0.25/0.5/0.75/1`，�
 Safety-v2 分四个提交检查点执行：
 
 1. **实现与封存（已完成，commit `5ed80cf`）。** 提交代码、README、旧 s30 raw/acceptance 和 `safety-v2-amendment.json`；不得继续旧 s30。
-2. **当前检查点：计划冻结（已生成，待提交）。** 从干净提交运行准备脚本，生成唯一 720-row Safety-v2 计划、验证 JSON 和逐行兼容合同。
-3. **校准检查点。** 从不高于 50°C 的冷机状态运行约 8 分钟校准，上传 60-cell 原始数据、图和验证结果。
+2. **计划冻结（已完成，commit `0631bc1`）。** 从干净提交运行准备脚本，生成唯一 720-row Safety-v2 计划、验证 JSON 和逐行兼容合同。
+3. **当前检查点：校准。** 首次 60-cell 候选已完成但因一个吞吐 CV 门及旧 warmup 边界被明确拒绝；原始证据完整保留。修复先提交，之后才从不高于 50°C 的冷机状态生成不覆盖旧文件的正式候选。
 4. **正式 profile 检查点。** 先做无窗口预检，再用一个命令自动顺序完成全部剩余批次；脚本自行批前冷却，异常立即停机。
 
 计划检查点的完整 PowerShell 命令如下；已经真实运行，保留用于只读复核和新环境重建：
@@ -1836,7 +1836,67 @@ GPU applied levels=0,0.0625,0.125,0.1875,0.25
 
 独立计划验证 7/7 项通过：计划与组合 SHA-256、720 行计数、连续 execution index、720 个唯一 run ID、逐行 SHA-256 和组合/split 完整性全部一致。兼容合同逐行比较新旧计划的 23 个归一化实验字段，证明 720 个 run ID、workload、组合、split、resource、`pressure_requested`、repeat、seed、游戏哈希和采样间隔没有改变；四个 stage 仍为 `24/480/180/36`，新旧 raw 目录完全不重叠。根目录 [`.gitattributes`](.gitattributes) 将 `artifacts/`、`data/raw/` 和 `data/interim/` 标为不做文本换行转换，避免 Windows `core.autocrlf=true` 在重新检出时改变哈希绑定的 CSV/JSON/JSONL 字节。计划生成及这些验证都没有启动 workload 或 benchmark。
 
-本检查点只完成正式计划冻结；60-cell Safety-v2 新校准和 480 个正式 profile 尚未运行，不能预先写成完成。提交并上传上述五个计划产物及合同脚本后，才进入约 8 分钟的校准检查点。
+计划冻结检查点已经完成；480 个正式 profile 尚未运行，不能预先写成完成。
+
+#### Safety-v2 校准候选 001：真实拒绝记录与 warmup 边界修复
+
+首次校准在受保护的提交 `0631bc15bd196d2a5d0972388188075411c85afc` 上从 49°C 外部检查、48°C 脚本内检查开始，顺序完成 60 个 cell。压力作用校准本身全部通过：
+
+```text
+[Safety-v2 calibration] Start GPU temperature: 48 C
+[Safety-v2 calibration] Running 60 capped calibration cells (about 8 minutes)...
+status=passed, cells=60/60
+cpu_compute max abs error=0.016749
+memory_bandwidth max abs error=0.042275
+gpu_compute max abs error=0.001063
+gpu_memory max abs error=0.000000
+[Safety-v2 calibration] Verifying JSONL hash and quality gates...
+[Safety-v2 calibration] Auditing baseline and capped denominator compatibility...
+PROFILE_ERROR: ProfileError: 独立 benchmark 吞吐 CV 超限: cpu_compute/0.25=9.395%
+```
+
+这不是温度失败。独立脚本 [`audit_step7_rejected_calibration.py`](scripts/audit_step7_rejected_calibration.py) 从校准 JSON、420 条原始 telemetry 和 60 份 worker status 重算得到：GPU 温度为 47–68°C，超过 80°C 的样本为 0，热降频样本为 0。16 个非零吞吐分母中只有 `cpu_compute/0.25` 超过预先固定的 5% CV 门；三次吞吐为 `21,668,668.45 / 18,522,395.98 / 18,454,253.07 ops/s`，样本 CV 为 `9.3946%`。因此不能仅凭 60 个压力作用质量门通过就把该文件用于正式 profile。
+
+进一步代码与 worker status 审计发现，候选请求虽声明 `warmup_s=1`，60 个 worker 报告的最大 `warmup_elapsed_s` 只有约 `0.0000061` 秒、最大 `warmup_operations=0`：旧校准器只在父进程等待 1 秒，没有把 `--warmup-s` 传给 worker，线程池/算子冷启动被计入了吞吐分母。这能够解释首次 CPU 低占空比单元偏高，且使校准分母与正式 runner 的“warmup 不计入 measurement”语义不一致。
+
+处理原则是保留门槛、修复测量边界，而不是看到结果后把 5% 放宽到 10%。修复后：
+
+- 校准 worker 显式接收 `--warmup-s 1.0`，warmup 操作与 measurement 的 `operations/elapsed_s` 完全分离；
+- 校准 JSON 和 dry-run 记录 `timing_semantics=worker_warmup_excluded_v1`；
+- Safety-v2 输入审计拒绝没有该标记的 capped calibration，历史 identity-cap Step 4 文件仍可只读复核；
+- 新正式候选写到 `formal-calibration-warmup-v1*`，不会覆盖候选 001；
+- 候选 001 永久标为 `included_in_profile_denominators=false`、`included_in_model_training=false`。
+
+候选 001 的冻结哈希如下：
+
+| 被拒绝的校准证据 | SHA-256 |
+| --- | --- |
+| `formal-calibration.json` | `492f7a91c2c3c8fee0f335155dad9cfaa6f7bc9012b3c3cbde130437f7e022e3` |
+| `formal-calibration-metrics.jsonl` | `ee5bf1c1f20b45345211df5adca04a64886be9f99b05b8f608f94dcb3251995b` |
+| `formal-calibration-verification.json` | `2c7a576d60c9a6635c40608810434e98d642f84ee37a62985403f743f31af979` |
+| `formal-calibration-status.json` | `4b3ba84444d78d5cf54ef3150bd10a363cecc9135503ac57196db3374778953e` |
+| `pressure-calibration.png` | `6ba56e75b2f31344142e4f37e20cdc9adee81545f0c8aa57ae383a40d62fbe33` |
+| `rejected-candidate-001-audit.json` | `37b590475a99955a6149aad996b7c197a74a3160fcbb7b3cd0ec687817a363c0` |
+
+修复后的短验收没有启动 benchmark 或 Pyxel workload：
+
+```text
+unit tests:
+........................................................................ [ 85%]
+............                                                             [100%]
+84 passed in 5.65s
+
+rejected candidate recomputation:
+REJECTED calibration candidate: max temperature=68 C, max CV=9.3946%,
+failed checks=all_nonzero_throughput_cv_at_most_5_pct,worker_warmup_excluded_from_measurement
+
+corrected calibration dry-run:
+cells=60, timing_semantics=worker_warmup_excluded_v1
+GPU Compute applied levels=0,0.0625,0.125,0.1875,0.25
+output=formal-calibration-warmup-v1.json（dry-run，未创建文件）
+```
+
+截至本检查点，修复后的 `formal-calibration-warmup-v1.json` 尚未生成，正式 profile 仍为 0/480；提交并上传本节的代码、被拒绝证据和 README 后，才允许再运行一次约 8 分钟的新校准。
 
 ### Step 8：采集真实共置组合
 

@@ -1,0 +1,277 @@
+{
+  "candidate": "artifacts/calibration/step7-safety-v2/formal-calibration.json",
+  "candidate_guarded_head": "0631bc15bd196d2a5d0972388188075411c85afc",
+  "candidate_sha256": "492f7a91c2c3c8fee0f335155dad9cfaa6f7bc9012b3c3cbde130437f7e022e3",
+  "checks": [
+    {
+      "name": "calibration_pressure_quality_gates",
+      "passed": true
+    },
+    {
+      "name": "cell_count_60",
+      "passed": true
+    },
+    {
+      "actual": "ee5bf1c1f20b45345211df5adca04a64886be9f99b05b8f608f94dcb3251995b",
+      "expected": "ee5bf1c1f20b45345211df5adca04a64886be9f99b05b8f608f94dcb3251995b",
+      "name": "metrics_sha256",
+      "passed": true
+    },
+    {
+      "actual_max_c": 68.0,
+      "expected_max_c": 80.0,
+      "name": "gpu_temperature_at_most_80_c",
+      "passed": true
+    },
+    {
+      "actual_max_pct": 9.394553118062769,
+      "expected_max_pct": 5.0,
+      "name": "all_nonzero_throughput_cv_at_most_5_pct",
+      "passed": false
+    },
+    {
+      "actual": null,
+      "expected": "worker_warmup_excluded_v1",
+      "name": "worker_warmup_excluded_from_measurement",
+      "passed": false
+    }
+  ],
+  "decision": {
+    "cv_threshold_pct_unchanged": 5.0,
+    "included_in_model_training": false,
+    "included_in_profile_denominators": false,
+    "replacement_timing_semantics": "worker_warmup_excluded_v1",
+    "rerun_required": true
+  },
+  "gpu_temperature": {
+    "maximum_c": 68.0,
+    "minimum_c": 47.0,
+    "sample_count": 420,
+    "samples_above_80_c": 0,
+    "thermal_slowdown_samples": 0
+  },
+  "metrics": "artifacts/calibration/step7-safety-v2/formal-calibration-metrics.jsonl",
+  "metrics_sha256": "ee5bf1c1f20b45345211df5adca04a64886be9f99b05b8f608f94dcb3251995b",
+  "pressure_quality_status": "passed",
+  "schema_version": 1,
+  "standalone_throughput": {
+    "cells": [
+      {
+        "passed_5_pct_gate": false,
+        "pressure_requested": 0.25,
+        "resource": "cpu_compute",
+        "throughput_cv_pct": 9.394553118062769,
+        "throughput_mean_ops_per_s": 19548439.166124202,
+        "throughputs_ops_per_s": [
+          21668668.446491927,
+          18522395.98164381,
+          18454253.07023687
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.5,
+        "resource": "cpu_compute",
+        "throughput_cv_pct": 3.4755380404574017,
+        "throughput_mean_ops_per_s": 35206531.85151521,
+        "throughputs_ops_per_s": [
+          35230730.2784934,
+          33970995.700898,
+          36417869.57515425
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.75,
+        "resource": "cpu_compute",
+        "throughput_cv_pct": 4.886220865251824,
+        "throughput_mean_ops_per_s": 78638763.9293115,
+        "throughputs_ops_per_s": [
+          74446925.63798164,
+          81994006.7122471,
+          79475359.43770576
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 1.0,
+        "resource": "cpu_compute",
+        "throughput_cv_pct": 1.4817315343803248,
+        "throughput_mean_ops_per_s": 229902100.66828275,
+        "throughputs_ops_per_s": [
+          231869992.6270744,
+          231867732.73952287,
+          225968576.638251
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.25,
+        "resource": "gpu_compute",
+        "throughput_cv_pct": 2.0067332082252904,
+        "throughput_mean_ops_per_s": 151963010.96446478,
+        "throughputs_ops_per_s": [
+          149861233.03580624,
+          155460591.54479113,
+          150567208.31279698
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.5,
+        "resource": "gpu_compute",
+        "throughput_cv_pct": 4.592059366973989,
+        "throughput_mean_ops_per_s": 298146025.09352887,
+        "throughputs_ops_per_s": [
+          311734280.4437352,
+          284354459.9311127,
+          298349334.9057387
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.75,
+        "resource": "gpu_compute",
+        "throughput_cv_pct": 1.5228869476194178,
+        "throughput_mean_ops_per_s": 496334678.3326729,
+        "throughputs_ops_per_s": [
+          493205110.9089048,
+          504955454.6846416,
+          490843469.40447223
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 1.0,
+        "resource": "gpu_compute",
+        "throughput_cv_pct": 2.2291735936754264,
+        "throughput_mean_ops_per_s": 664330957.5881779,
+        "throughputs_ops_per_s": [
+          648280381.8801764,
+          667248073.6031513,
+          677464417.281206
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.25,
+        "resource": "gpu_memory",
+        "throughput_cv_pct": 0.5822889529770191,
+        "throughput_mean_ops_per_s": 53470028003.00506,
+        "throughputs_ops_per_s": [
+          53113146388.398094,
+          53610845697.74636,
+          53686091922.87071
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.5,
+        "resource": "gpu_memory",
+        "throughput_cv_pct": 0.5856402809410582,
+        "throughput_mean_ops_per_s": 110135950993.83746,
+        "throughputs_ops_per_s": [
+          109517086773.52473,
+          110086522485.72089,
+          110804243722.26678
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.75,
+        "resource": "gpu_memory",
+        "throughput_cv_pct": 0.3403958799797048,
+        "throughput_mean_ops_per_s": 166421104685.98953,
+        "throughputs_ops_per_s": [
+          166209583229.39203,
+          167062920995.87173,
+          165990809832.70486
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 1.0,
+        "resource": "gpu_memory",
+        "throughput_cv_pct": 0.5224024117870155,
+        "throughput_mean_ops_per_s": 214982478382.58084,
+        "throughputs_ops_per_s": [
+          215126048329.34216,
+          213794523538.3541,
+          216026863280.0463
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.25,
+        "resource": "memory_bandwidth",
+        "throughput_cv_pct": 1.625179840937168,
+        "throughput_mean_ops_per_s": 17608643445.36145,
+        "throughputs_ops_per_s": [
+          17322548805.29433,
+          17608488541.309452,
+          17894892989.480564
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.5,
+        "resource": "memory_bandwidth",
+        "throughput_cv_pct": 0.8774333502740086,
+        "throughput_mean_ops_per_s": 37697634825.24469,
+        "throughputs_ops_per_s": [
+          37507490674.18198,
+          37505838000.21999,
+          38079575801.33211
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.75,
+        "resource": "memory_bandwidth",
+        "throughput_cv_pct": 0.7500337164947148,
+        "throughput_mean_ops_per_s": 55163829764.10325,
+        "throughputs_ops_per_s": [
+          54686075526.78021,
+          55402590911.39902,
+          55402822854.13054
+        ]
+      },
+      {
+        "passed_5_pct_gate": true,
+        "pressure_requested": 1.0,
+        "resource": "memory_bandwidth",
+        "throughput_cv_pct": 1.1453656289216367,
+        "throughput_mean_ops_per_s": 71457303061.03906,
+        "throughputs_ops_per_s": [
+          70654592873.0515,
+          72290628516.8718,
+          71426687793.19388
+        ]
+      }
+    ],
+    "failed_cells": [
+      {
+        "passed_5_pct_gate": false,
+        "pressure_requested": 0.25,
+        "resource": "cpu_compute",
+        "throughput_cv_pct": 9.394553118062769,
+        "throughput_mean_ops_per_s": 19548439.166124202,
+        "throughputs_ops_per_s": [
+          21668668.446491927,
+          18522395.98164381,
+          18454253.07023687
+        ]
+      }
+    ],
+    "maximum_cv_pct": 9.394553118062769,
+    "nonzero_cell_count": 16,
+    "threshold_pct": 5.0
+  },
+  "status": "rejected",
+  "worker_warmup_evidence": {
+    "maximum_reported_warmup_elapsed_s": 6.100002792663872e-06,
+    "maximum_reported_warmup_operations": 0,
+    "requested_warmup_s": 1.0,
+    "timing_semantics": null
+  }
+}

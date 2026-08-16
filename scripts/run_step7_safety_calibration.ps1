@@ -16,9 +16,9 @@ $plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-safety-v2-s30.csv'
 $baselinePlan = Join-Path $repoRoot 'artifacts\plans\formal-v1.csv'
 $solo = Join-Path $repoRoot 'data\interim\formal-v1\solo-baselines.json'
 $root = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2'
-$calibration = Join-Path $root 'formal-calibration.json'
-$verification = Join-Path $root 'formal-calibration-verification.json'
-$plot = Join-Path $root 'pressure-calibration.png'
+$calibration = Join-Path $root 'formal-calibration-warmup-v1.json'
+$verification = Join-Path $root 'formal-calibration-warmup-v1-verification.json'
+$plot = Join-Path $root 'pressure-calibration-warmup-v1.png'
 
 Push-Location $repoRoot
 try {

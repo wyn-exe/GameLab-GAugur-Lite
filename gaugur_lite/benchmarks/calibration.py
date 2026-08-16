@@ -23,6 +23,7 @@ from ..metrics.writer import JsonlWriter, write_json_atomic
 from .engine import BENCHMARK_RESOURCES, BenchmarkResource
 
 CALIBRATION_SCHEMA_VERSION = 1
+CALIBRATION_TIMING_SEMANTICS = "worker_warmup_excluded_v1"
 
 
 @dataclass(frozen=True)
@@ -103,6 +104,7 @@ class CalibrationRequest:
         return {
             "schema_version": CALIBRATION_SCHEMA_VERSION,
             "command": "benchmark calibrate",
+            "timing_semantics": CALIBRATION_TIMING_SEMANTICS,
             "dry_run": True,
             "resources": list(self.resources),
             "levels": list(self.levels),
@@ -224,23 +226,19 @@ def _wait_for_ready(process: subprocess.Popen[str], ready_file: Path, timeout_s:
     raise RuntimeError("benchmark worker ready 超时")
 
 
-def _run_cell(
+def _build_worker_command(
     *,
     request: CalibrationRequest,
     resource: BenchmarkResource,
-    level: float,
-    repeat: int,
-    writer: JsonlWriter,
-) -> dict[str, Any]:
-    worker_dir = request.workers_root / resource / _pressure_token(level) / f"r{repeat:02d}"
-    worker_dir.mkdir(parents=True, exist_ok=False)
-    ready_file = worker_dir / "ready.json"
-    worker_status = worker_dir / "status.json"
-    stdout_file = worker_dir / "stdout.log"
-    stderr_file = worker_dir / "stderr.log"
-    runtime_s = request.warmup_s + request.duration_s + max(0.5, request.sample_interval_s / 2)
-    pressure_applied = level * request.pressure_caps[resource]
-    command = [
+    pressure_applied: float,
+    ready_file: Path,
+    worker_status: Path,
+) -> list[str]:
+    """构造校准 worker 命令；worker 自己预热，预热操作不计入吞吐分母。"""
+
+    # 额外半个采样周期只用于保证父进程能取得 measurement 终点样本。
+    runtime_s = request.duration_s + max(0.5, request.sample_interval_s / 2)
+    return [
         sys.executable,
         "-m",
         "gaugur_lite",
@@ -250,6 +248,8 @@ def _run_cell(
         resource,
         "--pressure",
         str(pressure_applied),
+        "--warmup-s",
+        str(request.warmup_s),
         "--runtime-s",
         str(runtime_s),
         "--cpu-workers",
@@ -265,6 +265,30 @@ def _run_cell(
         "--status-file",
         str(worker_status),
     ]
+
+
+def _run_cell(
+    *,
+    request: CalibrationRequest,
+    resource: BenchmarkResource,
+    level: float,
+    repeat: int,
+    writer: JsonlWriter,
+) -> dict[str, Any]:
+    worker_dir = request.workers_root / resource / _pressure_token(level) / f"r{repeat:02d}"
+    worker_dir.mkdir(parents=True, exist_ok=False)
+    ready_file = worker_dir / "ready.json"
+    worker_status = worker_dir / "status.json"
+    stdout_file = worker_dir / "stdout.log"
+    stderr_file = worker_dir / "stderr.log"
+    pressure_applied = level * request.pressure_caps[resource]
+    command = _build_worker_command(
+        request=request,
+        resource=resource,
+        pressure_applied=pressure_applied,
+        ready_file=ready_file,
+        worker_status=worker_status,
+    )
     environment = os.environ.copy()
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
@@ -465,6 +489,7 @@ def summarize_calibration_records(
         "cell_count": len(records),
         "expected_cell_count": len(request.resources) * len(request.levels) * request.repeats,
         "request": {
+            "timing_semantics": CALIBRATION_TIMING_SEMANTICS,
             "resources": list(request.resources),
             "levels": list(request.levels),
             "pressure_caps": dict(request.pressure_caps),

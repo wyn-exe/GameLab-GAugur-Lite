@@ -303,6 +303,7 @@ def _calibration_payload(
                 "gpu_compute": gpu_compute_cap,
                 "gpu_memory": 1.0,
             },
+            "timing_semantics": "worker_warmup_excluded_v1",
         },
         "runs": runs,
     }
@@ -346,6 +347,24 @@ def test_standalone_benchmark_requires_matching_safety_cap(tmp_path: Path) -> No
     assert cells[("gpu_compute", 1.0)]["pressure_applied"] == 0.25
     with pytest.raises(ProfileError, match="pressure_caps 不兼容"):
         _load_standalone_benchmarks(path=path, cv_threshold_pct=5.0)
+
+
+def test_safety_calibration_rejects_legacy_parent_only_warmup(tmp_path: Path) -> None:
+    path = tmp_path / "calibration.json"
+    payload = _calibration_payload(gpu_compute_cap=0.25)
+    payload["request"].pop("timing_semantics")
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    caps = {
+        "cpu_compute": 1.0,
+        "memory_bandwidth": 1.0,
+        "gpu_compute": 0.25,
+        "gpu_memory": 1.0,
+    }
+
+    with pytest.raises(ProfileError, match="timing_semantics 不兼容"):
+        _load_standalone_benchmarks(
+            path=path, cv_threshold_pct=5.0, expected_pressure_caps=caps
+        )
 
 
 def test_aggregate_keeps_sensitivity_and_slowdown_as_distinct_metrics() -> None:
