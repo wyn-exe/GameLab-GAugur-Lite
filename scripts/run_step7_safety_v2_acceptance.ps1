@@ -19,6 +19,7 @@ $plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-safety-v2-s30.csv'
 $baselinePlan = Join-Path $repoRoot 'artifacts\plans\formal-v1.csv'
 $solo = Join-Path $repoRoot 'data\interim\formal-v1\solo-baselines.json'
 $calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-warmup-v1.json'
+$calibrationConfirmation = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-confirmation-v1.json'
 $artifactRoot = Join-Path $repoRoot 'artifacts\profiles\step7\safety-v2'
 $invocationRoot = Join-Path $artifactRoot 'invocations'
 $plotRoot = Join-Path $artifactRoot 'plots'
@@ -63,7 +64,7 @@ function Wait-GpuCool {
     }
 }
 
-$required = @($plan, $baselinePlan, $solo, $calibration)
+$required = @($plan, $baselinePlan, $solo, $calibration, $calibrationConfirmation)
 $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
 if ($missing.Count -gt 0) {
     throw "Missing safety-v2 inputs: $($missing -join ', ')"
@@ -84,6 +85,7 @@ try {
         --baseline-plan $baselinePlan `
         --solo-baselines $solo `
         --calibration $calibration `
+        --calibration-confirmation $calibrationConfirmation `
         --out $profiles `
         --runs-out $profileRuns `
         --summary $profileSummary `
@@ -216,6 +218,7 @@ try {
             --baseline-plan $baselinePlan `
             --solo-baselines $solo `
             --calibration $calibration `
+            --calibration-confirmation $calibrationConfirmation `
             --out $profiles `
             --runs-out $profileRuns `
             --summary $profileSummary `
@@ -235,6 +238,7 @@ try {
             --baseline-plan $baselinePlan `
             --solo-baselines $solo `
             --calibration $calibration `
+            --calibration-confirmation $calibrationConfirmation `
             --profiles $profiles `
             --runs $profileRuns `
             --summary $profileSummary `

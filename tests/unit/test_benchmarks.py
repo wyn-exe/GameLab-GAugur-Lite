@@ -12,6 +12,7 @@ from gaugur_lite.benchmarks.calibration import (
     CALIBRATION_TIMING_SEMANTICS,
     CalibrationRequest,
     _build_worker_command,
+    plan_calibration_confirmation,
     summarize_calibration_records,
     verify_calibration,
 )
@@ -150,6 +151,53 @@ def test_calibration_worker_excludes_warmup_from_measurement(tmp_path: Path) -> 
     assert command[command.index("--warmup-s") + 1] == "1.0"
     assert command[command.index("--runtime-s") + 1] == "2.5"
     assert request.public_plan(repo_root)["timing_semantics"] == CALIBRATION_TIMING_SEMANTICS
+
+
+def test_confirmation_plan_selects_all_and_only_failed_denominators(tmp_path: Path) -> None:
+    repo_root = _make_repo_root(tmp_path)
+    runs = []
+    for resource in ("cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"):
+        for pressure in (0.0, 0.25, 0.5, 0.75, 1.0):
+            for repeat in (1, 2, 3):
+                operations = 0 if pressure == 0 else 1_000_000
+                if resource == "cpu_compute" and pressure == 0.5 and repeat == 3:
+                    operations = 1_100_000
+                runs.append(
+                    {
+                        "resource": resource,
+                        "pressure_requested": pressure,
+                        "repeat": repeat,
+                        "run_key": f"{resource}-{pressure}-{repeat}",
+                        "worker": {"operations": operations, "elapsed_s": 2.0},
+                    }
+                )
+    calibration = repo_root / "artifacts" / "base.json"
+    calibration.parent.mkdir()
+    calibration.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "cell_count": 60,
+                "request": {"timing_semantics": CALIBRATION_TIMING_SEMANTICS},
+                "runs": runs,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plan = plan_calibration_confirmation(
+        repo_root=repo_root,
+        calibration_file=calibration,
+        output_file=repo_root / "artifacts" / "confirmation.json",
+        metrics_file=repo_root / "artifacts" / "confirmation.jsonl",
+        status_file=repo_root / "artifacts" / "confirmation-status.json",
+        workers_root=repo_root / "artifacts" / "confirmation-workers",
+    )
+
+    assert plan["selected_cell_count"] == 1
+    assert plan["additional_cell_count"] == 2
+    assert plan["selected_cells"][0]["resource"] == "cpu_compute"
+    assert plan["selected_cells"][0]["pressure_requested"] == 0.5
 
 
 def test_summary_builds_monotonic_requested_to_observed_curve(tmp_path: Path) -> None:

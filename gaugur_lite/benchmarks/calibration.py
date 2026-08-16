@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import platform
 import statistics
@@ -24,6 +25,7 @@ from .engine import BENCHMARK_RESOURCES, BenchmarkResource
 
 CALIBRATION_SCHEMA_VERSION = 1
 CALIBRATION_TIMING_SEMANTICS = "worker_warmup_excluded_v1"
+CONFIRMATION_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -511,6 +513,263 @@ def summarize_calibration_records(
             "plot": _repo_relative(repo_root, request.plot_file),
         },
     }
+
+
+def denominator_cells(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """从 calibration run 重算 16 个非零吞吐分母及样本 CV。"""
+
+    grouped: dict[tuple[str, float], list[dict[str, Any]]] = defaultdict(list)
+    for run in payload.get("runs", []):
+        pressure = float(run.get("pressure_requested", -1))
+        if pressure > 0:
+            grouped[(str(run.get("resource")), pressure)].append(run)
+    cells: list[dict[str, Any]] = []
+    for (resource, pressure), runs in sorted(grouped.items()):
+        throughputs = [
+            int(run["worker"]["operations"]) / float(run["worker"]["elapsed_s"])
+            for run in runs
+        ]
+        mean = statistics.fmean(throughputs)
+        cv = _sample_std(throughputs) / mean * 100
+        cells.append(
+            {
+                "resource": resource,
+                "pressure_requested": pressure,
+                "run_keys": [str(run["run_key"]) for run in runs],
+                "throughputs_ops_per_s": throughputs,
+                "throughput_mean_ops_per_s": mean,
+                "throughput_sample_std_ops_per_s": _sample_std(throughputs),
+                "throughput_cv_pct": cv,
+            }
+        )
+    return cells
+
+
+def plan_calibration_confirmation(
+    *,
+    repo_root: Path,
+    calibration_file: Path,
+    output_file: Path,
+    metrics_file: Path,
+    status_file: Path,
+    workers_root: Path,
+    cv_threshold_pct: float = 5.0,
+    eligibility_ceiling_pct: float = 10.0,
+    additional_repeats: int = 2,
+) -> dict[str, Any]:
+    """只读确定追加集合；失败集合由 base calibration 唯一决定，禁止手选。"""
+
+    payload = json.loads(calibration_file.read_text(encoding="utf-8"))
+    if (
+        payload.get("status") != "passed"
+        or payload.get("cell_count") != 60
+        or payload.get("request", {}).get("timing_semantics")
+        != CALIBRATION_TIMING_SEMANTICS
+    ):
+        raise ValueError("base calibration 状态、cell 数或 timing_semantics 不兼容")
+    cells = denominator_cells(payload)
+    if len(cells) != 16 or any(len(cell["run_keys"]) != 3 for cell in cells):
+        raise ValueError("base calibration 必须完整包含 16 个三重复非零分母")
+    selected = [cell for cell in cells if float(cell["throughput_cv_pct"]) > cv_threshold_pct]
+    if not selected:
+        raise ValueError("base calibration 没有需要追加确认的分母")
+    if any(float(cell["throughput_cv_pct"]) > eligibility_ceiling_pct for cell in selected):
+        raise ValueError("存在超过追加确认适用上限的分母，必须拒绝整个 calibration")
+    if additional_repeats != 2:
+        raise ValueError("正式确认协议固定追加两个重复")
+    return {
+        "schema_version": CONFIRMATION_SCHEMA_VERSION,
+        "command": "benchmark confirm-calibration",
+        "dry_run": True,
+        "base_calibration": _repo_relative(repo_root, calibration_file),
+        "base_calibration_sha256": _file_sha256(calibration_file),
+        "selection_rule": {
+            "cv_sample_std": True,
+            "cv_threshold_pct": cv_threshold_pct,
+            "eligibility_ceiling_pct": eligibility_ceiling_pct,
+            "additional_repeats": additional_repeats,
+            "combined_repeat_count": 3 + additional_repeats,
+            "selection": "all and only base cells with threshold < CV <= ceiling",
+        },
+        "selected_cell_count": len(selected),
+        "additional_cell_count": len(selected) * additional_repeats,
+        "selected_cells": selected,
+        "outputs": {
+            "confirmation": _repo_relative(repo_root, output_file),
+            "metrics": _repo_relative(repo_root, metrics_file),
+            "status": _repo_relative(repo_root, status_file),
+            "workers": _repo_relative(repo_root, workers_root),
+        },
+    }
+
+
+def run_calibration_confirmation(
+    *,
+    repo_root: Path,
+    config_path: Path,
+    calibration_file: Path,
+    output_file: Path,
+    metrics_file: Path,
+    status_file: Path,
+    workers_root: Path,
+    cv_threshold_pct: float = 5.0,
+    eligibility_ceiling_pct: float = 10.0,
+    additional_repeats: int = 2,
+) -> dict[str, Any]:
+    """仅为窄幅失败分母追加 r04/r05，并用全部五次重复重新验收。"""
+
+    for path in (output_file, metrics_file, status_file, workers_root):
+        _inside_repo(repo_root, path)
+        if path.exists():
+            raise FileExistsError(f"确认输出已存在，拒绝覆盖: {path}")
+    plan = plan_calibration_confirmation(
+        repo_root=repo_root,
+        calibration_file=calibration_file,
+        output_file=output_file,
+        metrics_file=metrics_file,
+        status_file=status_file,
+        workers_root=workers_root,
+        cv_threshold_pct=cv_threshold_pct,
+        eligibility_ceiling_pct=eligibility_ceiling_pct,
+        additional_repeats=additional_repeats,
+    )
+    base = json.loads(calibration_file.read_text(encoding="utf-8"))
+    request_data = base["request"]
+    local_config = load_local_config(config_path)
+    if config_sha256(local_config.model_dump(mode="json")) != base.get("config_sha256"):
+        raise ValueError("confirmation config 与 base calibration 不一致")
+    environment = _environment_fingerprint(int(request_data["gpu_index"]))
+    if config_sha256(environment) != base.get("environment_sha256"):
+        raise ValueError("confirmation 环境指纹与 base calibration 不一致")
+    request = CalibrationRequest(
+        config_path=config_path,
+        resources=tuple(request_data["resources"]),  # type: ignore[arg-type]
+        levels=tuple(float(value) for value in request_data["levels"]),
+        repeats=3,
+        warmup_s=float(request_data["warmup_s"]),
+        duration_s=float(request_data["duration_s"]),
+        sample_interval_s=float(request_data["sample_interval_s"]),
+        gpu_index=int(request_data["gpu_index"]),
+        cpu_workers=int(request_data["cpu_workers"]),
+        memory_buffer_mib=int(request_data["memory_buffer_mib"]),
+        gpu_matrix_size=int(request_data["gpu_matrix_size"]),
+        gpu_memory_max_mib=int(request_data["gpu_memory_max_mib"]),
+        output_file=output_file,
+        metrics_file=metrics_file,
+        status_file=status_file,
+        workers_root=workers_root,
+        pressure_caps={key: float(value) for key, value in request_data["pressure_caps"].items()},
+        max_gpu_temp_c=float(request_data["max_gpu_temp_c"]),
+    )
+    workers_root.mkdir(parents=True, exist_ok=False)
+    started_wall_ns = time.time_ns()
+    write_json_atomic(
+        status_file,
+        {
+            "schema_version": CONFIRMATION_SCHEMA_VERSION,
+            "status": "running",
+            "started_wall_time_ns": started_wall_ns,
+            "base_calibration_sha256": plan["base_calibration_sha256"],
+        },
+    )
+    records: list[dict[str, Any]] = []
+    try:
+        with JsonlWriter(metrics_file, batch_size=10) as writer:
+            for cell in plan["selected_cells"]:
+                resource = str(cell["resource"])
+                level = float(cell["pressure_requested"])
+                for repeat in (4, 5):
+                    records.append(
+                        _run_cell(
+                            request=request,
+                            resource=resource,  # type: ignore[arg-type]
+                            level=level,
+                            repeat=repeat,
+                            writer=writer,
+                        )
+                    )
+        combined_cells = []
+        for selected in plan["selected_cells"]:
+            key = (str(selected["resource"]), float(selected["pressure_requested"]))
+            extra = [
+                run
+                for run in records
+                if (str(run["resource"]), float(run["pressure_requested"])) == key
+            ]
+            extra_throughputs = [
+                int(run["worker"]["operations"]) / float(run["worker"]["elapsed_s"])
+                for run in extra
+            ]
+            combined = [*selected["throughputs_ops_per_s"], *extra_throughputs]
+            mean = statistics.fmean(combined)
+            cv = _sample_std(combined) / mean * 100
+            combined_cells.append(
+                {
+                    "resource": key[0],
+                    "pressure_requested": key[1],
+                    "base_run_keys": selected["run_keys"],
+                    "confirmation_run_keys": [run["run_key"] for run in extra],
+                    "base_throughputs_ops_per_s": selected["throughputs_ops_per_s"],
+                    "confirmation_throughputs_ops_per_s": extra_throughputs,
+                    "combined_throughputs_ops_per_s": combined,
+                    "combined_throughput_mean_ops_per_s": mean,
+                    "combined_throughput_sample_std_ops_per_s": _sample_std(combined),
+                    "combined_throughput_cv_pct": cv,
+                    "status": "passed" if math.isfinite(cv) and cv <= cv_threshold_pct else "failed",
+                }
+            )
+        safe_records = []
+        for record in records:
+            safe = dict(record)
+            safe["worker_directory"] = _repo_relative(repo_root, Path(record["worker_directory"]))
+            safe_records.append(safe)
+        passed = all(cell["status"] == "passed" for cell in combined_cells)
+        result = {
+            "schema_version": CONFIRMATION_SCHEMA_VERSION,
+            "status": "passed" if passed else "failed",
+            "base_calibration": plan["base_calibration"],
+            "base_calibration_sha256": plan["base_calibration_sha256"],
+            "environment": environment,
+            "environment_sha256": config_sha256(environment),
+            "timing_semantics": CALIBRATION_TIMING_SEMANTICS,
+            "selection_rule": plan["selection_rule"],
+            "selected_cell_count": plan["selected_cell_count"],
+            "additional_cell_count": len(records),
+            "combined_cells": combined_cells,
+            "runs": safe_records,
+            "artifacts": {
+                "metrics": _repo_relative(repo_root, metrics_file),
+                "metrics_sha256": _file_sha256(metrics_file),
+                "workers": _repo_relative(repo_root, workers_root),
+            },
+        }
+        write_json_atomic(output_file, result)
+        write_json_atomic(
+            status_file,
+            {
+                "schema_version": CONFIRMATION_SCHEMA_VERSION,
+                "status": "completed" if passed else "failed",
+                "started_wall_time_ns": started_wall_ns,
+                "finished_wall_time_ns": time.time_ns(),
+                "base_calibration_sha256": plan["base_calibration_sha256"],
+                "confirmation_file": _repo_relative(repo_root, output_file),
+            },
+        )
+        return result
+    except BaseException as exc:
+        write_json_atomic(
+            status_file,
+            {
+                "schema_version": CONFIRMATION_SCHEMA_VERSION,
+                "status": "failed",
+                "started_wall_time_ns": started_wall_ns,
+                "finished_wall_time_ns": time.time_ns(),
+                "base_calibration_sha256": plan["base_calibration_sha256"],
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            },
+        )
+        raise
 
 
 def _write_plot(result: dict[str, Any], output_file: Path) -> None:

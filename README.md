@@ -1744,7 +1744,7 @@ Safety-v2 分四个提交检查点执行：
 
 1. **实现与封存（已完成，commit `5ed80cf`）。** 提交代码、README、旧 s30 raw/acceptance 和 `safety-v2-amendment.json`；不得继续旧 s30。
 2. **计划冻结（已完成，commit `0631bc1`）。** 从干净提交运行准备脚本，生成唯一 720-row Safety-v2 计划、验证 JSON 和逐行兼容合同。
-3. **当前检查点：校准。** 首次 60-cell 候选已完成但因一个吞吐 CV 门及旧 warmup 边界被明确拒绝；原始证据完整保留。修复先提交，之后才从不高于 50°C 的冷机状态生成不覆盖旧文件的正式候选。
+3. **当前检查点：校准。** 候选 001 因旧 warmup 边界和 9.3946% CV 被拒绝；修复后的候选 002 已完成 60 cell，但有三个 0.5 档分母以 5.022%–5.189% 窄幅超过 5% 门。两次候选均完整保留；下一提交只追加固定失败集合的 r04/r05，不重跑已通过单元、不降低门槛。
 4. **正式 profile 检查点。** 先做无窗口预检，再用一个命令自动顺序完成全部剩余批次；脚本自行批前冷却，异常立即停机。
 
 计划检查点的完整 PowerShell 命令如下；已经真实运行，保留用于只读复核和新环境重建：
@@ -1769,7 +1769,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_step7_safety_calibration.ps1
 ```
 
-校准产物再次提交后，先执行只读预检：
+若 60-cell base 出现符合本节规则的窄幅失败，必须先提交 base 与确认协议，再运行以下约 2 分钟的追加确认：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_calibration_confirmation.ps1
+```
+
+追加确认产物再次提交后，先执行只读预检：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -1896,7 +1903,75 @@ GPU Compute applied levels=0,0.0625,0.125,0.1875,0.25
 output=formal-calibration-warmup-v1.json（dry-run，未创建文件）
 ```
 
-截至本检查点，修复后的 `formal-calibration-warmup-v1.json` 尚未生成，正式 profile 仍为 0/480；提交并上传本节的代码、被拒绝证据和 README 后，才允许再运行一次约 8 分钟的新校准。
+候选 001 检查点结束时，修复后的 `formal-calibration-warmup-v1.json` 尚未生成，正式 profile 为 0/480；该修复随后以提交 `145a333` 冻结后才运行候选 002。
+
+#### Safety-v2 校准候选 002：窄幅失败与固定追加确认协议
+
+候选 002 在提交 `145a33327f394ac1211126b9a7b1254ec5ba7f65` 上从外部 50°C、脚本内 49°C 开始，完成 60/60 cell。`timing_semantics=worker_warmup_excluded_v1` 已真实生效：60 个 worker 的 warmup 均约为 1 秒，所有非零压力 worker 都执行了 warmup operations；修复前失败的 `cpu_compute/0.25` CV 从 9.3946% 降为 1.65%。四类压力作用质量门继续全部通过：
+
+```text
+[Safety-v2 calibration] Start GPU temperature: 49 C
+[Safety-v2 calibration] Running 60 capped calibration cells (about 8 minutes)...
+status=passed, cells=60/60, timing_semantics=worker_warmup_excluded_v1
+cpu_compute max abs error=0.018785
+memory_bandwidth max abs error=0.040218
+gpu_compute max abs error=0.000770
+gpu_memory max abs error=0.000000
+[Safety-v2 calibration] Verifying JSONL hash and quality gates...
+[Safety-v2 calibration] Auditing baseline and capped denominator compatibility...
+PROFILE_ERROR: ProfileError: 独立 benchmark 吞吐 CV 超限: cpu_compute/0.5=5.022%
+```
+
+终端在遇到排序后的第一个失败单元时停止；独立脚本 [`audit_step7_borderline_calibration.py`](scripts/audit_step7_borderline_calibration.py) 继续重算全部 16 个分母，确认共有三个窄幅失败，且都位于 requested pressure 0.5：
+
+| Resource | 三次吞吐量（ops/s） | 样本 CV |
+| --- | --- | --- |
+| `cpu_compute` | 35,407,091.56 / 32,663,789.41 / 35,891,073.34 | 5.0224% |
+| `memory_bandwidth` | 37,660,402,264.46 / 34,523,155,989.90 / 37,827,512,582.14 | 5.0761% |
+| `gpu_compute` | 340,527,424.44 / 309,708,903.93 / 314,059,262.30 | 5.1892% |
+
+其余 13 个分母通过，最高 CV 为 2.77%。420 个 telemetry 样本的 GPU 温度为 48–70°C，超过 80°C 的样本为 0，热降频样本为 0；因此这仍是分母统计稳定性问题，不是温度或硬件安全问题。候选 002 在追加确认完成前保持 `included_in_profile_denominators=false`、`included_in_model_training=false`。
+
+本次不把门槛从 5% 放宽到 6%，也不第三次运行完整 60-cell。固定的顺序确认规则是：
+
+1. 从候选 002 的全部三重复结果自动选择且仅选择 `5% < sample CV <= 10%` 的非零分母，禁止手工指定；
+2. 若任一分母超过 10%，整个 base 直接拒绝，不适用追加确认；
+3. 对每个选中单元追加 `r04/r05`，本次唯一确定为 3 个单元、共 6 个短 run；
+4. 使用原始 r01–r03 与追加 r04–r05 的全部五次吞吐重新计算样本标准差和 CV，不丢弃、不替换任何原始值；
+5. 三个五重复 CV 必须全部 `<=5%`，否则立即停止，不能继续正式 profile；
+6. profile 输入审计独立重算 base 失败集合、追加 run、五个吞吐值、base/confirmation SHA-256 和 CV，确认文件不能覆盖额外单元。
+
+候选 002 的冻结哈希如下：
+
+| 候选 002 证据 | SHA-256 |
+| --- | --- |
+| `formal-calibration-warmup-v1.json` | `c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade` |
+| `formal-calibration-warmup-v1-metrics.jsonl` | `e7085927e777bcdcfb7a15c6fe9224187025c480bddb4bdd1da36dc6a76ce821` |
+| `formal-calibration-warmup-v1-verification.json` | `a1ec29ab3f436cad0af0639ff4adcc674bb26add12768048c7c686ec842859b7` |
+| `formal-calibration-warmup-v1-status.json` | `f4ab8c6f0447883ae8e610168669d0ad3fccb9b343b02f0a597fc8c16a649d47` |
+| `pressure-calibration-warmup-v1.png` | `13653637596a47353f8e985674ebc0fd16a4a158cd36ba37e3924885d58561b6` |
+| `borderline-candidate-002-audit.json` | `bf9e3c2f3553cea05cbba12b65594c6d9304e8b664eaca3e9c16e03699eaa490` |
+
+追加确认实现的短验收没有启动任何确认 worker 或游戏：
+
+```text
+unit tests:
+........................................................................ [ 83%]
+..............                                                           [100%]
+86 passed in 5.60s
+
+candidate 002 independent audit:
+REQUIRES_CONFIRMATION candidate: failed=3, max CV=5.1892%, max temperature=70 C
+
+confirmation dry-run:
+selected_cell_count=3, additional_cell_count=6
+selected=cpu_compute/0.5,gpu_compute/0.5,memory_bandwidth/0.5
+repeats=r04,r05, combined_repeat_count=5
+CV threshold=5.0%, eligibility ceiling=10.0%
+base SHA-256=c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade
+```
+
+截至本检查点，`formal-calibration-confirmation-v1.json` 尚未生成，正式 profile 仍为 0/480。必须先提交并上传候选 002、审计、确认实现、测试与 README，之后才能运行六个追加单元。
 
 ### Step 8：采集真实共置组合
 

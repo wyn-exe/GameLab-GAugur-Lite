@@ -1,0 +1,375 @@
+{
+  "calibration": {
+    "cell_count": 60,
+    "max_abs_errors": {
+      "cpu_compute": 0.0187847967654714,
+      "gpu_compute": 0.0007700774580702285,
+      "gpu_memory": 0.0,
+      "memory_bandwidth": 0.040217969639923634
+    },
+    "status": "passed",
+    "timing_semantics": "worker_warmup_excluded_v1",
+    "timing_semantics_passed": true
+  },
+  "candidate": "artifacts/calibration/step7-safety-v2/formal-calibration-warmup-v1.json",
+  "candidate_guarded_head": "145a33327f394ac1211126b9a7b1254ec5ba7f65",
+  "candidate_sha256": "c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade",
+  "decision": {
+    "confirmation_required": true,
+    "confirmation_rule": "append r04/r05 to all and only failed cells; recompute five-repeat sample CV",
+    "cv_threshold_pct_unchanged": 5.0,
+    "included_in_model_training": false,
+    "included_in_profile_denominators": false
+  },
+  "gpu_temperature": {
+    "maximum_c": 70.0,
+    "minimum_c": 48.0,
+    "sample_count": 420,
+    "samples_above_80_c": 0,
+    "thermal_slowdown_samples": 0
+  },
+  "metrics": "artifacts/calibration/step7-safety-v2/formal-calibration-warmup-v1-metrics.jsonl",
+  "metrics_sha256": "e7085927e777bcdcfb7a15c6fe9224187025c480bddb4bdd1da36dc6a76ce821",
+  "schema_version": 1,
+  "standalone_throughput": {
+    "cells": [
+      {
+        "pressure_requested": 0.25,
+        "resource": "cpu_compute",
+        "run_keys": [
+          "step4-cpu_compute-p025-r01",
+          "step4-cpu_compute-p025-r02",
+          "step4-cpu_compute-p025-r03"
+        ],
+        "throughput_cv_pct": 1.649421086668345,
+        "throughput_mean_ops_per_s": 18496719.399243098,
+        "throughput_sample_std_ops_per_s": 305088.7901129901,
+        "throughputs_ops_per_s": [
+          18711640.060693737,
+          18630994.46479607,
+          18147523.672239486
+        ]
+      },
+      {
+        "pressure_requested": 0.5,
+        "resource": "cpu_compute",
+        "run_keys": [
+          "step4-cpu_compute-p050-r01",
+          "step4-cpu_compute-p050-r02",
+          "step4-cpu_compute-p050-r03"
+        ],
+        "throughput_cv_pct": 5.022408906635066,
+        "throughput_mean_ops_per_s": 34653984.770344146,
+        "throughput_sample_std_ops_per_s": 1740464.8176097237,
+        "throughputs_ops_per_s": [
+          35407091.56430557,
+          32663789.405948076,
+          35891073.34077879
+        ]
+      },
+      {
+        "pressure_requested": 0.75,
+        "resource": "cpu_compute",
+        "run_keys": [
+          "step4-cpu_compute-p075-r01",
+          "step4-cpu_compute-p075-r02",
+          "step4-cpu_compute-p075-r03"
+        ],
+        "throughput_cv_pct": 0.945279547162111,
+        "throughput_mean_ops_per_s": 78234243.53738002,
+        "throughput_sample_std_ops_per_s": 739532.303035849,
+        "throughputs_ops_per_s": [
+          78878224.4444818,
+          78397922.1797162,
+          77426583.98794204
+        ]
+      },
+      {
+        "pressure_requested": 1.0,
+        "resource": "cpu_compute",
+        "run_keys": [
+          "step4-cpu_compute-p100-r01",
+          "step4-cpu_compute-p100-r02",
+          "step4-cpu_compute-p100-r03"
+        ],
+        "throughput_cv_pct": 0.44889035175889386,
+        "throughput_mean_ops_per_s": 231935943.9045223,
+        "throughput_sample_std_ops_per_s": 1041138.0744483209,
+        "throughputs_ops_per_s": [
+          231434621.54246894,
+          233132900.7090435,
+          231240309.46205446
+        ]
+      },
+      {
+        "pressure_requested": 0.25,
+        "resource": "gpu_compute",
+        "run_keys": [
+          "step4-gpu_compute-p025-r01",
+          "step4-gpu_compute-p025-r02",
+          "step4-gpu_compute-p025-r03"
+        ],
+        "throughput_cv_pct": 1.8548324422341007,
+        "throughput_mean_ops_per_s": 145554101.2612522,
+        "throughput_sample_std_ops_per_s": 2699784.69119598,
+        "throughputs_ops_per_s": [
+          142436658.87064493,
+          147111378.59028527,
+          147114266.3228264
+        ]
+      },
+      {
+        "pressure_requested": 0.5,
+        "resource": "gpu_compute",
+        "run_keys": [
+          "step4-gpu_compute-p050-r01",
+          "step4-gpu_compute-p050-r02",
+          "step4-gpu_compute-p050-r03"
+        ],
+        "throughput_cv_pct": 5.189180756362999,
+        "throughput_mean_ops_per_s": 321431863.553807,
+        "throughput_sample_std_ops_per_s": 16679680.408353128,
+        "throughputs_ops_per_s": [
+          340527424.43579483,
+          309708903.9301888,
+          314059262.2954375
+        ]
+      },
+      {
+        "pressure_requested": 0.75,
+        "resource": "gpu_compute",
+        "run_keys": [
+          "step4-gpu_compute-p075-r01",
+          "step4-gpu_compute-p075-r02",
+          "step4-gpu_compute-p075-r03"
+        ],
+        "throughput_cv_pct": 2.771732038807856,
+        "throughput_mean_ops_per_s": 477580493.765106,
+        "throughput_sample_std_ops_per_s": 13237251.5567842,
+        "throughputs_ops_per_s": [
+          462474543.0096941,
+          483112945.0501849,
+          487153993.23543924
+        ]
+      },
+      {
+        "pressure_requested": 1.0,
+        "resource": "gpu_compute",
+        "run_keys": [
+          "step4-gpu_compute-p100-r01",
+          "step4-gpu_compute-p100-r02",
+          "step4-gpu_compute-p100-r03"
+        ],
+        "throughput_cv_pct": 1.8487885872147356,
+        "throughput_mean_ops_per_s": 707508869.9248124,
+        "throughput_sample_std_ops_per_s": 13080343.240701882,
+        "throughputs_ops_per_s": [
+          712534633.1330823,
+          717330965.313983,
+          692661011.327372
+        ]
+      },
+      {
+        "pressure_requested": 0.25,
+        "resource": "gpu_memory",
+        "run_keys": [
+          "step4-gpu_memory-p025-r01",
+          "step4-gpu_memory-p025-r02",
+          "step4-gpu_memory-p025-r03"
+        ],
+        "throughput_cv_pct": 0.40547259711426337,
+        "throughput_mean_ops_per_s": 53931808815.38801,
+        "throughput_sample_std_ops_per_s": 218678705.87445298,
+        "throughputs_ops_per_s": [
+          53683657097.74178,
+          54096331184.25644,
+          54015438164.16581
+        ]
+      },
+      {
+        "pressure_requested": 0.5,
+        "resource": "gpu_memory",
+        "run_keys": [
+          "step4-gpu_memory-p050-r01",
+          "step4-gpu_memory-p050-r02",
+          "step4-gpu_memory-p050-r03"
+        ],
+        "throughput_cv_pct": 0.43671441751570267,
+        "throughput_mean_ops_per_s": 108912106502.31902,
+        "throughput_sample_std_ops_per_s": 475634871.5156842,
+        "throughputs_ops_per_s": [
+          109187477504.84363,
+          108362891367.58156,
+          109185950634.53183
+        ]
+      },
+      {
+        "pressure_requested": 0.75,
+        "resource": "gpu_memory",
+        "run_keys": [
+          "step4-gpu_memory-p075-r01",
+          "step4-gpu_memory-p075-r02",
+          "step4-gpu_memory-p075-r03"
+        ],
+        "throughput_cv_pct": 0.8709538301699488,
+        "throughput_mean_ops_per_s": 166418573080.78012,
+        "throughput_sample_std_ops_per_s": 1449428936.36123,
+        "throughputs_ops_per_s": [
+          166996215018.80597,
+          167490116616.2793,
+          164769387607.25504
+        ]
+      },
+      {
+        "pressure_requested": 1.0,
+        "resource": "gpu_memory",
+        "run_keys": [
+          "step4-gpu_memory-p100-r01",
+          "step4-gpu_memory-p100-r02",
+          "step4-gpu_memory-p100-r03"
+        ],
+        "throughput_cv_pct": 0.037045280126569706,
+        "throughput_mean_ops_per_s": 216162658061.72095,
+        "throughput_sample_std_ops_per_s": 80078062.20800354,
+        "throughputs_ops_per_s": [
+          216251431101.89172,
+          216095866038.9383,
+          216140677044.33282
+        ]
+      },
+      {
+        "pressure_requested": 0.25,
+        "resource": "memory_bandwidth",
+        "run_keys": [
+          "step4-memory_bandwidth-p025-r01",
+          "step4-memory_bandwidth-p025-r02",
+          "step4-memory_bandwidth-p025-r03"
+        ],
+        "throughput_cv_pct": 0.9451196012903493,
+        "throughput_mean_ops_per_s": 17509076852.359158,
+        "throughput_sample_std_ops_per_s": 165481717.3366377,
+        "throughputs_ops_per_s": [
+          17674442232.024345,
+          17343479042.199665,
+          17509309282.853462
+        ]
+      },
+      {
+        "pressure_requested": 0.5,
+        "resource": "memory_bandwidth",
+        "run_keys": [
+          "step4-memory_bandwidth-p050-r01",
+          "step4-memory_bandwidth-p050-r02",
+          "step4-memory_bandwidth-p050-r03"
+        ],
+        "throughput_cv_pct": 5.076053233755019,
+        "throughput_mean_ops_per_s": 36670356945.50139,
+        "throughput_sample_std_ops_per_s": 1861406839.5616312,
+        "throughputs_ops_per_s": [
+          37660402264.463196,
+          34523155989.90103,
+          37827512582.13994
+        ]
+      },
+      {
+        "pressure_requested": 0.75,
+        "resource": "memory_bandwidth",
+        "run_keys": [
+          "step4-memory_bandwidth-p075-r01",
+          "step4-memory_bandwidth-p075-r02",
+          "step4-memory_bandwidth-p075-r03"
+        ],
+        "throughput_cv_pct": 0.9612810771775048,
+        "throughput_mean_ops_per_s": 55281981458.09546,
+        "throughput_sample_std_ops_per_s": 531415226.8454485,
+        "throughputs_ops_per_s": [
+          54675910828.81165,
+          55668148821.68871,
+          55501884723.786
+        ]
+      },
+      {
+        "pressure_requested": 1.0,
+        "resource": "memory_bandwidth",
+        "run_keys": [
+          "step4-memory_bandwidth-p100-r01",
+          "step4-memory_bandwidth-p100-r02",
+          "step4-memory_bandwidth-p100-r03"
+        ],
+        "throughput_cv_pct": 1.6058908812377344,
+        "throughput_mean_ops_per_s": 71543229130.65147,
+        "throughput_sample_std_ops_per_s": 1148906192.7521503,
+        "throughputs_ops_per_s": [
+          70232238800.934,
+          72374689366.71667,
+          72022759224.30376
+        ]
+      }
+    ],
+    "failed_cell_count": 3,
+    "failed_cells": [
+      {
+        "pressure_requested": 0.5,
+        "resource": "cpu_compute",
+        "run_keys": [
+          "step4-cpu_compute-p050-r01",
+          "step4-cpu_compute-p050-r02",
+          "step4-cpu_compute-p050-r03"
+        ],
+        "throughput_cv_pct": 5.022408906635066,
+        "throughput_mean_ops_per_s": 34653984.770344146,
+        "throughput_sample_std_ops_per_s": 1740464.8176097237,
+        "throughputs_ops_per_s": [
+          35407091.56430557,
+          32663789.405948076,
+          35891073.34077879
+        ]
+      },
+      {
+        "pressure_requested": 0.5,
+        "resource": "gpu_compute",
+        "run_keys": [
+          "step4-gpu_compute-p050-r01",
+          "step4-gpu_compute-p050-r02",
+          "step4-gpu_compute-p050-r03"
+        ],
+        "throughput_cv_pct": 5.189180756362999,
+        "throughput_mean_ops_per_s": 321431863.553807,
+        "throughput_sample_std_ops_per_s": 16679680.408353128,
+        "throughputs_ops_per_s": [
+          340527424.43579483,
+          309708903.9301888,
+          314059262.2954375
+        ]
+      },
+      {
+        "pressure_requested": 0.5,
+        "resource": "memory_bandwidth",
+        "run_keys": [
+          "step4-memory_bandwidth-p050-r01",
+          "step4-memory_bandwidth-p050-r02",
+          "step4-memory_bandwidth-p050-r03"
+        ],
+        "throughput_cv_pct": 5.076053233755019,
+        "throughput_mean_ops_per_s": 36670356945.50139,
+        "throughput_sample_std_ops_per_s": 1861406839.5616312,
+        "throughputs_ops_per_s": [
+          37660402264.463196,
+          34523155989.90103,
+          37827512582.13994
+        ]
+      }
+    ],
+    "maximum_cv_pct": 5.189180756362999,
+    "nonzero_cell_count": 16,
+    "passed_cell_count": 13,
+    "threshold_pct": 5.0
+  },
+  "status": "requires_confirmation",
+  "worker_warmup": {
+    "all_nonzero_pressure_workers_executed_warmup": true,
+    "maximum_elapsed_s": 1.0078917999999248,
+    "minimum_elapsed_s": 1.0000820999994176,
+    "minimum_nonzero_pressure_operations": 19922944
+  }
+}

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import statistics
 from pathlib import Path
 
 import pytest
@@ -267,7 +269,7 @@ def _calibration_payload(
                 applied = pressure * cap
                 operations = 0 if applied == 0 else int(1_000_000 * applied)
                 if unstable and resource == "cpu_compute" and pressure == 0.25 and repeat == 3:
-                    operations *= 2
+                    operations = int(operations * 1.1)
                 runs.append(
                     {
                         "resource": resource,
@@ -326,6 +328,79 @@ def test_standalone_benchmark_rejects_unstable_denominator(tmp_path: Path) -> No
 
     with pytest.raises(ProfileError, match="吞吐 CV 超限"):
         _load_standalone_benchmarks(path=path, cv_threshold_pct=5.0)
+
+
+def test_standalone_benchmark_accepts_exact_failed_set_after_two_confirmations(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "calibration.json"
+    payload = _calibration_payload(unstable=True, gpu_compute_cap=0.25)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    base_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    base_values = [125_000.0, 125_000.0, 137_500.0]
+    extra_values = [125_000.0, 125_000.0]
+    combined = [*base_values, *extra_values]
+    mean = statistics.fmean(combined)
+    cv = statistics.stdev(combined) / mean * 100
+    confirmation = tmp_path / "confirmation.json"
+    confirmation.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "base_calibration_sha256": base_sha,
+                "environment_sha256": None,
+                "timing_semantics": "worker_warmup_excluded_v1",
+                "selection_rule": {
+                    "cv_threshold_pct": 5.0,
+                    "additional_repeats": 2,
+                    "combined_repeat_count": 5,
+                },
+                "combined_cells": [
+                    {
+                        "resource": "cpu_compute",
+                        "pressure_requested": 0.25,
+                        "combined_throughputs_ops_per_s": combined,
+                        "combined_throughput_cv_pct": cv,
+                        "status": "passed",
+                    }
+                ],
+                "runs": [
+                    {
+                        "resource": "cpu_compute",
+                        "pressure_requested": 0.25,
+                        "repeat": repeat,
+                        "run_key": f"cpu_compute-0.25-{repeat}",
+                        "worker": {
+                            "status": "completed",
+                            "resource": "cpu_compute",
+                            "pressure_requested": 0.25,
+                            "elapsed_s": 2.0,
+                            "operations": 250_000,
+                        },
+                    }
+                    for repeat in (4, 5)
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    caps = {
+        "cpu_compute": 1.0,
+        "memory_bandwidth": 1.0,
+        "gpu_compute": 0.25,
+        "gpu_memory": 1.0,
+    }
+
+    cells, returned = _load_standalone_benchmarks(
+        path=path,
+        cv_threshold_pct=5.0,
+        expected_pressure_caps=caps,
+        confirmation_path=confirmation,
+    )
+
+    assert len(cells[("cpu_compute", 0.25)]["throughputs_ops_per_s"]) == 5
+    assert cells[("cpu_compute", 0.25)]["throughput_cv_pct"] == pytest.approx(cv)
+    assert returned["denominator_confirmation"]["selected_cell_count"] == 1
 
 
 def test_standalone_benchmark_requires_matching_safety_cap(tmp_path: Path) -> None:

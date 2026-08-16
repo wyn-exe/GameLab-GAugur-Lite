@@ -1,0 +1,82 @@
+{
+  "calibration": "artifacts/calibration/step7-safety-v2/formal-calibration-warmup-v1.json",
+  "calibration_sha256": "c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade",
+  "checks": [
+    {
+      "actual": 1,
+      "expected": 1,
+      "name": "schema_version",
+      "passed": true
+    },
+    {
+      "actual": "passed",
+      "expected": "passed",
+      "name": "calibration_status",
+      "passed": true
+    },
+    {
+      "actual": 60,
+      "expected": 60,
+      "name": "cell_count",
+      "passed": true
+    },
+    {
+      "actual": 4,
+      "expected": 4,
+      "name": "resource_count",
+      "passed": true
+    },
+    {
+      "actual": {
+        "all_levels_have_repeats": true,
+        "hardware_signal_available": true,
+        "max_abs_error_at_most_0_05": true,
+        "observed_pressure_monotonic": true
+      },
+      "expected": true,
+      "name": "cpu_compute_quality_gate",
+      "passed": true
+    },
+    {
+      "actual": {
+        "all_levels_have_repeats": true,
+        "hardware_signal_available": true,
+        "max_abs_error_at_most_0_05": true,
+        "observed_pressure_monotonic": true
+      },
+      "expected": true,
+      "name": "memory_bandwidth_quality_gate",
+      "passed": true
+    },
+    {
+      "actual": {
+        "all_levels_have_repeats": true,
+        "hardware_signal_available": true,
+        "max_abs_error_at_most_0_05": true,
+        "observed_pressure_monotonic": true
+      },
+      "expected": true,
+      "name": "gpu_compute_quality_gate",
+      "passed": true
+    },
+    {
+      "actual": {
+        "all_levels_have_repeats": true,
+        "hardware_signal_available": true,
+        "max_abs_error_at_most_0_05": true,
+        "observed_pressure_monotonic": true
+      },
+      "expected": true,
+      "name": "gpu_memory_quality_gate",
+      "passed": true
+    },
+    {
+      "actual": "e7085927e777bcdcfb7a15c6fe9224187025c480bddb4bdd1da36dc6a76ce821",
+      "expected": "e7085927e777bcdcfb7a15c6fe9224187025c480bddb4bdd1da36dc6a76ce821",
+      "name": "metrics_sha256",
+      "passed": true
+    }
+  ],
+  "schema_version": 1,
+  "status": "passed"
+}

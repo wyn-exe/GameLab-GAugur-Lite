@@ -488,6 +488,7 @@ def _load_standalone_benchmarks(
     path: Path,
     cv_threshold_pct: float,
     expected_pressure_caps: dict[str, float] | None = None,
+    confirmation_path: Path | None = None,
 ) -> tuple[dict[tuple[str, float], dict[str, Any]], dict[str, Any]]:
     payload = _read_json(path)
     request = payload.get("request", {})
@@ -545,6 +546,7 @@ def _load_standalone_benchmarks(
         raise ProfileError("calibration 未完整覆盖 4×5×3")
 
     result: dict[tuple[str, float], dict[str, Any]] = {}
+    unstable: dict[tuple[str, float], dict[str, Any]] = {}
     calibration_sha = _file_sha256(path)
     for (resource, pressure), items in sorted(grouped.items()):
         if pressure == 0:
@@ -560,10 +562,6 @@ def _load_standalone_benchmarks(
             mean = statistics.fmean(throughputs)
             std = _sample_std(throughputs)
             cv = std / mean * 100
-            if not math.isfinite(cv) or cv > cv_threshold_pct:
-                raise ProfileError(
-                    f"独立 benchmark 吞吐 CV 超限: {resource}/{pressure}={cv:.3f}%"
-                )
         observed = [float(item["observed_pressure"]) for item in items]
         result[(resource, pressure)] = {
             "standalone_id": config_sha256(
@@ -585,7 +583,128 @@ def _load_standalone_benchmarks(
             "throughput_cv_pct": cv,
             "observed_pressure_mean": statistics.fmean(observed),
         }
-    return result, payload
+        if cv is not None and (not math.isfinite(cv) or cv > cv_threshold_pct):
+            unstable[(resource, pressure)] = result[(resource, pressure)]
+
+    confirmation_payload: dict[str, Any] | None = None
+    if unstable:
+        first_key = sorted(unstable)[0]
+        first_cv = unstable[first_key]["throughput_cv_pct"]
+        if confirmation_path is None:
+            raise ProfileError(
+                f"独立 benchmark 吞吐 CV 超限: {first_key[0]}/{first_key[1]}={first_cv:.3f}%"
+            )
+        confirmation_payload = _read_json(confirmation_path)
+        rule = confirmation_payload.get("selection_rule", {})
+        if (
+            confirmation_payload.get("status") != "passed"
+            or confirmation_payload.get("base_calibration_sha256") != calibration_sha
+            or confirmation_payload.get("environment_sha256") != payload.get("environment_sha256")
+            or confirmation_payload.get("timing_semantics") != CALIBRATION_TIMING_SEMANTICS
+            or float(rule.get("cv_threshold_pct", -1)) != cv_threshold_pct
+            or int(rule.get("additional_repeats", -1)) != 2
+            or int(rule.get("combined_repeat_count", -1)) != 5
+        ):
+            raise ProfileError("calibration confirmation 合同、环境或 base hash 不兼容")
+        expected_keys = set(unstable)
+        combined_rows = confirmation_payload.get("combined_cells", [])
+        actual_keys = {
+            (str(item.get("resource")), float(item.get("pressure_requested", -1)))
+            for item in combined_rows
+        }
+        if actual_keys != expected_keys:
+            raise ProfileError("calibration confirmation 未且仅未覆盖 base 失败集合")
+        extra_grouped: dict[tuple[str, float], list[dict[str, Any]]] = defaultdict(list)
+        for run in confirmation_payload.get("runs", []):
+            key = (str(run.get("resource")), float(run.get("pressure_requested", -1)))
+            worker = run.get("worker", {})
+            if (
+                key not in expected_keys
+                or int(run.get("repeat", 0)) not in (4, 5)
+                or worker.get("status") != "completed"
+                or worker.get("resource") != key[0]
+                or abs(
+                    float(worker.get("pressure_requested", -1))
+                    - float(result[key]["pressure_applied"])
+                )
+                > 1e-10
+                or float(worker.get("elapsed_s", 0)) <= 0
+                or int(worker.get("operations", 0)) <= 0
+            ):
+                raise ProfileError("calibration confirmation worker 状态非法")
+            extra_grouped[key].append(run)
+        if set(extra_grouped) != expected_keys or any(
+            {int(run["repeat"]) for run in runs} != {4, 5}
+            for runs in extra_grouped.values()
+        ):
+            raise ProfileError("calibration confirmation 追加重复不完整")
+        stored_combined = {
+            (str(item["resource"]), float(item["pressure_requested"])): item
+            for item in combined_rows
+        }
+        confirmation_sha = _file_sha256(confirmation_path)
+        for key in sorted(expected_keys):
+            base_cell = result[key]
+            extra_runs = sorted(extra_grouped[key], key=lambda run: int(run["repeat"]))
+            extra_values = [
+                int(run["worker"]["operations"]) / float(run["worker"]["elapsed_s"])
+                for run in extra_runs
+            ]
+            combined = [*base_cell["throughputs_ops_per_s"], *extra_values]
+            mean = statistics.fmean(combined)
+            std = _sample_std(combined)
+            cv = std / mean * 100
+            stored = stored_combined[key]
+            if (
+                stored.get("status") != "passed"
+                or stored.get("combined_throughputs_ops_per_s") != combined
+                or abs(float(stored.get("combined_throughput_cv_pct", -1)) - cv) > 1e-10
+                or not math.isfinite(cv)
+                or cv > cv_threshold_pct
+            ):
+                raise ProfileError(
+                    f"追加确认后独立 benchmark 吞吐 CV 仍超限: {key[0]}/{key[1]}={cv:.3f}%"
+                )
+            base_cell.update(
+                {
+                    "standalone_id": config_sha256(
+                        {
+                            "calibration_sha256": calibration_sha,
+                            "confirmation_sha256": confirmation_sha,
+                            "resource": key[0],
+                            "pressure_requested": key[1],
+                            "run_keys": [
+                                *base_cell["run_keys"],
+                                *[run["run_key"] for run in extra_runs],
+                            ],
+                            "throughputs": combined,
+                        }
+                    ),
+                    "run_keys": [
+                        *base_cell["run_keys"],
+                        *[run["run_key"] for run in extra_runs],
+                    ],
+                    "throughputs_ops_per_s": combined,
+                    "throughput_mean_ops_per_s": mean,
+                    "throughput_sample_std_ops_per_s": std,
+                    "throughput_cv_pct": cv,
+                    "confirmation_sha256": confirmation_sha,
+                    "confirmation_additional_repeats": 2,
+                }
+            )
+    elif confirmation_path is not None:
+        raise ProfileError("base calibration 已通过，不允许附加非必要 confirmation")
+
+    returned_payload = dict(payload)
+    returned_payload["denominator_confirmation"] = (
+        {
+            "sha256": _file_sha256(confirmation_path),
+            "selected_cell_count": len(unstable),
+        }
+        if confirmation_payload is not None and confirmation_path is not None
+        else None
+    )
+    return result, returned_payload
 
 
 def _plan_pressure_caps(rows: list[ParsedPlanRow]) -> dict[str, float]:
@@ -614,6 +733,7 @@ def audit_profile_inputs(
     plan_file: Path,
     solo_baselines_file: Path,
     calibration_file: Path,
+    calibration_confirmation_file: Path | None = None,
     baseline_plan_file: Path | None = None,
     benchmark_cv_threshold_pct: float = 5.0,
 ) -> dict[str, Any]:
@@ -635,6 +755,7 @@ def audit_profile_inputs(
         path=calibration_file,
         cv_threshold_pct=benchmark_cv_threshold_pct,
         expected_pressure_caps=pressure_caps,
+        confirmation_path=calibration_confirmation_file,
     )
     nonzero_cvs = [
         float(item["throughput_cv_pct"])
@@ -657,6 +778,15 @@ def audit_profile_inputs(
         "solo_baselines_sha256": _file_sha256(solo_baselines_file),
         "calibration_sha256": _file_sha256(calibration_file),
         "calibration_environment_sha256": calibration.get("environment_sha256"),
+        "calibration_confirmation": (
+            {
+                "path": _relative(repo_root, calibration_confirmation_file),
+                **calibration["denominator_confirmation"],
+            }
+            if calibration.get("denominator_confirmation") is not None
+            and calibration_confirmation_file is not None
+            else None
+        ),
         "standalone_nonzero_cell_count": len(nonzero_cvs),
         "standalone_throughput_cv_max_pct": max(nonzero_cvs),
         "standalone_throughput_cv_threshold_pct": benchmark_cv_threshold_pct,
@@ -902,6 +1032,7 @@ def compute_profiles(
     plan_file: Path,
     solo_baselines_file: Path,
     calibration_file: Path,
+    calibration_confirmation_file: Path | None = None,
     baseline_plan_file: Path | None = None,
     benchmark_cv_threshold_pct: float = 5.0,
     pressure_zero_tolerance: float = 0.05,
@@ -914,6 +1045,7 @@ def compute_profiles(
         plan_file=plan_file,
         solo_baselines_file=solo_baselines_file,
         calibration_file=calibration_file,
+        calibration_confirmation_file=calibration_confirmation_file,
         baseline_plan_file=baseline_plan_file,
         benchmark_cv_threshold_pct=benchmark_cv_threshold_pct,
     )
@@ -930,6 +1062,7 @@ def compute_profiles(
         path=calibration_file,
         cv_threshold_pct=benchmark_cv_threshold_pct,
         expected_pressure_caps=pressure_caps,
+        confirmation_path=calibration_confirmation_file,
     )
     records = [
         _collect_profile_record(
@@ -1026,6 +1159,7 @@ def compute_profiles(
             "calibration": _relative(repo_root, calibration_file),
             "calibration_sha256": _file_sha256(calibration_file),
             "calibration_environment_sha256": calibration_payload.get("environment_sha256"),
+            "calibration_confirmation": audit.get("calibration_confirmation"),
             "solo_execution_source_tree_sha256s": baseline_payload.get("execution", {}).get("source_tree_sha256s", []),
         },
         "execution": {
@@ -1145,6 +1279,7 @@ def build_profiles(
     plan_file: Path,
     solo_baselines_file: Path,
     calibration_file: Path,
+    calibration_confirmation_file: Path | None = None,
     baseline_plan_file: Path | None = None,
     output_file: Path,
     runs_output_file: Path,
@@ -1166,6 +1301,7 @@ def build_profiles(
         plan_file=plan_file,
         solo_baselines_file=solo_baselines_file,
         calibration_file=calibration_file,
+        calibration_confirmation_file=calibration_confirmation_file,
         baseline_plan_file=baseline_plan_file,
     )
     _write_jsonl_exclusive(runs, records)
@@ -1195,6 +1331,7 @@ def verify_profiles(
     plan_file: Path,
     solo_baselines_file: Path,
     calibration_file: Path,
+    calibration_confirmation_file: Path | None = None,
     baseline_plan_file: Path | None = None,
     profiles_file: Path,
     runs_file: Path,
@@ -1214,6 +1351,7 @@ def verify_profiles(
         plan_file=plan_file,
         solo_baselines_file=solo_baselines_file,
         calibration_file=calibration_file,
+        calibration_confirmation_file=calibration_confirmation_file,
         baseline_plan_file=baseline_plan_file,
         benchmark_cv_threshold_pct=float(thresholds["benchmark_cv_max_pct"]),
         pressure_zero_tolerance=float(thresholds["pressure_zero_retention_abs_deviation_max"]),
