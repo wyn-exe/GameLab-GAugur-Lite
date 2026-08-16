@@ -1,0 +1,473 @@
+{
+  "batch": {
+    "number": 1,
+    "selection_end_exclusive": 24,
+    "selection_start_zero_based": 0,
+    "size": 24
+  },
+  "completed": 1,
+  "elapsed_s": 167.1466633999953,
+  "execution_provenance": {
+    "root_commit": "8c980c00d5a56c3fd5206c44de1a567610b8867f",
+    "root_dirty_at_execution": true,
+    "source_files": {
+      "gaugur_lite/__init__.py": "40ce80d3950239110ee0c5c723744d91db53da3c5bf5423cc6d7d31f6140c09e",
+      "gaugur_lite/__main__.py": "08370caec634f97ccdc7e2ece318d99b6f1ca80eb817e4940b259ac4fa729a65",
+      "gaugur_lite/baselines.py": "f888c7058ee65a4c6a436580f095adb20919d572ec2c390e9e7504347a1cf884",
+      "gaugur_lite/benchmarks/__init__.py": "21820b57d90bc390e1c355be208946cb0444b3231d4504c0e4c793e8fb336434",
+      "gaugur_lite/benchmarks/calibration.py": "092ea2f040775e2e8e34790565ff95f7f85ac5d2b5ab781f657578efdcc55cf5",
+      "gaugur_lite/benchmarks/engine.py": "e21d064faece16578110da5b2c1758c84fef46a9ad620e5f88d48e076b808ab3",
+      "gaugur_lite/cli.py": "314bee3c86aa3bca27fdb8b0a276476bf16c3cd66aa64cd616fab7462108b1a6",
+      "gaugur_lite/config.py": "27b53f4558b9437a4405f09c6aeb6669962be31816c83e61973830f0ec240082",
+      "gaugur_lite/doctor.py": "37bb15b312cc7fa8a1dbabff3baf39760ab04bacd11f44a4804820796354cb77",
+      "gaugur_lite/metrics/__init__.py": "0aec1d02734c7a9e2a39ed1be350e9f0afb78d7d9dcc849030f2d09c4020831c",
+      "gaugur_lite/metrics/summarize.py": "56dc923d30286ed96ef08476cc4fc85fed39770dc6e22a154f38abd5bd7d8541",
+      "gaugur_lite/metrics/system_sampler.py": "fe126627c2e1b4cb0108a37bbdea8bd9a1186a13b0b6330306a70024f574a71f",
+      "gaugur_lite/metrics/telemetry.py": "52e79cd75e38f5d4e65f80d8bb8150296969e970160e12f28bae23ed012a39f9",
+      "gaugur_lite/metrics/writer.py": "18e8c5b53946fe958d2f6b9cba218dd483b149cf90618092916a35864b375ca0",
+      "gaugur_lite/profiles.py": "a78ff2e09c7ee673cc22df26e2ae0184428706917debd3bdd7cfff0496fb42a7",
+      "gaugur_lite/runner/__init__.py": "955a52e9207d2f139633b5ddb986fec3df9a8a2cfe62a2d2b66ec45374f1c242",
+      "gaugur_lite/runner/plan.py": "32840eab56f0808567607d9e3ff67718698773da27909104988ec5eb92beb8a0",
+      "gaugur_lite/runner/runner.py": "06c4723ef0442a90813cdbd9f147804c9587c1534b53b804c6771e492cb8f2de",
+      "gaugur_lite/runner/window_layout.py": "d4514b058f3818de54db298866e6a837e7214a4962f0caf7151fc09d5b834e6b",
+      "gaugur_lite/schema.py": "a57382342af3cf68eab0ffad5841267952e3638ad94f8c9a69f24505f13a7387",
+      "gaugur_lite/workloads/__init__.py": "a00c5a8f4d39322460971110fe0a5d170478e9cb8f32269a4ac62d5148941e48",
+      "gaugur_lite/workloads/controllers.py": "4817786830425b71c69376c9f259e8e2c76dd727be9142ef3ae2ef47899d8794",
+      "gaugur_lite/workloads/launcher.py": "cd57805a1fed4c4e4f36e00d2b45ac8c0280973b3ac7395d6685c29fd941aed9",
+      "gaugur_lite/workloads/pyxel_game.py": "13b024afa3c33e783276caae9eb18c461e489358181cd65e8e3c9c0282e4df89",
+      "gaugur_lite/workloads/registry.py": "21d154b156a51b4e99da30d367ca969173c05f9ebc97fb7a1ad822b5175c4d62",
+      "gaugur_lite/workloads/window_probe.py": "4a01cedfe96b87d8a5bf8fcbe770858d231cdb77a0bdf7fb114eb2bf95f38cd9",
+      "pyproject.toml": "3096335850c3d3a26e819c88d0e77823ebf1bc4580d309eb5e251775c4091223"
+    },
+    "source_tree_sha256": "1c71244569502052191d4f6ec09c5eea4185d6b2b13c555cba6fa16cea0089ce"
+  },
+  "failed_or_invalid": 1,
+  "global_kill_used": false,
+  "plan": "artifacts/plans/formal-v1.csv",
+  "plan_sha256": "94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a",
+  "progress_before": {
+    "existing_source_tree_sha256s": [
+      "1c71244569502052191d4f6ec09c5eea4185d6b2b13c555cba6fa16cea0089ce"
+    ],
+    "existing_source_tree_sha256s_by_stage": {
+      "profile": [
+        "1c71244569502052191d4f6ec09c5eea4185d6b2b13c555cba6fa16cea0089ce"
+      ]
+    },
+    "stage_completed_runs": 22,
+    "stage_remaining_runs": 458,
+    "stage_total_runs": 480
+  },
+  "results": [
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_bubbles__gpu_compute__p025__r02/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_bubbles__gpu_compute__p025__r02",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__cpu_compute__p050__r01/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_snake__cpu_compute__p050__r01",
+      "status": "skipped"
+    },
+    {
+      "attempt": 2,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_bubbles__gpu_compute__p100__r02/attempts/a002",
+      "run_id": "formal-v1__profile__pyxel_bubbles__gpu_compute__p100__r02",
+      "status": "completed",
+      "summary": {
+        "artifact_sha256": {
+          "barrier.json": "f6d4e190540cc9e2e4c177b1f8cbd2d9af2ca9e73d218641c06e665284c3fea8",
+          "benchmark/ready.json": "2a0d2853f110f1ad87810d96b711b543f16dd4e3e403c6ed36498de7fdb9ca56",
+          "benchmark/status.json": "57c703b4cedcf58f04387ef641b3cba037c3e8336614bec7518a0389bb47fb8a",
+          "benchmark/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "benchmark/stdout.log": "1af4339ec3ae9093c04fa94bd2a9558b87ac49565b31005107620325b25f6b0b",
+          "cooldown.jsonl": "5177fea40bed8504e1ca9acee282d58e4cc886bab0bfcad6fa8207e5b09345bf",
+          "layout.json": "eef7de61db52d7fb401278d8887cadb8636f4d3111f3e0fbc8e6015e11963ff9",
+          "manifest.json": "c45a44f2bc8bb4fd4b4510b02f09f2f7af53b6fedde98febe783020992ecffc4",
+          "system_metrics.jsonl": "8ef12d0464d599c1cd705695498e83901e970c13ec9fc30218c6441265fa688e",
+          "window_observations.jsonl": "481ff70998538ddf45373a57c17c91edb7afca5327cc492c2372b45ac6494792",
+          "workloads/pyxel_bubbles/game_metrics.jsonl": "ce24c49248eb09cf208e8f5f33a300703cdd6cbfb480ba1c291c20bbc8b576e3",
+          "workloads/pyxel_bubbles/heartbeat.json": "6108a490d138e2b4c19e22ceab5d6499e61cf544027efa9275a6fd3fa332b467",
+          "workloads/pyxel_bubbles/measurement-start.json": "354eee04eadc38f487c1406e3b0f1b447292543a282628a5ac790cf4f43d8e25",
+          "workloads/pyxel_bubbles/ready.json": "17a5bb6817537adce58c4abfdd6e15a3837608aeb98f54d433ca362205956223",
+          "workloads/pyxel_bubbles/status.json": "a48294d1d3ea8af856142c5c10930709654b4348c19720aaa440ba9196b8cf6d",
+          "workloads/pyxel_bubbles/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "workloads/pyxel_bubbles/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "workloads/pyxel_bubbles/stop.json": "dc4c2cb25885a2f9c1c2a03a09e7568481a38804ccb5f83cae1a9460a0349a9b",
+          "workloads/pyxel_bubbles/summary.json": "39f2096378b50dd9782598f77a70627a6521a91110c3319aefd3f5972d46529f"
+        },
+        "attempt": 2,
+        "benchmark": {
+          "active_fraction": 0.9991630578761632,
+          "active_s": 59.94974830199499,
+          "allocated_bytes": 0,
+          "barrier_used": true,
+          "barrier_wait_s": 0.09568839997518808,
+          "capacity_bytes": 0,
+          "duty_cycle_s": 0.25,
+          "elapsed_s": 59.9999647999648,
+          "finished_wall_time_ns": 1786845640584012900,
+          "measurement_end_monotonic_ns": 315235077631300,
+          "measurement_start_monotonic_ns": 315175077659500,
+          "operations": 177322590208,
+          "pid": 13980,
+          "planned_measurement_end_monotonic_ns": 315235077567800,
+          "planned_measurement_start_monotonic_ns": 315175077567800,
+          "pressure_requested": 1.0,
+          "resource": "gpu_compute",
+          "schema_version": 1,
+          "sleep_s": 0.0,
+          "started_wall_time_ns": 1786845550180899300,
+          "status": "completed",
+          "warmup_active_s": 19.950224903644994,
+          "warmup_elapsed_s": 19.96612009999808,
+          "warmup_operations": 59721646080,
+          "warmup_sleep_s": 0.0
+        },
+        "cleanup": {
+          "actions": [],
+          "global_kill_used": false
+        },
+        "cooldown": {
+          "elapsed_s": 20.006800599978305,
+          "extended_beyond_planned": false,
+          "gpu_temp_c_last": 58.0,
+          "samples": 21,
+          "thermal_target_c": 72.0,
+          "thermal_target_reached": true
+        },
+        "external_occlusion_checked": false,
+        "gpu_temp_c_max": 82.0,
+        "gpu_temp_limit_c": 82.0,
+        "measurement_end_monotonic_ns": 315235077567800,
+        "measurement_start_monotonic_ns": 315175077567800,
+        "mode": "pressure_profile",
+        "pressure_requested": 1.0,
+        "resource": "gpu_compute",
+        "run_id": "formal-v1__profile__pyxel_bubbles__gpu_compute__p100__r02",
+        "schema_version": 1,
+        "split": "not_applicable",
+        "stage": "profile",
+        "status": "completed",
+        "system_coverage_ratio": 1.0,
+        "system_coverage_s": 60.0,
+        "system_sample_count": 61,
+        "valid": true,
+        "window_sample_count": 61,
+        "windows_pairwise_nonoverlap": true,
+        "workload_ids": [
+          "pyxel_bubbles"
+        ],
+        "workload_overlap_ratio": 1.0,
+        "workload_overlap_s": 60.0018555,
+        "workloads": [
+          {
+            "audio_mode": "muted",
+            "barrier_used": true,
+            "barrier_wait_s": 8.471302299993113,
+            "controller": "bubbles_v1",
+            "controller_trace_sha256": "baa22b33966a88ad955b3ff7eb5620e0ce45987e4b69a53dcb175aae35b1a6dd",
+            "display_scale": 2,
+            "draw_count": 2400,
+            "draw_interval_ms": {
+              "count": 1799,
+              "max": 125.5553,
+              "mean": 33.346478488048916,
+              "min": 0.3501,
+              "p95": 34.8228
+            },
+            "draw_time_ms": {
+              "count": 1800,
+              "max": 0.353,
+              "mean": 0.021342166666666666,
+              "min": 0.0149,
+              "p95": 0.0296
+            },
+            "duration_requested_s": 60.0,
+            "elapsed_s": 88.4841129,
+            "entrypoint": "games/pyxel/06_click_game.py",
+            "game_fps": {
+              "count": 59,
+              "max": 30.938024948423315,
+              "mean": 29.98026786612151,
+              "min": 28.902676364709233,
+              "p05": 29.93745168220038,
+              "p95": 30.048385655327184,
+              "windows_used": 59
+            },
+            "headless": false,
+            "logical_height": 256,
+            "logical_width": 256,
+            "max_frames": 0,
+            "measurement_coverage_ratio": 1.0,
+            "measurement_coverage_s": 60.0345126,
+            "measurement_finished_monotonic_ns": 315235081923900,
+            "measurement_metric_rows": 59,
+            "measurement_started_monotonic_ns": 315175080068400,
+            "metric_rows": 79,
+            "missed_deadline_count": 4,
+            "output_files": {
+              "heartbeat": "heartbeat.json",
+              "metrics": "game_metrics.jsonl",
+              "ready": "ready.json",
+              "status": "status.json",
+              "stop": "stop.json",
+              "summary": "summary.json"
+            },
+            "planned_measurement_end_monotonic_ns": 315235077567800,
+            "planned_measurement_start_monotonic_ns": 315175077567800,
+            "quality_gate": {
+              "checks": [
+                {
+                  "actual": "duration_reached",
+                  "name": "planned_stop",
+                  "passed": true
+                },
+                {
+                  "actual": 2400,
+                  "name": "draw_count_positive",
+                  "passed": true
+                },
+                {
+                  "actual": 79,
+                  "name": "metric_count_positive",
+                  "passed": true
+                },
+                {
+                  "actual": true,
+                  "name": "counts_consistent",
+                  "passed": true
+                },
+                {
+                  "actual": 2400,
+                  "name": "expected_frames",
+                  "passed": true,
+                  "threshold": null
+                },
+                {
+                  "actual": 30,
+                  "name": "target_fps_matches_registry",
+                  "passed": true,
+                  "threshold": 30
+                },
+                {
+                  "actual": true,
+                  "name": "window_healthy",
+                  "passed": true,
+                  "skipped": false
+                },
+                {
+                  "actual": 1.0,
+                  "name": "measurement_coverage",
+                  "passed": true,
+                  "skipped": false,
+                  "threshold": 0.95
+                }
+              ],
+              "failed_checks": [],
+              "status": "passed"
+            },
+            "run_id": "formal-v1__profile__pyxel_bubbles__gpu_compute__p100__r02",
+            "schema_version": 1,
+            "seed": 1002,
+            "status": "completed",
+            "stop_reason": "duration_reached",
+            "target_fps": 30,
+            "title": "Pyxel Bubbles",
+            "update_count": 2400,
+            "update_time_ms": {
+              "count": 1800,
+              "max": 0.3598,
+              "mean": 0.088036,
+              "min": 0.0457,
+              "p95": 0.1277
+            },
+            "warmup_requested_s": 20.0,
+            "window_observations": 59,
+            "workload_id": "pyxel_bubbles"
+          }
+        ]
+      },
+      "valid": true
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_shooter__gpu_compute__p000__r02/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_shooter__gpu_compute__p000__r02",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__mega_wing__cpu_compute__p100__r03/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__mega_wing__cpu_compute__p100__r03",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_shooter__gpu_memory__p050__r03/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_shooter__gpu_memory__p050__r03",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__cpu_compute__p000__r02/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_snake__cpu_compute__p000__r02",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_bubbles__cpu_compute__p075__r02/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_bubbles__cpu_compute__p075__r02",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_platformer__gpu_memory__p050__r01/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_platformer__gpu_memory__p050__r01",
+      "status": "skipped"
+    },
+    {
+      "attempt": 2,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_compute__p100__r03/attempts/a002",
+      "reason": "RunInvalidError:gpu_temperature_exceeded:83.0>82.0",
+      "run_id": "formal-v1__profile__pyxel_snake__gpu_compute__p100__r03",
+      "status": "invalid",
+      "valid": false
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__space_rescue__cpu_compute__p100__r03/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__space_rescue__cpu_compute__p100__r03",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__mega_wing__cpu_compute__p100__r01/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__mega_wing__cpu_compute__p100__r01",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_shooter__memory_bandwidth__p050__r03/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_shooter__memory_bandwidth__p050__r03",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_jump__memory_bandwidth__p050__r01/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_jump__memory_bandwidth__p050__r01",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__space_rescue__gpu_memory__p000__r02/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__space_rescue__gpu_memory__p000__r02",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_compute__p000__r03/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_snake__gpu_compute__p000__r03",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_memory__p025__r03/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_snake__gpu_memory__p025__r03",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_jump__gpu_memory__p000__r02/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_jump__gpu_memory__p000__r02",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_memory__p025__r01/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_snake__gpu_memory__p025__r01",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__cpu_compute__p100__r01/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_snake__cpu_compute__p100__r01",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__daylight__memory_bandwidth__p050__r01/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__daylight__memory_bandwidth__p050__r01",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_memory__p100__r03/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_snake__gpu_memory__p100__r03",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_platformer__gpu_memory__p075__r03/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__pyxel_platformer__gpu_memory__p075__r03",
+      "status": "skipped"
+    },
+    {
+      "action": "skip",
+      "attempt": 1,
+      "directory": "data/raw/formal-v1/formal-v1__profile__mega_wing__gpu_compute__p000__r02/attempts/a001",
+      "reason": "completed_valid",
+      "run_id": "formal-v1__profile__mega_wing__gpu_compute__p000__r02",
+      "status": "skipped"
+    }
+  ],
+  "schema_version": 1,
+  "selected_runs": 24,
+  "skipped": 22,
+  "stage": "profile",
+  "status": "failed"
+}

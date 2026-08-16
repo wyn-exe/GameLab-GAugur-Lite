@@ -1,0 +1,37 @@
+{
+  "attempt": 1,
+  "cleanup": {
+    "actions": [
+      {
+        "action": "terminate_verified_tree",
+        "descendant_pids": [
+          43764
+        ],
+        "name": "pyxel_snake",
+        "pid": 14560
+      },
+      {
+        "action": "terminate_verified_tree",
+        "descendant_pids": [
+          13652
+        ],
+        "name": "benchmark:gpu_compute",
+        "pid": 44848
+      }
+    ],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 20.00805720000062,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 60.0,
+    "samples": 21,
+    "thermal_target_c": 72.0,
+    "thermal_target_reached": true
+  },
+  "reason": "RunInvalidError:gpu_temperature_exceeded:83.0>82.0",
+  "run_id": "formal-v1__profile__pyxel_snake__gpu_compute__p100__r03",
+  "schema_version": 1,
+  "status": "invalid",
+  "valid": false
+}

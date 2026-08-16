@@ -473,7 +473,16 @@ def _cooldown(*, row: ParsedPlanRow, run_id: str, output: Path) -> dict[str, Any
     started = time.perf_counter()
     rows = []
     if row.cooldown_s <= 0:
-        return {"elapsed_s": 0.0, "samples": 0, "gpu_temp_c_last": None}
+        return {
+            "elapsed_s": 0.0,
+            "samples": 0,
+            "gpu_temp_c_last": None,
+            "thermal_target_c": row.max_gpu_temp_c - 10.0,
+            "thermal_target_reached": None,
+            "extended_beyond_planned": False,
+        }
+    thermal_target_c = row.max_gpu_temp_c - 10.0
+    maximum_cooldown_s = max(row.cooldown_s, 300.0)
     with JsonlWriter(output / "cooldown.jsonl", batch_size=1) as writer, SystemSampler(
         run_id=run_id,
         gpu_index=row.gpu_index,
@@ -485,14 +494,23 @@ def _cooldown(*, row: ParsedPlanRow, run_id: str, output: Path) -> dict[str, Any
             writer.write(event)
             rows.append(event)
             sequence += 1
-            remaining = row.cooldown_s - (time.perf_counter() - started)
-            if remaining <= 0:
+            elapsed = time.perf_counter() - started
+            planned_complete = elapsed >= row.cooldown_s
+            thermally_ready = event.gpu_temp_c is None or event.gpu_temp_c <= thermal_target_c
+            if planned_complete and thermally_ready:
                 break
-            time.sleep(min(1.0, remaining))
+            if elapsed >= maximum_cooldown_s:
+                break
+            time.sleep(min(1.0, max(0.0, row.cooldown_s - elapsed)) or 1.0)
+    elapsed = time.perf_counter() - started
+    last_temperature = rows[-1].gpu_temp_c if rows else None
     return {
-        "elapsed_s": time.perf_counter() - started,
+        "elapsed_s": elapsed,
         "samples": len(rows),
-        "gpu_temp_c_last": rows[-1].gpu_temp_c if rows else None,
+        "gpu_temp_c_last": last_temperature,
+        "thermal_target_c": thermal_target_c,
+        "thermal_target_reached": last_temperature is None or last_temperature <= thermal_target_c,
+        "extended_beyond_planned": elapsed > row.cooldown_s + 0.1,
     }
 
 
@@ -938,6 +956,18 @@ def run_one(
         final_valid = False
         final_reason = f"{type(exc).__name__}:{_safe_error(exc, repo_root)}"
         cleanup_actions = _terminate_owned_children(children)
+        # 高温或子进程失败后也执行计划冷却，避免 Runner 立即把热状态传递给下一行。
+        failure_cooldown = None
+        try:
+            if row.cooldown_s > 0:
+                failure_cooldown = _cooldown(
+                    row=row, run_id=row.run_id, output=attempt_dir
+                )
+        except BaseException as cooldown_exc:
+            failure_cooldown = {
+                "status": "failed",
+                "reason": f"{type(cooldown_exc).__name__}:{_safe_error(cooldown_exc, repo_root)}",
+            }
         failure_summary = {
             "schema_version": 1,
             "run_id": row.run_id,
@@ -945,6 +975,7 @@ def run_one(
             "status": final_status,
             "valid": False,
             "reason": final_reason,
+            "cooldown": failure_cooldown,
             "cleanup": {"global_kill_used": False, "actions": cleanup_actions},
         }
         write_json_atomic(attempt_dir / "failure.json", failure_summary)
@@ -996,6 +1027,8 @@ def run_plan(
     resume: bool,
     stage: str | None = None,
     max_runs: int | None = None,
+    batch_number: int | None = None,
+    batch_size: int | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     verification = verify_plan(repo_root=repo_root, plan_file=plan_file)
@@ -1009,12 +1042,112 @@ def run_plan(
         rows = [row for row in rows if row.stage == stage]
         if not rows:
             raise ValueError(f"计划中没有 stage={stage} 的行")
+    stage_rows = rows
+    if (batch_number is None) != (batch_size is None):
+        raise ValueError("--batch-number 与 --batch-size 必须同时提供")
+    if batch_number is not None:
+        if stage is None:
+            raise ValueError("正式分批必须同时指定 --stage")
+        if max_runs is not None:
+            raise ValueError("--max-runs 不能与正式 batch 参数同时使用")
+        if batch_number < 1 or batch_size is None or batch_size < 1:
+            raise ValueError("batch_number 和 batch_size 必须 >= 1")
     if max_runs is not None:
         if max_runs < 1:
             raise ValueError("max_runs 必须 >= 1")
         rows = rows[:max_runs]
-    decisions = [inspect_resume(repo_root=repo_root, row=row) for row in rows]
+
     execution_provenance = build_execution_provenance(repo_root)
+    # 同一 stage 的正式 attempt 必须由完全相同的源码树产生；否则分批运行会静默混入不同实现。
+    stage_decisions = [inspect_resume(repo_root=repo_root, row=row) for row in stage_rows]
+    existing_source_hashes: set[str] = set()
+    existing_hash_by_row: list[str | None] = []
+    existing_root_by_row: list[str | None] = []
+    for decision in stage_decisions:
+        if decision.get("action") != "skip":
+            existing_hash_by_row.append(None)
+            existing_root_by_row.append(None)
+            continue
+        attempt_dir = _inside_repo(repo_root, str(decision["directory"]))
+        manifest = json.loads((attempt_dir / "manifest.json").read_text(encoding="utf-8"))
+        provenance = manifest.get("execution_provenance", {})
+        source_hash = provenance.get("source_tree_sha256")
+        if not source_hash:
+            raise ValueError(f"已完成 attempt 缺少 source_tree_sha256: {attempt_dir}")
+        source_hash = str(source_hash)
+        existing_source_hashes.add(source_hash)
+        existing_hash_by_row.append(source_hash)
+        root_commit = provenance.get("root_commit")
+        existing_root_by_row.append(str(root_commit) if root_commit else None)
+    current_source_hash = str(execution_provenance["source_tree_sha256"])
+    current_root_commit = execution_provenance.get("root_commit")
+    existing_source_hashes_by_stage: dict[str, list[str]] = {}
+    existing_root_commits_by_stage: dict[str, list[str]] = {}
+    for stage_name in sorted({row.stage for row in stage_rows}):
+        indices = [index for index, row in enumerate(stage_rows) if row.stage == stage_name]
+        stage_hashes = {
+            existing_hash_by_row[index]
+            for index in indices
+            if existing_hash_by_row[index] is not None
+        }
+        existing_source_hashes_by_stage[stage_name] = sorted(stage_hashes)
+        stage_root_commits = {
+            existing_root_by_row[index]
+            for index in indices
+            if existing_root_by_row[index] is not None
+        }
+        existing_root_commits_by_stage[stage_name] = sorted(stage_root_commits)
+        has_work_remaining = any(
+            stage_decisions[index]["action"] == "run" for index in indices
+        )
+        if has_work_remaining and stage_hashes and stage_hashes != {current_source_hash}:
+            raise ValueError(
+                f"stage={stage_name} 已存在不同源码树的有效 attempt；"
+                "为避免混合 provenance，拒绝继续: "
+                + ", ".join(sorted(stage_hashes | {current_source_hash}))
+            )
+        if (
+            has_work_remaining
+            and stage_root_commits
+            and current_root_commit is not None
+            and stage_root_commits != {str(current_root_commit)}
+        ):
+            raise ValueError(
+                f"stage={stage_name} 已存在不同 root commit 的有效 attempt；"
+                "正式采集期间不得提交或切换 commit: "
+                + ", ".join(sorted(stage_root_commits | {str(current_root_commit)}))
+            )
+
+    selection_start = 0
+    if batch_number is not None and batch_size is not None:
+        selection_start = (batch_number - 1) * batch_size
+        if selection_start >= len(stage_rows):
+            raise ValueError(
+                f"batch 超出 stage 范围: batch={batch_number}, "
+                f"batch_size={batch_size}, stage_rows={len(stage_rows)}"
+            )
+        rows = stage_rows[selection_start : selection_start + batch_size]
+    decisions = [inspect_resume(repo_root=repo_root, row=row) for row in rows]
+    stage_would_run = sum(item["action"] == "run" for item in stage_decisions)
+    stage_would_skip = len(stage_decisions) - stage_would_run
+    progress = {
+        "stage_total_runs": len(stage_rows),
+        "stage_completed_runs": stage_would_skip,
+        "stage_remaining_runs": stage_would_run,
+        "existing_source_tree_sha256s": sorted(existing_source_hashes),
+        "existing_source_tree_sha256s_by_stage": existing_source_hashes_by_stage,
+        "existing_root_commits_by_stage": existing_root_commits_by_stage,
+    }
+    batch = (
+        {
+            "number": batch_number,
+            "size": batch_size,
+            "selection_start_zero_based": selection_start,
+            "selection_end_exclusive": selection_start + len(rows),
+        }
+        if batch_number is not None
+        else None
+    )
     if dry_run:
         return {
             "schema_version": 1,
@@ -1022,6 +1155,8 @@ def run_plan(
             "dry_run": True,
             "plan_sha256": verification["plan_sha256"],
             "stage": stage or "all",
+            "batch": batch,
+            "progress": progress,
             "execution_provenance": execution_provenance,
             "selected_runs": len(rows),
             "would_run": sum(item["action"] == "run" for item in decisions),
@@ -1052,6 +1187,8 @@ def run_plan(
         "plan": plan_file.resolve().relative_to(repo_root.resolve()).as_posix(),
         "plan_sha256": verification["plan_sha256"],
         "stage": stage or "all",
+        "batch": batch,
+        "progress_before": progress,
         "execution_provenance": execution_provenance,
         "selected_runs": len(rows),
         "completed": completed,

@@ -1,0 +1,28 @@
+schema_version: 1
+
+# Step 7 温控修订：只放宽 profile 的采样上限，并隔离新 raw 数据。
+host:
+  id: "windows-rtx4060"
+  platform: "windows"
+  gpu_index: 0
+  display_index: 0
+  dpi_awareness: "per_monitor_v2"
+  window_layout: "grid_2x2"
+  require_visible_windows: true
+  cpu_affinity: null
+  cooldown_s: 20
+  max_gpu_temp_c: 84
+
+measurement:
+  warmup_s: 20
+  duration_s: 60
+  sample_interval_s: 1.0
+  repeats: 3
+  qos_ratios: [0.70, 0.80, 0.90]
+  random_seed: 20260811
+
+paths:
+  raw: "data/raw/step7-t84"
+  interim: "data/interim"
+  processed: "data/processed"
+  artifacts: "artifacts"

@@ -1,0 +1,37 @@
+{
+  "attempt": 1,
+  "cleanup": {
+    "actions": [
+      {
+        "action": "terminate_verified_tree",
+        "descendant_pids": [
+          23092
+        ],
+        "name": "pyxel_bubbles",
+        "pid": 16508
+      },
+      {
+        "action": "terminate_verified_tree",
+        "descendant_pids": [
+          46844
+        ],
+        "name": "benchmark:gpu_compute",
+        "pid": 42264
+      }
+    ],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 20.00761169998441,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 60.0,
+    "samples": 21,
+    "thermal_target_c": 72.0,
+    "thermal_target_reached": true
+  },
+  "reason": "RunInvalidError:gpu_temperature_exceeded:83.0>82.0",
+  "run_id": "formal-v1__profile__pyxel_bubbles__gpu_compute__p100__r02",
+  "schema_version": 1,
+  "status": "invalid",
+  "valid": false
+}

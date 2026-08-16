@@ -202,6 +202,152 @@ def test_run_plan_filters_stage_before_max_runs(tmp_path: Path, monkeypatch: obj
     assert result["decisions"][0]["run_id"] == solo["run_id"]
 
 
+def test_run_plan_selects_deterministic_stage_batch(tmp_path: Path, monkeypatch: object) -> None:
+    rows = [
+        dict(_row(f"data/raw/test-exp/profile-{index}", f"test-exp__profile__game_{index}__r01").raw)
+        for index in range(5)
+    ]
+    for item in rows:
+        item.update(stage="profile", mode="pressure_profile", resource="cpu_compute", pressure_requested="0.5")
+    monkeypatch.setattr(runner, "verify_plan", lambda **_: {"status": "passed", "plan_sha256": "c" * 64})
+    monkeypatch.setattr(runner, "load_plan_rows", lambda _: rows)
+    monkeypatch.setattr(runner, "inspect_resume", lambda **_: {"action": "run", "attempt": 1})
+    plan = tmp_path / "plan.csv"
+    plan.write_text("placeholder\n", encoding="utf-8")
+
+    result = runner.run_plan(
+        repo_root=tmp_path,
+        plan_file=plan,
+        resume=True,
+        stage="profile",
+        batch_number=2,
+        batch_size=2,
+        dry_run=True,
+    )
+
+    assert result["selected_runs"] == 2
+    assert [item["run_id"] for item in result["decisions"]] == [rows[2]["run_id"], rows[3]["run_id"]]
+    assert result["progress"]["stage_total_runs"] == 5
+    assert result["batch"]["selection_start_zero_based"] == 2
+
+
+def test_run_plan_rejects_mixed_stage_source_tree(tmp_path: Path, monkeypatch: object) -> None:
+    row = _row("data/raw/test-exp/existing")
+    pending = _row("data/raw/test-exp/pending", "test-exp__solo__game_1__r01")
+    attempt = tmp_path / "data/raw/test-exp/existing/attempts/a001"
+    attempt.mkdir(parents=True)
+    (attempt / "manifest.json").write_text(
+        json.dumps({"execution_provenance": {"source_tree_sha256": "f" * 64}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(runner, "verify_plan", lambda **_: {"status": "passed", "plan_sha256": "c" * 64})
+    monkeypatch.setattr(runner, "load_plan_rows", lambda _: [row.raw, pending.raw])
+    monkeypatch.setattr(
+        runner,
+        "inspect_resume",
+        lambda **kwargs: (
+            {"action": "skip", "attempt": 1, "directory": attempt.relative_to(tmp_path).as_posix()}
+            if kwargs["row"].run_id == row.run_id
+            else {"action": "run", "attempt": 1}
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_execution_provenance",
+        lambda _: {"source_tree_sha256": "e" * 64},
+    )
+    plan = tmp_path / "plan.csv"
+    plan.write_text("placeholder\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="不同源码树"):
+        runner.run_plan(repo_root=tmp_path, plan_file=plan, resume=True, stage="solo", dry_run=True)
+
+
+def test_run_plan_rejects_mid_stage_root_commit_change(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    row = _row("data/raw/test-exp/existing")
+    pending = _row("data/raw/test-exp/pending", "test-exp__solo__game_1__r01")
+    attempt = tmp_path / "data/raw/test-exp/existing/attempts/a001"
+    attempt.mkdir(parents=True)
+    (attempt / "manifest.json").write_text(
+        json.dumps(
+            {
+                "execution_provenance": {
+                    "source_tree_sha256": "e" * 64,
+                    "root_commit": "f" * 40,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(runner, "verify_plan", lambda **_: {"status": "passed", "plan_sha256": "c" * 64})
+    monkeypatch.setattr(runner, "load_plan_rows", lambda _: [row.raw, pending.raw])
+    monkeypatch.setattr(
+        runner,
+        "inspect_resume",
+        lambda **kwargs: (
+            {"action": "skip", "attempt": 1, "directory": attempt.relative_to(tmp_path).as_posix()}
+            if kwargs["row"].run_id == row.run_id
+            else {"action": "run", "attempt": 1}
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_execution_provenance",
+        lambda _: {"source_tree_sha256": "e" * 64, "root_commit": "d" * 40},
+    )
+    plan = tmp_path / "plan.csv"
+    plan.write_text("placeholder\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="不同 root commit"):
+        runner.run_plan(repo_root=tmp_path, plan_file=plan, resume=True, stage="solo", dry_run=True)
+
+
+def test_run_plan_allows_new_stage_after_completed_stage_with_older_source(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    solo = _row("data/raw/test-exp/existing")
+    profile = _row("data/raw/test-exp/new-profile", "test-exp__profile__game_1__r01")
+    profile.raw.update(
+        stage="profile",
+        mode="pressure_profile",
+        resource="cpu_compute",
+        pressure_requested="0.5",
+    )
+    attempt = tmp_path / "data/raw/test-exp/existing/attempts/a001"
+    attempt.mkdir(parents=True)
+    (attempt / "manifest.json").write_text(
+        json.dumps({"execution_provenance": {"source_tree_sha256": "f" * 64}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(runner, "verify_plan", lambda **_: {"status": "passed", "plan_sha256": "c" * 64})
+    monkeypatch.setattr(runner, "load_plan_rows", lambda _: [solo.raw, profile.raw])
+    monkeypatch.setattr(
+        runner,
+        "inspect_resume",
+        lambda **kwargs: (
+            {"action": "skip", "attempt": 1, "directory": attempt.relative_to(tmp_path).as_posix()}
+            if kwargs["row"].stage == "solo"
+            else {"action": "run", "attempt": 1}
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_execution_provenance",
+        lambda _: {"source_tree_sha256": "e" * 64},
+    )
+    plan = tmp_path / "plan.csv"
+    plan.write_text("placeholder\n", encoding="utf-8")
+
+    result = runner.run_plan(repo_root=tmp_path, plan_file=plan, resume=True, dry_run=True)
+
+    assert result["progress"]["stage_completed_runs"] == 1
+    assert result["progress"]["stage_remaining_runs"] == 1
+    assert result["progress"]["existing_source_tree_sha256s_by_stage"]["solo"] == ["f" * 64]
+    assert result["progress"]["existing_source_tree_sha256s_by_stage"]["profile"] == []
+
+
 def test_execution_provenance_changes_with_source_tree(tmp_path: Path) -> None:
     package = tmp_path / "gaugur_lite"
     package.mkdir()

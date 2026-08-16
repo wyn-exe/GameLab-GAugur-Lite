@@ -31,6 +31,12 @@ from .config import (
 from .doctor import build_doctor_report
 from .metrics.telemetry import format_result, run_overhead, run_probe
 from .metrics.writer import write_json_atomic
+from .profiles import (
+    ProfileError,
+    audit_profile_inputs,
+    build_profiles,
+    verify_profiles,
+)
 from .runner.plan import PLAN_STAGES, build_plan, load_plan_rows, verify_plan
 from .runner.runner import run_plan
 from .workloads.launcher import build_step3_acceptance, launch_smoke
@@ -68,9 +74,16 @@ benchmark_app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+features_app = typer.Typer(
+    name="features",
+    help="构建与独立复核 GAugur 敏感度/强度特征。",
+    no_args_is_help=True,
+    add_completion=False,
+)
 app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(workload_app, name="workload")
 app.add_typer(benchmark_app, name="benchmark")
+app.add_typer(features_app, name="features")
 
 
 def _version_callback(value: bool) -> None:
@@ -313,6 +326,8 @@ def experiment_run(
         help="只执行 solo/profile/colocation-main/colocation-extra-test；默认执行整表。",
     ),
     max_runs: int | None = typer.Option(None, "--max-runs", min=1, help="仅调试/分批执行前 N 个计划行。"),
+    batch_number: int | None = typer.Option(None, "--batch-number", min=1, help="stage 内从 1 开始的正式批次编号。"),
+    batch_size: int | None = typer.Option(None, "--batch-size", min=1, help="正式批次包含的 stage 行数。"),
     report: Path | None = typer.Option(None, "--report", help="可选的独占运行报告 JSON。"),
     dry_run: bool = typer.Option(False, "--dry-run", help="只复核计划和 resume 决策。"),
 ) -> None:
@@ -328,6 +343,8 @@ def experiment_run(
             resume=resume,
             stage=stage,
             max_runs=max_runs,
+            batch_number=batch_number,
+            batch_size=batch_size,
             dry_run=_effective_dry_run(ctx, dry_run),
         )
         if report is not None and not result.get("dry_run"):
@@ -444,6 +461,109 @@ def experiment_summarize_verify(
         json.JSONDecodeError,
     ) as exc:
         typer.echo(f"SUMMARY_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@features_app.command("build-profiles")
+def features_build_profiles(
+    ctx: typer.Context,
+    plan: Path = typer.Option(..., "--plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    solo_baselines: Path = typer.Option(..., "--solo-baselines", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    baseline_plan: Path | None = typer.Option(None, "--baseline-plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True, help="温控修订时，solo baseline 所属的父计划。"),
+    calibration: Path = typer.Option(..., "--calibration", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    output: Path = typer.Option(..., "--out", help="独占创建的 160-row profiles.parquet。"),
+    runs_output: Path = typer.Option(..., "--runs-out", help="独占创建的 480-row run-level JSONL。"),
+    summary: Path = typer.Option(..., "--summary", help="独占创建的曲线、强度和质量门 JSON。"),
+    plot_dir: Path = typer.Option(..., "--plot-dir", help="独占创建三张 PNG 的目录。"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="只复核计划、solo 与 calibration 分母。"),
+) -> None:
+    """构建 8×4×5×3 profile 的敏感度、slowdown intensity 与图表。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        if _effective_dry_run(ctx, dry_run):
+            result = audit_profile_inputs(
+                repo_root=repo_root,
+                plan_file=plan,
+                solo_baselines_file=solo_baselines,
+                calibration_file=calibration,
+                baseline_plan_file=baseline_plan,
+            )
+            result["dry_run"] = True
+            result["mutations_planned"] = [
+                output.as_posix(),
+                runs_output.as_posix(),
+                summary.as_posix(),
+                plot_dir.as_posix(),
+            ]
+        else:
+            result = build_profiles(
+                repo_root=repo_root,
+                plan_file=plan,
+                solo_baselines_file=solo_baselines,
+                calibration_file=calibration,
+                baseline_plan_file=baseline_plan,
+                output_file=output,
+                runs_output_file=runs_output,
+                summary_file=summary,
+                plot_dir=plot_dir,
+            )
+    except (
+        ProfileError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        typer.echo(f"PROFILE_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+
+
+@features_app.command("verify-profiles")
+def features_verify_profiles(
+    plan: Path = typer.Option(..., "--plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    solo_baselines: Path = typer.Option(..., "--solo-baselines", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    baseline_plan: Path | None = typer.Option(None, "--baseline-plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True, help="温控修订时，solo baseline 所属的父计划。"),
+    calibration: Path = typer.Option(..., "--calibration", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    profiles: Path = typer.Option(..., "--profiles", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    runs: Path = typer.Option(..., "--runs", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    summary: Path = typer.Option(..., "--summary", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    plot_dir: Path = typer.Option(..., "--plot-dir", exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True),
+    output: Path | None = typer.Option(None, "--output", help="可选的独占验证 JSON。"),
+) -> None:
+    """从 480 个原始 attempt 重算并核对 Parquet、JSONL、summary 和 PNG。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        if output is not None and output.exists():
+            raise FileExistsError(f"验证输出已存在，拒绝覆盖: {output}")
+        result = verify_profiles(
+            repo_root=repo_root,
+            plan_file=plan,
+            solo_baselines_file=solo_baselines,
+            calibration_file=calibration,
+            baseline_plan_file=baseline_plan,
+            profiles_file=profiles,
+            runs_file=runs,
+            summary_file=summary,
+            plot_dir=plot_dir,
+        )
+        if output is not None:
+            write_json_atomic(output, result)
+    except (
+        ProfileError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        typer.echo(f"PROFILE_ERROR: {type(exc).__name__}: {exc}", err=True)
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] != "passed":

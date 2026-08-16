@@ -17,8 +17,9 @@
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
-| Python 实现              | 分阶段实现中 | Step 0–6 已完成，下一阶段采集敏感度与干扰强度 profile             |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；profile、共置、模型与最终报告待后续阶段 |
+| Step 7 敏感度/强度 profile | 温控修订中 | 原 82°C pilot 保留 23 个有效单元和 4 次同因失败；已实现隔离的 84°C profile-only 重启协议 |
+| Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 实现与 74 项温控修订单测已通过，480-run 正式采集待执行 |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；Step 7 原 pilot 不进入最终特征，修订后 profile、共置、模型与报告待生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -204,15 +205,13 @@ GameLab-RLCG/
 │  │  ├─ writer.py
 │  │  ├─ system_sampler.py
 │  │  └─ summarize.py
-│  ├─ orchestration/
+│  ├─ runner/
 │  │  ├─ plan.py
-│  │  ├─ process.py                # Windows PID/进程树管理
-│  │  ├─ lifecycle.py
-│  │  └─ runner.py
-│  ├─ features/
-│  │  ├─ sensitivity.py
-│  │  ├─ intensity.py
-│  │  ├─ aggregate.py
+│  │  ├─ runner.py                 # Windows PID/进程树与生命周期
+│  │  └─ window_layout.py
+│  ├─ baselines.py
+│  ├─ profiles.py
+│  ├─ features/                    # Step 8 后构建组合模型样本
 │  │  └─ dataset.py
 │  ├─ models/
 │  │  ├─ split.py
@@ -1498,68 +1497,157 @@ PASS independent verification: 6/6 checks, summary SHA-256=965d4e5a68df4293442f0
 
 ### Step 7：采集敏感度与强度 profile
 
-#### 敏感度
+#### 已实现的指标口径
 
-对 workload $A$、资源 $r$、压力 $x$：
+对 workload $A$、资源 $r$、压力 $x$，敏感度仍是游戏 FPS 保留率：
 
 $$
 S_A^r(x)=\frac{FPS_A^r(x)}{FPS_{A,solo}}
 $$
 
-正式主实验曲线：
+每个 workload-resource 对保留五档完整曲线：
 
 $$
 S_A^r=[S_A^r(0),S_A^r(0.25),S_A^r(0.5),S_A^r(0.75),S_A^r(1)]
 $$
 
-#### 强度
+`FPS_{A,solo}` 只允许引用 Step 6 的唯一 `baseline_id`，不能从 profile 数据自身估计。每个压力点先保留三个 run-level 比值，再报告三次的均值和样本标准差。
 
-同一次 workload + benchmark 共置中测 benchmark slowdown：
-
-令 $P^+$ 为所有非零压力档位。压力 0 时 benchmark 不执行有效工作，吞吐 slowdown 没有定义，因此强度只在 $P^+$ 上求平均：
+论文中的强度是 benchmark 完成固定工作量所需时间的 slowdown。当前 benchmark 输出 operation 数，因此采用数学上等价的吞吐形式：
 
 $$
-I_A^r=mean_{x\in P^+}\left(\frac{T_{benchmark\mid A}^r(x)}{T_{benchmark,solo}^r(x)}\right)
+throughput=\frac{operations}{elapsed\_s}
 $$
 
-若 benchmark 输出吞吐：
+$$
+slowdown_A^r(x)=\frac{throughput_{benchmark,solo}^r(x)}{throughput_{benchmark\mid A}^r(x)}
+=\frac{T_{benchmark\mid A}^r(x)}{T_{benchmark,solo}^r(x)}
+$$
+
+令 $P^+=\{0.25,0.5,0.75,1\}$。压力 0 的 operation 数按设计为 0，吞吐比无定义，所以只用于检查 $S_A^r(0)$，不进入强度平均：
 
 $$
-slowdown=\frac{throughput_{solo}}{throughput_{colocated}}
+I_A^r=mean_{x\in P^+}(slowdown_A^r(x))
 $$
 
-#### 执行
+同时保存 `benchmark_throughput_retention = throughput_colocated / throughput_solo`。它与 `intensity_slowdown` 互为倒数，但字段名和方向明确，不会把“游戏受压力后的敏感度”与“游戏使 benchmark 变慢的强度”混成同一特征。
 
-1. 每个 workload 与每种 benchmark 在各压力档共置；
-2. workload 先 ready/预热；
-3. benchmark ready 后进入统一正式窗口；
-4. 同时记录 `game_fps`、deadline miss 与 benchmark throughput；
-5. 压力顺序随机；
-6. 每档重复至少 3 次；
-7. 输出曲线、误差条和强度表。
+#### 独立 benchmark 分母
 
-#### 计划命令
+Step 4 的 60 个 worker 本身就是相同四类 benchmark 的独占运行，且参数与正式 Runner 一致：8 个 CPU worker、64 MiB × 8 memory buffer、1024×1024 CUDA matrix、最多 1024 MiB GPU memory 和 250 ms duty cycle。因此其 `operations / elapsed_s` 用作 $throughput_{benchmark,solo}^r(x)$；Step 7 不额外伪造 profile 或增加未写入不可变计划的 60 个 run。
+
+压力 0 以外共有 4 resource × 4 pressure = 16 个独立吞吐分母。三次重复的实测 CV 范围为 0.1672%–3.7651%，全部低于 5% 门槛。构建特征时仍会重新验证 calibration 状态、60-cell 笛卡尔积、worker 参数、operation/elapsed 合法性、环境指纹和每个分母的 CV。
+
+#### 82°C pilot 的中止结论与温控修订
+
+原 [`formal-v1.csv`](artifacts/plans/formal-v1.csv) 把 `82°C` 写入每个计划行。首批采集最终留下 23 个有效 profile 单元；`formal-v1__profile__pyxel_snake__gpu_compute__p100__r03` 在四次独立冷启动中均以完全相同的 `gpu_temperature_exceeded:83.0>82.0` 终止。四次失败前的空闲温度处于正常冷态，失败后均完成 cooldown 且无遗留受管 PID，因此继续重试不能消除这个稳定的协议冲突。
+
+温度证据还包括：Step 4 压力校准曾观测到 `84°C`；本机 `nvidia-smi -q -d TEMPERATURE` 可解析的 GPU Target Temperature 为 `87°C`，但笔记本驱动把部分 T.Limit 字段错误报告为负值或 0，所以这些异常字段不用于决策。修订采用以下保守边界：
+
+- 正式 profile 允许的最高采样值从 `82°C` 改为 `84°C`，采样值大于 `84°C` 仍立即判 invalid；
+- 与设备 `87°C` target 保留 3°C 距离，不修改功率、时钟、风扇或 benchmark 压力；
+- 基础 cooldown 仍为 20 秒，若温度高于 `74°C` 则最多延长至 300 秒；
+- 原 82°C pilot 的 23 个有效单元和所有失败 attempt 原样保留，但全部标记为不进入最终 profile；
+- 修订后从 0/480 重新采集，避免同一特征表混入两种温控计划或两种 source-tree SHA-256。
+
+Step 6 的 24 个 solo baseline 不重跑：其实测最高温仅为 50°C，比原 82°C 门槛低 32°C，而且未施加资源压力。代码不会仅凭这段文字复用它们，而会对原 720-row 父计划和新的 480-row profile-only 计划逐 `run_id`、逐字段比较。除 `execution_index`、`max_gpu_temp_c`、`config_sha256`、`root_commit`、`run_directory` 与 `row_sha256` 外出现任何差异都会拒绝构建特征；新旧 raw 目录也必须完全不相交。
+
+#### 修订后的采集与恢复实现
+
+1. 父计划仍是 [`formal-v1.csv`](artifacts/plans/formal-v1.csv)，用于绑定已经验收的 solo baseline；新的 `formal-v1-profile-t84.csv` 只含 8 workload × 4 resource × 5 pressure × 3 repeat = 480 个 profile 行；
+2. 新配置 [`local.step7-t84.yaml`](configs/local.step7-t84.yaml) 保持 workload、压力、预热、测量窗口、重复次数和随机种子不变，只把温度改为 84°C，并把 raw 根目录隔离为 `data/raw/step7-t84/`；
+3. 修订计划只能从干净 Git 提交生成，计划 manifest 会记录生成 commit、配置哈希、计划哈希和 `root_dirty_at_generation=false`；
+4. `run --stage profile --batch-number N --batch-size 24` 在 stage 内按修订计划的随机顺序切片，20 批恰好覆盖 480 行；
+5. 每批约 24 × (20 秒 warmup + 60 秒 measurement + 至少 20 秒 cooldown) = 40 分钟，失败和已完成 attempt 都原样保留；
+6. `--resume` 只跳过状态、row SHA-256 和全部 artifact SHA-256 均有效的 attempt；脚本自动找到第一个未完成行所在批次；
+7. 只要修订计划已有有效 profile 且仍有待运行行，`gaugur_lite/**/*.py + pyproject.toml` 的 source-tree SHA-256 必须与既有 attempt 完全一致，否则 Runner 拒绝混合实现；
+8. workload 与 benchmark 共享 barrier、20 秒预热和 60 秒正式窗口；同时保存 FPS、deadline miss、operation/elapsed、requested/observed pressure、硬件信号、温度、窗口与系统覆盖率；
+9. 最终一次脚本调用自动构建 480-row run JSONL、160-row 聚合 Parquet、32 条敏感度曲线、32 个强度值和三张图，再从原始 attempt 独立重算。
+
+#### 正式运行命令
+
+修订计划要求生成时工作树干净。应先把当前 Step 7 实现、82°C pilot 原始数据和 invocation 报告提交并上传；不要删除 `data/raw/formal-v1/` 中的 pilot。确认 `git status --short` 没有输出后，运行一次准备命令。它会独占创建 480-row t84 计划、抓取设备温度证据、重算四次失败与 23 个有效 pilot 单元，并验证父计划兼容性：
 
 ```powershell
-python -m gaugur_lite plan `
-  --experiment configs\experiments\formal.yaml `
-  --stage profile `
-  --out artifacts\plans\formal-profile.csv
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
 
-python -m gaugur_lite run --plan artifacts\plans\formal-profile.csv --resume
+git status --short
 
-python -m gaugur_lite features build-profiles `
-  --experiment formal-v1 `
-  --out data\interim\profiles.parquet
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\prepare_step7_thermal_amendment.ps1
 ```
 
-#### 验收
+准备成功后先执行只读预检，不打开游戏窗口：
 
-- 压力 0 的 retention 接近 1；
-- 所有曲线覆盖计划压力档；
-- requested 与 observed pressure 同时保留；
-- 敏感度和强度不混为同一指标；
-- 至少验证“非线性”或“敏感度与强度不相关”中的一项。
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_acceptance.ps1 `
+  -PreflightOnly
+```
+
+正式采集时反复运行下面同一条命令。每次自动完成下一个未完成批次；每批成功后退出并打印全局 `completed/remaining`，共约 20 次。不要最小化或遮挡 Pyxel 窗口；从第一个 t84 run 到 480 个全部完成之间，不要修改 `gaugur_lite` 源码，也不要提交、切换或 rebase Git commit，否则最终的单一 root-commit 质量门不会通过：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_acceptance.ps1
+```
+
+若某批出现高温、窗口或子进程 invalid，保留现场并停止连续重试，先检查 `artifacts/profiles/step7/t84/invocations/` 中该批报告。不要删除失败 attempt，也不要直接覆盖最终特征文件。
+
+#### 产物与质量门
+
+```text
+artifacts/plans/
+├─ formal-v1.csv                         # Step 6/后续共置使用的原 720-row 父计划
+└─ formal-v1-profile-t84.csv             # 修订后的 480-row profile-only 计划
+
+data/raw/
+├─ formal-v1/                            # 82°C pilot；只保留作审计，不进入最终特征
+└─ step7-t84/formal-v1/                  # 修订后的 480 个正式 profile run
+
+data/interim/formal-v1/
+├─ profile-runs.jsonl                    # 480 个有效修订后物理 run
+├─ profiles.parquet                      # 8×4×5 = 160 个三次聚合单元
+└─ profile-summary.json                  # 32 条曲线、32 个 I、阈值与修订 provenance
+
+artifacts/profiles/step7/
+├─ invocations/                          # 原 82°C pilot 报告
+├─ thermal-device-query.txt
+├─ thermal-amendment.json
+└─ t84/
+   ├─ invocations/                       # 修订后各批单测、runner 报告与进度
+   ├─ plots/
+   │  ├─ sensitivity-curves.png
+   │  ├─ intensity-heatmap.png
+   │  └─ sensitivity-intensity.png
+   └─ formal-profile-verification.json
+```
+
+硬门包含：温控修订证据可从原始 index 重算；新旧 480 个 profile 实验语义字段一致且 raw 目录隔离；480/160/32 计数准确；每个单元三次重复；修订后的整个 profile stage 只有一个 source-tree SHA-256 和一个 root commit；三种同步覆盖率均不低于 0.95；最高温不超过 84°C；requested/observed pressure 最大误差不超过 0.05；32 个压力 0 聚合点的 $|S(0)-1|$ 均不超过 0.05；16 个独立吞吐分母 CV 不超过 5%。
+
+分析不会预设论文观察一定在八个轻量游戏上成立：对 32 条曲线计算相对端点线性插值的最大偏差，并对 `1-S(1)` 与 intensity 计算 Pearson、Spearman 相关系数，如实报告结果。
+
+#### 当前真实验收（84°C 正式 480-run 尚未开始）
+
+```text
+........................................................................ [ 97%]
+..                                                                       [100%]
+74 passed in 4.69s
+
+82°C pilot: completed=23/480
+trigger: formal-v1__profile__pyxel_snake__gpu_compute__p100__r03
+a001–a004: RunInvalidError:gpu_temperature_exceeded:83.0>82.0
+solo baseline max GPU temperature: 50°C
+device GPU Target Temperature: 87°C
+
+temporary 480-row plan compatibility check: PASS
+run_id sets equal: true
+changed columns: config_sha256, execution_index, max_gpu_temp_c, root_commit, row_sha256, run_directory
+raw directory overlap: 0
+```
+
+当前能得出的结论是：Step 7 的原 82°C 方案已被真实数据证伪，四次同因失败已保留；隔离重启、父计划兼容性、动态温度质量门、采集中途 commit 拒绝和 74 项单元测试已通过。修订计划必须在提交后由准备脚本从干净工作树生成，其计划 SHA-256、正式表格、图和最终哈希要等 480 个修订后 run 全部完成再填入本节。
 
 ### Step 8：采集真实共置组合
 
