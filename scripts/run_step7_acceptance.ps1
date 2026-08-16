@@ -19,47 +19,71 @@ if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'README.md') -PathType Lea
     throw "Repository marker README.md not found under $repoRoot"
 }
 
-$plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-profile-t84.csv'
-$planManifest = Join-Path $repoRoot 'artifacts\plans\formal-v1-profile-t84-manifest.json'
+$plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-remaining-s30.csv'
+$planManifest = Join-Path $repoRoot 'artifacts\plans\formal-v1-remaining-s30-manifest.json'
 $baselinePlan = Join-Path $repoRoot 'artifacts\plans\formal-v1.csv'
 $soloBaselines = Join-Path $repoRoot 'data\interim\formal-v1\solo-baselines.json'
 $calibration = Join-Path $repoRoot 'artifacts\calibration\step4\formal-calibration.json'
-$amendment = Join-Path $repoRoot 'artifacts\profiles\step7\thermal-amendment.json'
-$artifactRoot = Join-Path $repoRoot 'artifacts\profiles\step7\t84'
+$amendment = Join-Path $repoRoot 'artifacts\profiles\step7\duration-amendment.json'
+$artifactRoot = Join-Path $repoRoot 'artifacts\profiles\step7\s30'
 $invocationRoot = Join-Path $artifactRoot 'invocations'
 $plotRoot = Join-Path $artifactRoot 'plots'
-$planVerification = Join-Path $artifactRoot 'formal-v1-profile-t84-verification.json'
+$planVerification = Join-Path $artifactRoot 'formal-v1-remaining-s30-verification.json'
 $profiles = Join-Path $repoRoot 'data\interim\formal-v1\profiles.parquet'
 $profileRuns = Join-Path $repoRoot 'data\interim\formal-v1\profile-runs.jsonl'
 $profileSummary = Join-Path $repoRoot 'data\interim\formal-v1\profile-summary.json'
 $profileVerification = Join-Path $artifactRoot 'formal-profile-verification.json'
 
-$required = @($plan, $planManifest, $baselinePlan, $soloBaselines, $calibration, $amendment)
+$required = @(
+    $plan,
+    $planManifest,
+    $plan.Replace('.csv', '-combinations.json'),
+    $baselinePlan,
+    $soloBaselines,
+    $calibration,
+    $amendment
+)
 $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
 if ($missing.Count -gt 0) {
     throw "Step 7 input is incomplete: $($missing -join ', ')"
 }
 $manifest = Get-Content -LiteralPath $planManifest -Raw | ConvertFrom-Json
 $actualPlanHash = (Get-FileHash -LiteralPath $plan -Algorithm SHA256).Hash.ToLowerInvariant()
-if ([int]$manifest.row_count -ne 480 `
-        -or $manifest.selected_stage -ne 'profile' `
+if ([int]$manifest.row_count -ne 720 `
+        -or $manifest.selected_stage -ne 'all' `
         -or $manifest.root_dirty_at_generation -ne $false `
         -or $actualPlanHash -ne $manifest.plan_sha256) {
-    throw 'Frozen t84 plan must contain 480 profile rows, come from a clean commit and match its SHA-256'
+    throw 'Frozen s30 plan must contain all 720 rows, come from a clean commit and match its SHA-256'
 }
 $rows = @(Import-Csv -LiteralPath $plan)
 $profileRows = @($rows | Where-Object { $_.stage -eq 'profile' })
 if ($profileRows.Count -ne 480) {
     throw "Frozen formal plan must contain exactly 480 profile rows; actual=$($profileRows.Count)"
 }
+$protocols = @(
+    $profileRows |
+        ForEach-Object { "$($_.warmup_s)/$($_.duration_s)/$($_.cooldown_s)/$($_.max_gpu_temp_c)" } |
+        Sort-Object -Unique
+)
+if ($protocols.Count -ne 1 -or $protocols[0] -ne '10/30/10/84') {
+    throw "Frozen profile plan must use only the 10/30/10 + t84 protocol; actual=$($protocols -join ', ')"
+}
+$rawPrefixes = @(
+    $profileRows |
+        ForEach-Object { if ($_.run_directory -like 'data/raw/remaining-s30/formal-v1/*') { 's30' } else { 'other' } } |
+        Sort-Object -Unique
+)
+if ($rawPrefixes.Count -ne 1 -or $rawPrefixes[0] -ne 's30') {
+    throw 'Frozen profile plan must use the isolated data/raw/remaining-s30/formal-v1 directory'
+}
 
 Push-Location $repoRoot
 try {
-    Write-Host '[Step 7] Verifying the recorded 82°C -> 84°C protocol amendment...'
-    $amendmentRaw = python scripts\build_step7_thermal_amendment.py --output $amendment
+    Write-Host '[Step 7] Verifying the sealed t84 trial and 10/30/10 short-protocol amendment...'
+    $amendmentRaw = python scripts\build_step7_duration_amendment.py --output $amendment
     if ($LASTEXITCODE -ne 0) {
         $amendmentRaw | Out-Host
-        throw "Thermal amendment verification failed with exit code $LASTEXITCODE"
+        throw "Short-protocol amendment verification failed with exit code $LASTEXITCODE"
     }
 
     Write-Host '[Step 7] Auditing immutable plan, solo FPS denominators and standalone benchmark denominators...'
@@ -110,7 +134,7 @@ try {
             remaining = [int]$progressResult.progress.stage_remaining_runs
             batch_size = $BatchSize
             total_batches = [Math]::Ceiling(480 / $BatchSize)
-            estimated_minutes_per_full_batch = [Math]::Ceiling($BatchSize * 100 / 60)
+            estimated_minutes_per_full_batch = [Math]::Ceiling($BatchSize * 50 / 60)
             root_commit = $progressResult.execution_provenance.root_commit
             source_tree_sha256 = $progressResult.execution_provenance.source_tree_sha256
             existing_source_tree_sha256s = @($progressResult.progress.existing_source_tree_sha256s)
@@ -152,7 +176,7 @@ try {
         throw "Unit tests failed with exit code $unitExit"
     }
 
-    Write-Host '[Step 7] Verifying the frozen clean-commit 480-row t84 profile plan...'
+    Write-Host '[Step 7] Verifying the frozen clean-commit 720-row s30 plan (480 profile rows selected)...'
     if (Test-Path -LiteralPath $planVerification) {
         $planRaw = python -m gaugur_lite plan-verify --plan $plan
     }
@@ -180,11 +204,11 @@ try {
         }
         $batchNumber = [int][Math]::Floor($firstPendingIndex / $BatchSize) + 1
         $runReport = Join-Path $invocationRoot ("{0}-batch-{1:D3}-run.json" -f $invocationTag, $batchNumber)
-        Write-Host ("[Step 7] Running/resuming batch {0}/{1}: at most {2} visible profile runs (~{3} minutes plus thermal extension)..." -f `
+        Write-Host ("[Step 7] Running/resuming batch {0}/{1}: at most {2} visible s30 profile runs (~{3} minutes plus thermal extension)..." -f `
             $batchNumber,
             [Math]::Ceiling(480 / $BatchSize),
             $BatchSize,
-            [Math]::Ceiling($BatchSize * 100 / 60))
+            [Math]::Ceiling($BatchSize * 50 / 60))
         Write-Host '[Step 7] Keep the Pyxel window visible and unobscured; do not minimize it.'
         $runRaw = python -m gaugur_lite run `
             --plan $plan `

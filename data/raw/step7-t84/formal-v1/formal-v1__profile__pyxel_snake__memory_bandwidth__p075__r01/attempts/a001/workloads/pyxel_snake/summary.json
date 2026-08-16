@@ -1,0 +1,125 @@
+{
+  "audio_mode": "muted",
+  "barrier_used": true,
+  "barrier_wait_s": 0.06812459999946441,
+  "controller": "snake_cycle_v1",
+  "controller_trace_sha256": "f3c72aee46e7b442e02735c627a4b35afbaa2de51205b2a878838c25f193a702",
+  "display_scale": 2,
+  "draw_count": 1602,
+  "draw_interval_ms": {
+    "count": 1200,
+    "max": 51.9588,
+    "mean": 49.99055875,
+    "min": 40.3092,
+    "p95": 50.6997
+  },
+  "draw_time_ms": {
+    "count": 1201,
+    "max": 0.2877,
+    "mean": 0.02967352206494588,
+    "min": 0.0101,
+    "p95": 0.0429
+  },
+  "duration_requested_s": 60.0,
+  "elapsed_s": 80.1275015,
+  "entrypoint": "games/pyxel/07_snake.py",
+  "game_fps": {
+    "count": 58,
+    "max": 20.998418819062923,
+    "mean": 20.016791181950303,
+    "min": 19.980540856114796,
+    "p05": 19.989831172882358,
+    "p95": 20.016945774379856,
+    "windows_used": 58
+  },
+  "headless": false,
+  "logical_height": 50,
+  "logical_width": 40,
+  "max_frames": 0,
+  "measurement_coverage_ratio": 1.0,
+  "measurement_coverage_s": 60.049900500000014,
+  "measurement_finished_monotonic_ns": 6415025561000,
+  "measurement_metric_rows": 59,
+  "measurement_started_monotonic_ns": 6355025573400,
+  "metric_rows": 79,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "planned_measurement_end_monotonic_ns": 6415010075400,
+  "planned_measurement_start_monotonic_ns": 6355010075400,
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "duration_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 1602,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 79,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 1602,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": null
+      },
+      {
+        "actual": 20,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 20
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      },
+      {
+        "actual": 1.0,
+        "name": "measurement_coverage",
+        "passed": true,
+        "skipped": false,
+        "threshold": 0.95
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "formal-v1__profile__pyxel_snake__memory_bandwidth__p075__r01",
+  "schema_version": 1,
+  "seed": 1003,
+  "status": "completed",
+  "stop_reason": "duration_reached",
+  "target_fps": 20,
+  "title": "Snake!",
+  "update_count": 1602,
+  "update_time_ms": {
+    "count": 1201,
+    "max": 0.283,
+    "mean": 0.025497751873438803,
+    "min": 0.0086,
+    "p95": 0.0411
+  },
+  "warmup_requested_s": 20.0,
+  "window_observations": 59,
+  "workload_id": "pyxel_snake"
+}

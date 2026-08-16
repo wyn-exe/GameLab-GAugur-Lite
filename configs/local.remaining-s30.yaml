@@ -1,0 +1,28 @@
+schema_version: 1
+
+# Step 7/8 短时序正式协议：保留全部组合与三次重复，只缩短单次采集窗口。
+host:
+  id: "windows-rtx4060"
+  platform: "windows"
+  gpu_index: 0
+  display_index: 0
+  dpi_awareness: "per_monitor_v2"
+  window_layout: "grid_2x2"
+  require_visible_windows: true
+  cpu_affinity: null
+  cooldown_s: 10
+  max_gpu_temp_c: 84
+
+measurement:
+  warmup_s: 10
+  duration_s: 30
+  sample_interval_s: 1.0
+  repeats: 3
+  qos_ratios: [0.70, 0.80, 0.90]
+  random_seed: 20260811
+
+paths:
+  raw: "data/raw/remaining-s30"
+  interim: "data/interim"
+  processed: "data/processed"
+  artifacts: "artifacts"

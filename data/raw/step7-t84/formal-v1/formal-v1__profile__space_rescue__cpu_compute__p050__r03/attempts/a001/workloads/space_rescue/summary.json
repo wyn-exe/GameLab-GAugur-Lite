@@ -1,0 +1,125 @@
+{
+  "audio_mode": "muted",
+  "barrier_used": true,
+  "barrier_wait_s": 0.07543290000103298,
+  "controller": "space_rescue_pulse_v1",
+  "controller_trace_sha256": "f3d4123f745fb5188647f4296b16d3b2515e2b74306e9efd4f4f07536d97029c",
+  "display_scale": 2,
+  "draw_count": 2402,
+  "draw_interval_ms": {
+    "count": 1800,
+    "max": 36.5529,
+    "mean": 33.32319611111111,
+    "min": 15.5161,
+    "p95": 34.9357
+  },
+  "draw_time_ms": {
+    "count": 1801,
+    "max": 1.0999,
+    "mean": 0.04215258189894503,
+    "min": 0.0147,
+    "p95": 0.0735
+  },
+  "duration_requested_s": 60.0,
+  "elapsed_s": 80.1202225,
+  "entrypoint": "games/pyxel/apps-src/space_rescue/space_rescue.py",
+  "game_fps": {
+    "count": 59,
+    "max": 30.99969310303828,
+    "mean": 29.999718935422464,
+    "min": 28.985501452173622,
+    "p05": 29.954864010908363,
+    "p95": 30.050890698706475,
+    "windows_used": 59
+  },
+  "headless": false,
+  "logical_height": 120,
+  "logical_width": 160,
+  "max_frames": 0,
+  "measurement_coverage_ratio": 1.0,
+  "measurement_coverage_s": 60.03345500000001,
+  "measurement_finished_monotonic_ns": 17209305114300,
+  "measurement_metric_rows": 59,
+  "measurement_started_monotonic_ns": 17149304962500,
+  "metric_rows": 79,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "planned_measurement_end_monotonic_ns": 17209279029800,
+  "planned_measurement_start_monotonic_ns": 17149279029800,
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "duration_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 2402,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 79,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 2402,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": null
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      },
+      {
+        "actual": 1.0,
+        "name": "measurement_coverage",
+        "passed": true,
+        "skipped": false,
+        "threshold": 0.95
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "formal-v1__profile__space_rescue__cpu_compute__p050__r03",
+  "schema_version": 1,
+  "seed": 1008,
+  "status": "completed",
+  "stop_reason": "duration_reached",
+  "target_fps": 30,
+  "title": "Space Rescue",
+  "update_count": 2402,
+  "update_time_ms": {
+    "count": 1801,
+    "max": 0.496,
+    "mean": 0.029633148250971682,
+    "min": 0.0092,
+    "p95": 0.0503
+  },
+  "warmup_requested_s": 20.0,
+  "window_observations": 59,
+  "workload_id": "space_rescue"
+}

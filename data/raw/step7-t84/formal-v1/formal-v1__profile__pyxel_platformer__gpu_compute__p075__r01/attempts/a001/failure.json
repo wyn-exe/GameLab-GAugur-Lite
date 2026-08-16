@@ -1,0 +1,37 @@
+{
+  "attempt": 1,
+  "cleanup": {
+    "actions": [
+      {
+        "action": "terminate_verified_tree",
+        "descendant_pids": [
+          22812
+        ],
+        "name": "pyxel_platformer",
+        "pid": 7008
+      },
+      {
+        "action": "terminate_verified_tree",
+        "descendant_pids": [
+          14432
+        ],
+        "name": "benchmark:gpu_compute",
+        "pid": 10048
+      }
+    ],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 20.010925399999905,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 59.0,
+    "samples": 21,
+    "thermal_target_c": 74.0,
+    "thermal_target_reached": true
+  },
+  "reason": "RunInvalidError:gpu_temperature_exceeded:85.0>84.0",
+  "run_id": "formal-v1__profile__pyxel_platformer__gpu_compute__p075__r01",
+  "schema_version": 1,
+  "status": "invalid",
+  "valid": false
+}

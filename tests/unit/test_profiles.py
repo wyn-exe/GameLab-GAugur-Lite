@@ -11,6 +11,7 @@ from gaugur_lite.profiles import (
     ProfileError,
     _aggregate,
     _load_standalone_benchmarks,
+    _verify_short_profile_amendment,
     _verify_thermal_profile_amendment,
     build_profiles,
     compute_profiles,
@@ -18,7 +19,15 @@ from gaugur_lite.profiles import (
 )
 
 
-def _amendment_rows(*, limit: int, directory_prefix: str, config: str) -> list[dict[str, str]]:
+def _amendment_rows(
+    *,
+    limit: int,
+    directory_prefix: str,
+    config: str,
+    warmup: int = 20,
+    duration: int = 60,
+    cooldown: int = 20,
+) -> list[dict[str, str]]:
     rows = []
     for index in range(480):
         rows.append(
@@ -27,7 +36,10 @@ def _amendment_rows(*, limit: int, directory_prefix: str, config: str) -> list[d
                 "run_id": f"formal-v1__profile__cell_{index:03d}",
                 "experiment_id": "formal-v1",
                 "stage": "profile",
-                "duration_s": "60",
+                "warmup_s": str(warmup),
+                "duration_s": str(duration),
+                "sample_interval_s": "1",
+                "cooldown_s": str(cooldown),
                 "max_gpu_temp_c": str(limit),
                 "config_sha256": config * 64,
                 "root_commit": config * 40,
@@ -94,8 +106,95 @@ def test_thermal_amendment_rejects_semantic_measurement_change(
     rows = {original: original_rows, amended: amended_rows}
     monkeypatch.setattr(profiles, "load_plan_rows", lambda path: rows[path])
 
-    with pytest.raises(ProfileError, match="实验语义字段"):
+    with pytest.raises(ProfileError, match="未声明字段"):
         _verify_thermal_profile_amendment(
+            repo_root=tmp_path,
+            profile_plan_file=amended,
+            baseline_plan_file=original,
+            profile_plan_sha256="c" * 64,
+            baseline_plan_sha256="d" * 64,
+        )
+
+
+def test_short_amendment_accepts_exact_10_30_10_protocol(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    original = tmp_path / "formal-v1.csv"
+    amended = tmp_path / "formal-v1-profile-s30.csv"
+    original.write_text("placeholder\n", encoding="utf-8")
+    amended.write_text("placeholder\n", encoding="utf-8")
+    (tmp_path / "formal-v1-manifest.json").write_text(
+        json.dumps({"root_dirty_at_generation": False, "selected_stage": "all", "row_count": 720}),
+        encoding="utf-8",
+    )
+    (tmp_path / "formal-v1-profile-s30-manifest.json").write_text(
+        json.dumps({"root_dirty_at_generation": False, "selected_stage": "all", "row_count": 720}),
+        encoding="utf-8",
+    )
+    rows = {
+        original: _amendment_rows(
+            limit=82, directory_prefix="data/raw/formal-v1", config="a"
+        ),
+        amended: _amendment_rows(
+            limit=84,
+            directory_prefix="data/raw/remaining-s30/formal-v1",
+            config="b",
+            warmup=10,
+            duration=30,
+            cooldown=10,
+        ),
+    }
+    monkeypatch.setattr(profiles, "load_plan_rows", lambda path: rows[path])
+
+    result = _verify_short_profile_amendment(
+        repo_root=tmp_path,
+        profile_plan_file=amended,
+        baseline_plan_file=original,
+        profile_plan_sha256="c" * 64,
+        baseline_plan_sha256="d" * 64,
+    )
+
+    assert result["mode"] == "short_profile_amendment_s30_v2"
+    assert result["profile_protocol"] == {
+        "warmup_s": 10.0,
+        "duration_s": 30.0,
+        "cooldown_s": 10.0,
+        "max_gpu_temp_c": 84.0,
+    }
+    assert result["semantic_fields_equal_except_timing"] is True
+
+
+def test_short_amendment_rejects_any_unlisted_change(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    original = tmp_path / "formal-v1.csv"
+    amended = tmp_path / "formal-v1-profile-s30.csv"
+    original.write_text("placeholder\n", encoding="utf-8")
+    amended.write_text("placeholder\n", encoding="utf-8")
+    (tmp_path / "formal-v1-manifest.json").write_text(
+        json.dumps({"root_dirty_at_generation": False}), encoding="utf-8"
+    )
+    (tmp_path / "formal-v1-profile-s30-manifest.json").write_text(
+        json.dumps({"root_dirty_at_generation": False, "selected_stage": "all", "row_count": 720}),
+        encoding="utf-8",
+    )
+    original_rows = _amendment_rows(
+        limit=82, directory_prefix="data/raw/formal-v1", config="a"
+    )
+    amended_rows = _amendment_rows(
+        limit=84,
+        directory_prefix="data/raw/remaining-s30/formal-v1",
+        config="b",
+        warmup=10,
+        duration=30,
+        cooldown=10,
+    )
+    amended_rows[0]["sample_interval_s"] = "2"
+    rows = {original: original_rows, amended: amended_rows}
+    monkeypatch.setattr(profiles, "load_plan_rows", lambda path: rows[path])
+
+    with pytest.raises(ProfileError, match="未声明字段"):
+        _verify_short_profile_amendment(
             repo_root=tmp_path,
             profile_plan_file=amended,
             baseline_plan_file=original,

@@ -1,0 +1,214 @@
+{
+  "artifact_sha256": {
+    "barrier.json": "9f7c51690c11eafc62ac72531550e801bb332e47a0fc4605a4eac3a41bf7f4a7",
+    "benchmark/ready.json": "d82828b9a755586d1f7d28c79d147dd60f6d0a32ee06069673990ee1e5b5edee",
+    "benchmark/status.json": "d86b488fcb6ec5882bd1b3cbea8c1863f1fe6d9c07ad78ec71f9c07f1f1ae359",
+    "benchmark/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "benchmark/stdout.log": "92f3bcae8d05a0c7b9206f719bf7b52f07bbb2344253f723e96eb9366567cdb7",
+    "cooldown.jsonl": "cdde86a5775073c340d7cd63e519e1a2a8762590eda7126b35062e7693ca4c19",
+    "layout.json": "c6d8f134bf16883547dceab482c87baced0d34109b66697e215c40b98cd88c1f",
+    "manifest.json": "d19678ba9ce4a8cda4c13639f7ad342f825939364187c5341dcf718c1f11acf6",
+    "system_metrics.jsonl": "d025e603440af03d4d06a82a8555391403facadefcd9a48143b4eb2b20efeb65",
+    "window_observations.jsonl": "78c2788bf11d7d68f460120c31d97c8af61963855a36cf4b552e9c90744916d7",
+    "workloads/space_rescue/game_metrics.jsonl": "a0b990cf25f6aab634fa662dd6e8791ea17f75b15f7f87608bd0283f6c849e7e",
+    "workloads/space_rescue/heartbeat.json": "b4bd6bfd6643fb1a3df2b521c5c8aaec9ced668fb4df0e6f18b1aa6237c64f0d",
+    "workloads/space_rescue/measurement-start.json": "0b1227837be4e0dfe17ed98e1ebd07d7ad19bbd864f7f7c6fa565f7fba4a8bb1",
+    "workloads/space_rescue/ready.json": "fd57e44429ad85f5dc89311ba8bd9e9e53856feb2317c746df90a44c2240e6d5",
+    "workloads/space_rescue/status.json": "5e3b23a80aecc2aee0397585ed01a62ffde3db30d3f2c30626ffd2938b8d7e51",
+    "workloads/space_rescue/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/space_rescue/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/space_rescue/stop.json": "0c50b91ad852dffe242370015b49a48419956c9699dc48dd29acc82030d18815",
+    "workloads/space_rescue/summary.json": "8ed4599363982d64c7ae3d3d9f965f7a8ec298434f3a227a6ddb0a2131ba2437"
+  },
+  "attempt": 1,
+  "benchmark": {
+    "active_fraction": 0.7562056551678495,
+    "active_s": 45.37243859987575,
+    "allocated_bytes": 805306368,
+    "barrier_used": true,
+    "barrier_wait_s": 0.08206169999903068,
+    "capacity_bytes": 1073741824,
+    "duty_cycle_s": 0.25,
+    "elapsed_s": 60.00013130000298,
+    "finished_wall_time_ns": 1786863139193438900,
+    "measurement_end_monotonic_ns": 16903903580200,
+    "measurement_start_monotonic_ns": 16843903439999,
+    "operations": 9718437249024,
+    "pid": 700,
+    "planned_measurement_end_monotonic_ns": 16903903255800,
+    "planned_measurement_start_monotonic_ns": 16843903255800,
+    "pressure_requested": 0.75,
+    "resource": "gpu_memory",
+    "schema_version": 1,
+    "sleep_s": 14.521018300012656,
+    "started_wall_time_ns": 1786863057453453900,
+    "status": "completed",
+    "warmup_active_s": 15.163652999970509,
+    "warmup_elapsed_s": 19.980906499997218,
+    "warmup_operations": 3246995275776,
+    "warmup_sleep_s": 4.779333500002394
+  },
+  "cleanup": {
+    "actions": [],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 20.008382100000745,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 53.0,
+    "samples": 21,
+    "thermal_target_c": 74.0,
+    "thermal_target_reached": true
+  },
+  "external_occlusion_checked": false,
+  "gpu_temp_c_max": 64.0,
+  "gpu_temp_limit_c": 84.0,
+  "measurement_end_monotonic_ns": 16903903255800,
+  "measurement_start_monotonic_ns": 16843903255800,
+  "mode": "pressure_profile",
+  "pressure_requested": 0.75,
+  "resource": "gpu_memory",
+  "run_id": "formal-v1__profile__space_rescue__gpu_memory__p075__r03",
+  "schema_version": 1,
+  "split": "not_applicable",
+  "stage": "profile",
+  "status": "completed",
+  "system_coverage_ratio": 0.99975,
+  "system_coverage_s": 59.985,
+  "system_sample_count": 61,
+  "valid": true,
+  "window_sample_count": 61,
+  "windows_pairwise_nonoverlap": true,
+  "workload_ids": [
+    "space_rescue"
+  ],
+  "workload_overlap_ratio": 0.999994635,
+  "workload_overlap_s": 59.9996781,
+  "workloads": [
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 1.094979699999385,
+      "controller": "space_rescue_pulse_v1",
+      "controller_trace_sha256": "f3d4123f745fb5188647f4296b16d3b2515e2b74306e9efd4f4f07536d97029c",
+      "display_scale": 2,
+      "draw_count": 2402,
+      "draw_interval_ms": {
+        "count": 1800,
+        "max": 37.7414,
+        "mean": 33.3276805,
+        "min": 24.3762,
+        "p95": 35.0716
+      },
+      "draw_time_ms": {
+        "count": 1801,
+        "max": 0.5399,
+        "mean": 0.026571848972792893,
+        "min": 0.0127,
+        "p95": 0.0598
+      },
+      "duration_requested_s": 60.0,
+      "elapsed_s": 81.1384593,
+      "entrypoint": "games/pyxel/apps-src/space_rescue/space_rescue.py",
+      "game_fps": {
+        "count": 59,
+        "max": 30.969891071899895,
+        "mean": 29.99987709778283,
+        "min": 29.041037890643267,
+        "p05": 29.951332080502393,
+        "p95": 30.061926599054484,
+        "windows_used": 59
+      },
+      "headless": false,
+      "logical_height": 120,
+      "logical_width": 160,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 60.033000999999985,
+      "measurement_finished_monotonic_ns": 16903915359300,
+      "measurement_metric_rows": 59,
+      "measurement_started_monotonic_ns": 16843915681200,
+      "metric_rows": 79,
+      "missed_deadline_count": 0,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 16903903255800,
+      "planned_measurement_start_monotonic_ns": 16843903255800,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 2402,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 79,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 2402,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 30,
+            "name": "target_fps_matches_registry",
+            "passed": true,
+            "threshold": 30
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "run_id": "formal-v1__profile__space_rescue__gpu_memory__p075__r03",
+      "schema_version": 1,
+      "seed": 1008,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 30,
+      "title": "Space Rescue",
+      "update_count": 2402,
+      "update_time_ms": {
+        "count": 1801,
+        "max": 0.2461,
+        "mean": 0.018419211549139367,
+        "min": 0.0083,
+        "p95": 0.0398
+      },
+      "warmup_requested_s": 20.0,
+      "window_observations": 59,
+      "workload_id": "space_rescue"
+    }
+  ]
+}

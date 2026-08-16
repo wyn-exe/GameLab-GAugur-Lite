@@ -17,9 +17,9 @@
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
-| Step 7 敏感度/强度 profile | 正式采集待开始 | 原 82°C pilot 已封存；[480-row t84 计划](artifacts/plans/formal-v1-profile-t84.csv)与[温控修订证据](artifacts/profiles/step7/thermal-amendment.json)已冻结，当前 0/480 |
-| Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 实现与 74 项温控修订单测已通过，480-run 正式采集待执行 |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；Step 7 原 pilot 不进入最终特征，修订后 profile、共置、模型与报告待生成 |
+| Step 7 敏感度/强度 profile | 短协议待冻结 | 82°C pilot 与 71-run t84 timing trial 均已封存且不进入训练；保留 480 行完整设计，改用 10/30/10 秒短时序 |
+| Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 短时序、防混用证据与全阶段计划探针已实现，76 项单测通过，正式 clean-commit 计划待生成 |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；短时序 profile、60 个主组合、额外测试、模型与报告待生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -1538,35 +1538,43 @@ Step 4 的 60 个 worker 本身就是相同四类 benchmark 的独占运行，�
 
 压力 0 以外共有 4 resource × 4 pressure = 16 个独立吞吐分母。三次重复的实测 CV 范围为 0.1672%–3.7651%，全部低于 5% 门槛。构建特征时仍会重新验证 calibration 状态、60-cell 笛卡尔积、worker 参数、operation/elapsed 合法性、环境指纹和每个分母的 CV。
 
-#### 82°C pilot 的中止结论与温控修订
+#### 两轮长协议试运行与封存结论
 
-原 [`formal-v1.csv`](artifacts/plans/formal-v1.csv) 把 `82°C` 写入每个计划行。首批采集最终留下 23 个有效 profile 单元；`formal-v1__profile__pyxel_snake__gpu_compute__p100__r03` 在四次独立冷启动中均以完全相同的 `gpu_temperature_exceeded:83.0>82.0` 终止。四次失败前的空闲温度处于正常冷态，失败后均完成 cooldown 且无遗留受管 PID，因此继续重试不能消除这个稳定的协议冲突。
+原 [`formal-v1.csv`](artifacts/plans/formal-v1.csv) 使用 `20 秒 warmup + 60 秒 measurement + 20 秒基础 cooldown` 和 82°C 温度门。首批留下 23 个有效 profile 单元；同一 `gpu_compute/p100` 单元四次独立冷启动均以 `83°C>82°C` 终止，因此形成了已冻结的 84°C 温控修订。
 
-温度证据还包括：Step 4 压力校准曾观测到 `84°C`；本机 `nvidia-smi -q -d TEMPERATURE` 可解析的 GPU Target Temperature 为 `87°C`，但笔记本驱动把部分 T.Limit 字段错误报告为负值或 0，所以这些异常字段不用于决策。修订采用以下保守边界：
+随后 [`formal-v1-profile-t84.csv`](artifacts/plans/formal-v1-profile-t84.csv) 在完全隔离的 `data/raw/step7-t84/` 下实际取得 71 个有效单元，并留下三次 `85°C>84°C` 的无效 attempt：其中两个单元各经一次冷启动恢复，第三个单元在 `a001` 后按审计规则停止。全部 attempt、invocation 报告、清理动作和 cooldown 记录都保留。该轮已证明 Runner、84°C 硬门、断点恢复和数据链路可工作，但实测每个 24-row 批次约 40.8 分钟；继续完成 profile 后，Step 8 的 216 个共置 run 仍需约 6 小时，会挤压模型和调度实验时间。
 
-- 正式 profile 允许的最高采样值从 `82°C` 改为 `84°C`，采样值大于 `84°C` 仍立即判 invalid；
-- 与设备 `87°C` target 保留 3°C 距离，不修改功率、时钟、风扇或 benchmark 压力；
-- 基础 cooldown 仍为 20 秒，若温度高于 `74°C` 则最多延长至 300 秒；
-- 原 82°C pilot 的 23 个有效单元和所有失败 attempt 原样保留，但全部标记为不进入最终 profile；
-- 修订后从 0/480 重新采集，避免同一特征表混入两种温控计划或两种 source-tree SHA-256。
+因此 82°C pilot 和 71-run t84 timing trial 都只作为协议证据，明确标记为 `included_in_final_profiles=false`。不会删除旧数据，也不会把不同 warmup/measurement/cooldown 的结果混入同一训练表。
 
-Step 6 的 24 个 solo baseline 不重跑：其实测最高温仅为 50°C，比原 82°C 门槛低 32°C，而且未施加资源压力。代码不会仅凭这段文字复用它们，而会对原 720-row 父计划和新的 480-row profile-only 计划逐 `run_id`、逐字段比较。除 `execution_index`、`max_gpu_temp_c`、`config_sha256`、`root_commit`、`run_directory` 与 `row_sha256` 外出现任何差异都会拒绝构建特征；新旧 raw 目录也必须完全不相交。
+#### 10/30/10 秒短时序正式协议
 
-#### 修订后的采集与恢复实现
+短协议只缩短单次观察窗口，不缩减实验设计：
 
-1. 父计划仍是 [`formal-v1.csv`](artifacts/plans/formal-v1.csv)，用于绑定已经验收的 solo baseline；新的 [`formal-v1-profile-t84.csv`](artifacts/plans/formal-v1-profile-t84.csv) 只含 8 workload × 4 resource × 5 pressure × 3 repeat = 480 个 profile 行；
-2. 新配置 [`local.step7-t84.yaml`](configs/local.step7-t84.yaml) 保持 workload、压力、预热、测量窗口、重复次数和随机种子不变，只把温度改为 84°C，并把 raw 根目录隔离为 `data/raw/step7-t84/`；
-3. 修订计划只能从干净 Git 提交生成，计划 manifest 会记录生成 commit、配置哈希、计划哈希和 `root_dirty_at_generation=false`；
-4. `run --stage profile --batch-number N --batch-size 24` 在 stage 内按修订计划的随机顺序切片，20 批恰好覆盖 480 行；
-5. 每批约 24 × (20 秒 warmup + 60 秒 measurement + 至少 20 秒 cooldown) = 40 分钟，失败和已完成 attempt 都原样保留；
-6. `--resume` 只跳过状态、row SHA-256 和全部 artifact SHA-256 均有效的 attempt；脚本自动找到第一个未完成行所在批次；
-7. 只要修订计划已有有效 profile 且仍有待运行行，`gaugur_lite/**/*.py + pyproject.toml` 的 source-tree SHA-256 必须与既有 attempt 完全一致，否则 Runner 拒绝混合实现；
-8. workload 与 benchmark 共享 barrier、20 秒预热和 60 秒正式窗口；同时保存 FPS、deadline miss、operation/elapsed、requested/observed pressure、硬件信号、温度、窗口与系统覆盖率；
-9. 最终一次脚本调用自动构建 480-row run JSONL、160-row 聚合 Parquet、32 条敏感度曲线、32 个强度值和三张图，再从原始 attempt 独立重算。
+| 项目 | 长协议 | 短协议 | 是否改变实验单元 |
+| --- | ---: | ---: | --- |
+| warmup | 20 秒 | 10 秒 | 否 |
+| measurement | 60 秒 | 30 秒 | 否；仍按 1 秒窗口统计 FPS |
+| 基础 cooldown | 20 秒 | 10 秒 | 否；高于 74°C 时仍自适应延长，最多 300 秒 |
+| 温度硬门 | 82°C（原始）/84°C（t84） | 84°C | 保留已审计的 t84 门限 |
+| workload/resource/pressure | 8×4×5 | 8×4×5 | 不变 |
+| repeat | 3 | 3 | 不变 |
+| 主/额外组合 | 60/12 个 | 60/12 个 | 不变 |
 
-#### 正式运行命令
+尚未完成的三类正式数据共 696 行：480 个 profile、180 个主共置 run 和 36 个额外测试 run。长协议名义串行时间为 19.33 小时，短协议为 9.67 小时，节省 9.67 小时；把已经完成但将被排除的 71 个 t84 单元计入沉没成本后，从当前时点仍预计净节省约 7.7 小时。这里不把进程启动、批间冷却和失败审计伪装成零开销，实际应预留约 11–13 小时完成三类采集。
 
-修订计划要求生成时工作树干净。应先把当前 Step 7 实现、82°C pilot 原始数据和 invocation 报告提交并上传；不要删除 `data/raw/formal-v1/` 中的 pilot。确认 `git status --short` 没有输出后，运行一次准备命令。它会独占创建 480-row t84 计划、抓取设备温度证据、重算四次失败与 23 个有效 pilot 单元，并验证父计划兼容性：
+30 秒窗口仍有约 29 个完整 1 秒 FPS 窗口，且每个单元保留三次重复。Step 6 的 60 秒 solo baseline 可以继续作为分母，因为使用的是稳定状态下的 mean/P05 FPS 而非累计帧数；其三次重复最大 CV 仅 0.0829%。为防止窗口缩短静默带来偏差，最终仍要求 32 个压力 0 聚合点满足 $|S(0)-1|\le 0.05$，不满足就停止而不是放宽阈值。
+
+#### 防混用与计划冻结
+
+新配置 [`local.remaining-s30.yaml`](configs/local.remaining-s30.yaml) 使用独立 raw 根目录 `data/raw/remaining-s30/`。准备脚本会从一个干净提交原子生成唯一的 `formal-v1-remaining-s30.csv`：它仍含完整 720 行，其中 24 个 solo 行只用于证明计划兼容性且不执行；Runner 按 stage 选择 480 个 profile、180 个主共置和 36 个额外测试行。使用一个全阶段计划可以让三类剩余实验共享同一个配置哈希、组合 sidecar 和 clean-state provenance，也避免顺序生成多个文件时后续 manifest 被前一个未提交文件污染为 dirty。
+
+[`build_step7_duration_amendment.py`](scripts/build_step7_duration_amendment.py) 会从原始计划、t84 index、attempt summary 和新全阶段计划重算证据。它对四个 stage（包括不执行的 24 个 solo 兼容行）分别按 `run_id` 比较前后行，只允许 `warmup_s`、`duration_s`、`cooldown_s`、`max_gpu_temp_c` 及计划身份/目录字段改变；workload、组合、split、resource、pressure、repeat、随机 seed、游戏哈希、采样间隔等任何其他差异都会拒绝。新计划必须来自 clean commit，各 stage 的 raw 目录彼此不重叠，也不得与原计划或 t84 trial 重叠。
+
+Step 6 的 24 个 solo baseline 不重跑：父计划哈希仍绑定 [`formal-v1.csv`](artifacts/plans/formal-v1.csv)，新 profile 计划通过显式 `short_profile_amendment_s30_v2` 合同复用其 8 个唯一 baseline。正式特征只接受 `data/raw/remaining-s30/` 中 480 个状态、row SHA-256、artifact SHA-256 和执行源码树都一致的有效 attempt。
+
+#### 生成与执行顺序
+
+当前先提交短协议代码以及已封存的 t84 trial，确保工作树干净。随后执行一次准备命令；它会生成唯一的 720-row 短协议计划及 manifest/组合 sidecar、短协议修订证据，并只读审计 Step 6/Step 4 分母：
 
 ```powershell
 conda activate gaugur-lite
@@ -1575,10 +1583,10 @@ Set-Location D:\github\GameLab-RLCG
 git status --short
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\prepare_step7_thermal_amendment.ps1
+  -File scripts\prepare_step7_short_protocol.ps1
 ```
 
-准备成功后先执行只读预检，不打开游戏窗口：
+计划与修订证据生成后必须再次提交并上传，形成正式采集的冻结 commit。然后先执行不打开窗口的预检：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -1586,37 +1594,34 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -PreflightOnly
 ```
 
-正式采集时反复运行下面同一条命令。每次自动完成下一个未完成批次；每批成功后退出并打印全局 `completed/remaining`，共约 20 次。不要最小化或遮挡 Pyxel 窗口；从第一个 t84 run 到 480 个全部完成之间，不要修改 `gaugur_lite` 源码，也不要提交、切换或 rebase Git commit，否则最终的单一 root-commit 质量门不会通过：
+正式采集仍按 24 行一批安全续跑。每个完整批次名义约 20 分钟，20 批覆盖 480 行；可以在仓库外层使用自动循环，但任何单测、温度、窗口、子进程或数据质量异常都必须停止并审计，不能自动选择性重试：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_step7_acceptance.ps1
 ```
 
-若某批出现高温、窗口或子进程 invalid，保留现场并停止连续重试，先检查 `artifacts/profiles/step7/t84/invocations/` 中该批报告。不要删除失败 attempt，也不要直接覆盖最终特征文件。
+从首个 s30 attempt 到 480 行全部完成之间，不得修改 `gaugur_lite/**/*.py` 或 `pyproject.toml`，不得切换、提交或 rebase Git；Runner 会拒绝同一 stage 混入不同 source-tree SHA-256 或 root commit。最终一次调用自动生成 480-row JSONL、160-row Parquet、32 条敏感度曲线、32 个强度值和三张图，再从原始 attempt 独立重算。
 
 #### 产物与质量门
 
 ```text
 artifacts/plans/
-├─ formal-v1.csv                         # Step 6/后续共置使用的原 720-row 父计划
-└─ formal-v1-profile-t84.csv             # 修订后的 480-row profile-only 计划
+├─ formal-v1.csv                                  # 原 720-row 父计划与 solo baseline 绑定
+├─ formal-v1-profile-t84.csv                      # 已封存的长时序 trial 计划
+└─ formal-v1-remaining-s30.csv                    # 唯一 720-row 短协议计划；按 stage 执行剩余 696 行
 
 data/raw/
-├─ formal-v1/                            # 82°C pilot；只保留作审计，不进入最终特征
-└─ step7-t84/formal-v1/                  # 修订后的 480 个正式 profile run
-
-data/interim/formal-v1/
-├─ profile-runs.jsonl                    # 480 个有效修订后物理 run
-├─ profiles.parquet                      # 8×4×5 = 160 个三次聚合单元
-└─ profile-summary.json                  # 32 条曲线、32 个 I、阈值与修订 provenance
+├─ formal-v1/                                     # 82°C pilot；排除
+├─ step7-t84/formal-v1/                           # 71-run timing trial；排除
+└─ remaining-s30/formal-v1/                       # Step 7/8 唯一正式短协议 raw 根
 
 artifacts/profiles/step7/
-├─ invocations/                          # 原 82°C pilot 报告
-├─ thermal-device-query.txt
-├─ thermal-amendment.json
-└─ t84/
-   ├─ invocations/                       # 修订后各批单测、runner 报告与进度
+├─ thermal-amendment.json                         # 82°C -> 84°C 温控证据
+├─ duration-amendment.json                        # 长协议 -> 10/30/10 秒证据
+├─ t84/invocations/                               # 已封存 trial 报告
+└─ s30/
+   ├─ invocations/
    ├─ plots/
    │  ├─ sensitivity-curves.png
    │  ├─ intensity-heatmap.png
@@ -1624,47 +1629,38 @@ artifacts/profiles/step7/
    └─ formal-profile-verification.json
 ```
 
-硬门包含：温控修订证据可从原始 index 重算；新旧 480 个 profile 实验语义字段一致且 raw 目录隔离；480/160/32 计数准确；每个单元三次重复；修订后的整个 profile stage 只有一个 source-tree SHA-256 和一个 root commit；三种同步覆盖率均不低于 0.95；最高温不超过 84°C；requested/observed pressure 最大误差不超过 0.05；32 个压力 0 聚合点的 $|S(0)-1|$ 均不超过 0.05；16 个独立吞吐分母 CV 不超过 5%。
+硬门包含：696 行剩余实验的 `run_id`/组合/split/repeat 完整保留；新旧 raw 目录不重叠；t84 的 71 个有效单元和三次 invalid 均可从 index 重算且被排除；profile 480/160/32 计数准确；每个单元三次重复；正式 profile stage 只有一个 source-tree SHA-256 和 root commit；系统、workload 和 benchmark 同步覆盖率均不低于 0.95；最高温不超过 84°C；requested/observed pressure 最大误差不超过 0.05；压力 0 retention 偏差不超过 0.05；16 个独立吞吐分母 CV 不超过 5%。
 
-分析不会预设论文观察一定在八个轻量游戏上成立：对 32 条曲线计算相对端点线性插值的最大偏差，并对 `1-S(1)` 与 intensity 计算 Pearson、Spearman 相关系数，如实报告结果。
+#### 当前真实验收与待冻结项
 
-#### 当前真实验收（84°C 正式计划已冻结，480-run 尚未开始）
+已封存的 t84 trial 状态为：71 个有效单元、三次 `85°C>84°C` invalid、两个单元经一次冷启动恢复、一个单元未恢复；三个 24-row 首次批次各约 40.8 分钟。所有无效进程树均按 PID 身份终止，未使用全局 `taskkill`。旧 t84 计划 SHA-256 为 `f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7`，温控修订证据 SHA-256 为 `f7685d995744eb61ed969b71588dc21effe1e5005ca3b6b8bbb6c7dab486c935`。
+
+新的 s30 全阶段计划及其 SHA-256 必须等本次代码和 trial 数据提交后从 clean commit 生成，因此本节不预填临时哈希。生成、独立验证并再次提交后，再把真实 plan hash、source-tree hash、`0/480` 预检输出和后续批次验收填入此处。
+
+短协议实现完成后的本地真实验收如下。计划探针写在 `.test-tmp/` 且 manifest 如实记录 `root_dirty_at_generation=true`，只用于验证展开结果，不冒充正式计划：
 
 ```text
-........................................................................ [ 97%]
-..                                                                       [100%]
-74 passed in 4.69s
+........................................................................ [ 94%]
+....                                                                     [100%]
+76 passed in 4.78s
 
-82°C pilot: completed=23/480
-trigger: formal-v1__profile__pyxel_snake__gpu_compute__p100__r03
-a001–a004: RunInvalidError:gpu_temperature_exceeded:83.0>82.0
-solo baseline max GPU temperature: 50°C
-device GPU Target Temperature: 87°C
+temporary all-stage plan probe:
+rows=720, unique_run_ids=720
+stage_counts: solo=24, profile=480, colocation-main=180, colocation-extra-test=36
+protocols: 10/30/10/84
+unexpected field changes against formal-v1.csv: 0
+raw directory overlap against formal-v1.csv: 0
 
-temporary 480-row plan compatibility check: PASS
-run_id sets equal: true
-changed columns: config_sha256, execution_index, max_gpu_temp_c, root_commit, row_sha256, run_directory
-raw directory overlap: 0
+t84 sealed-trial recomputation:
+valid runs/attempts=71/71, invalid attempts=3
+resolved by one cold retry=2, unresolved=1
+max valid GPU temperature=84°C
+median first-pass 24-row batch elapsed=2441.78s
+included_in_final_profiles=false
 
-PASS Step 7 thermal amendment: rows=480,
-plan SHA-256=f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7,
-pilot=23, repeated trigger attempts=4
-
-PASS inputs: profile rows=480, standalone cells=16, max throughput CV=3.7651%
-PASS progress: completed=0/480, remaining=480
-batch_size=24, total_batches=20, estimated_minutes_per_full_batch=40
-source_tree_sha256=63ca1121c2646132be156f49c928fd1a1e548a618896b79dd32c1de3c1f92bd7
+legacy thermal-amendment.json byte-for-byte recomputation: PASS
+PowerShell parser / Python compile / git diff --check: PASS
 ```
-
-冻结产物的 SHA-256 为：
-
-- t84 计划：`f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7`；
-- 计划 manifest：`7216585d8c51ff838549f70efee369bdb04815bdb980560ce1f8f854c468e09a`，记录生成提交 `89d531ccb56448ddbc56df7c9f440912802204cb` 且 `root_dirty_at_generation=false`；
-- 组合 sidecar：`fe927f19999c81c2855030bf855247c8b0eff0bdfac20625bda50a00054cd826`；
-- 温控设备查询：`cf6acece3b2dca720ef80cfcfad1d7d68a8c3e6b407edba09667c025078b653b`；
-- 温控修订证据：`f7685d995744eb61ed969b71588dc21effe1e5005ca3b6b8bbb6c7dab486c935`，6/6 项检查通过。
-
-当前能得出的结论是：Step 7 的原 82°C 方案已被真实数据证伪，四次同因失败已保留；隔离重启、父计划兼容性、动态温度质量门、采集中途 commit 拒绝和 74 项单元测试已通过；新的 480-row t84 计划已从干净提交生成并通过 0/480 无窗口预检。正式表格、图和最终哈希仍须等待 480 个修订后 run 全部完成再填入本节。
 
 ### Step 8：采集真实共置组合
 
@@ -2064,7 +2060,7 @@ extra quads = 12 combinations × K            = 36
 total                                           720
 ```
 
-其中主共置数据为 180 run，额外测试为 36 run。若每次包含 20 秒预热、60 秒测量、20 秒冷却，720 个 run 的理论串行时间约 20 小时；考虑启动、校准、空载检查、失败重试和汇总，建议预留 26–36 小时，可分多次用 `--resume` 完成。11 档压力消融不计入这 720 个正式主实验 run。
+其中主共置数据为 180 run，额外测试为 36 run。24 个 solo 已按 20/60/20 秒长窗口完成；尚未采集的 696 个 profile/共置 run 使用 10/30/10 秒短协议，名义串行时间为 9.67 小时。考虑启动、批间冷启动等待、自适应 cooldown、失败审计和汇总，建议为三类剩余采集预留 11–13 小时并分段用 `--resume` 完成。11 档压力消融不计入这 720 个正式主实验 run。
 
 `smoke.yaml` 只用于在正式采集前验证游戏资源、自动输入、进程生命周期、CUDA benchmark 同步和数据 schema，不生成模型样本，也不构成缩小版实验。正式结果只接受 `formal-v1` 的完整组合 manifest。
 

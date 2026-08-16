@@ -1,0 +1,60 @@
+﻿............................................F........................... [ 97%]
+..                                                                       [100%]
+================================== FAILURES ===================================
+______ test_harness_uses_shared_barrier_and_reports_measurement_coverage ______
+
+tmp_path = WindowsPath('D:/github/GameLab-RLCG/.test-tmp/step7-invocation-004-unit/test_harness_uses_shared_barri0')
+
+    def test_harness_uses_shared_barrier_and_reports_measurement_coverage(tmp_path: Path) -> None:
+        pyxel = FakePyxel()
+        game = get_game("pyxel_jump")
+        barrier = tmp_path / "barrier.json"
+        # 给 harness/假 Pyxel 初始化留出余量，模拟父进程在 ready 后发布未来 barrier。
+        start_ns = time.perf_counter_ns() + 100_000_000
+        end_ns = start_ns + 60_000_000
+        barrier.write_text(
+            json.dumps(
+                {
+                    "status": "released",
+                    "run_id": "runner-barrier-test",
+                    "measurement_start_monotonic_ns": start_ns,
+                    "measurement_end_monotonic_ns": end_ns,
+                }
+            ),
+            encoding="utf-8",
+        )
+        config = GameRunConfig(
+            run_id="runner-barrier-test",
+            duration_s=0.06,
+            warmup_s=0.1,
+            max_frames=0,
+            headless=True,
+            audio_mode="muted",
+            metric_window_s=0.005,
+            barrier_file=barrier,
+        )
+    
+        with JsonlWriter(tmp_path / "game_metrics.jsonl", batch_size=2) as writer:
+            harness = PyxelGameHarness(
+                pyxel=pyxel,
+                game=game,
+                config=config,
+                working_directory=tmp_path,
+                output_directory=tmp_path,
+                writer=writer,
+            )
+            with harness.installed():
+                pyxel.init(128, 128, title=game.title)
+                pyxel.run(lambda: None, lambda: None)
+            summary = harness.summary()
+    
+>       assert summary["quality_gate"]["failed_checks"] == []
+E       AssertionError: assert ['measurement_coverage'] == []
+E         
+E         Left contains one more item: 'measurement_coverage'
+E         Use -v to get more diff
+
+D:\github\GameLab-RLCG\tests\unit\test_pyxel_game.py:181: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/unit/test_pyxel_game.py::test_harness_uses_shared_barrier_and_reports_measurement_coverage
+1 failed, 73 passed in 5.07s

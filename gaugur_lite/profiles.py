@@ -27,6 +27,14 @@ _AMENDMENT_ALLOWED_COLUMNS = {
     "run_directory",
     "row_sha256",
 }
+_SHORT_AMENDMENT_ALLOWED_COLUMNS = _AMENDMENT_ALLOWED_COLUMNS | {
+    "warmup_s",
+    "duration_s",
+    "cooldown_s",
+}
+_ORIGINAL_PROFILE_PROTOCOL = (20.0, 60.0, 20.0, 82.0)
+_THERMAL_PROFILE_PROTOCOL = (20.0, 60.0, 20.0, 84.0)
+_SHORT_PROFILE_PROTOCOL = (10.0, 30.0, 10.0, 84.0)
 
 
 class ProfileError(RuntimeError):
@@ -98,9 +106,20 @@ def _profile_plan_rows(plan_file: Path) -> list[ParsedPlanRow]:
     }
     if len(workloads) != 8 or set(keys) != expected:
         raise ProfileError("profile 计划未完整覆盖 8×4×5×3 笛卡尔积")
-    temperature_limits = {row.max_gpu_temp_c for row in rows}
-    if len(temperature_limits) != 1 or temperature_limits not in ({82.0}, {84.0}):
-        raise ProfileError(f"profile 计划温度门必须全表唯一且为 82°C 或 84°C: {temperature_limits}")
+    protocols = {
+        (row.warmup_s, row.duration_s, row.cooldown_s, row.max_gpu_temp_c)
+        for row in rows
+    }
+    accepted = {
+        _ORIGINAL_PROFILE_PROTOCOL,
+        _THERMAL_PROFILE_PROTOCOL,
+        _SHORT_PROFILE_PROTOCOL,
+    }
+    if len(protocols) != 1 or not protocols.issubset(accepted):
+        raise ProfileError(
+            "profile 计划时序/温度协议必须全表唯一且为已审计版本: "
+            f"{sorted(protocols)}"
+        )
     return rows
 
 
@@ -118,15 +137,21 @@ def _load_solo_baselines(
     return baselines, payload
 
 
-def _verify_thermal_profile_amendment(
+def _verify_profile_plan_amendment(
     *,
     repo_root: Path,
     profile_plan_file: Path,
     baseline_plan_file: Path,
     profile_plan_sha256: str,
     baseline_plan_sha256: str,
+    mode: str,
+    expected_profile_protocol: tuple[float, float, float, float],
+    allowed_changed_columns: set[str],
+    required_changed_columns: set[str],
+    expected_manifest_stage: str,
+    expected_manifest_rows: int,
 ) -> dict[str, Any]:
-    """逐行证明 profile 新计划只改变温控与非实验身份字段。"""
+    """逐行证明 profile 修订只改变声明过的协议与身份字段。"""
 
     del repo_root
     profile_rows = [row for row in load_plan_rows(profile_plan_file) if row["stage"] == "profile"]
@@ -147,26 +172,45 @@ def _verify_thermal_profile_amendment(
         differences = {
             column for column in amended if str(amended[column]) != str(original[column])
         }
-        unexpected = differences - _AMENDMENT_ALLOWED_COLUMNS
+        unexpected = differences - allowed_changed_columns
         if unexpected:
             raise ProfileError(
-                f"温控修订改变了实验语义字段: {run_id}: {', '.join(sorted(unexpected))}"
+                f"profile 修订改变了未声明字段: {run_id}: {', '.join(sorted(unexpected))}"
             )
         changed_columns.update(differences)
 
-    required_changes = {"max_gpu_temp_c", "config_sha256", "run_directory", "row_sha256"}
-    if not required_changes.issubset(changed_columns):
-        raise ProfileError("温控修订没有形成独立温度、配置、目录与行哈希")
-    original_limits = {float(row["max_gpu_temp_c"]) for row in baseline_rows}
-    amended_limits = {float(row["max_gpu_temp_c"]) for row in profile_rows}
-    if original_limits != {82.0} or amended_limits != {84.0}:
+    if not required_changed_columns.issubset(changed_columns):
+        missing = sorted(required_changed_columns - changed_columns)
+        raise ProfileError(f"profile 修订缺少必要差异字段: {', '.join(missing)}")
+    original_protocols = {
+        (
+            float(row["warmup_s"]),
+            float(row["duration_s"]),
+            float(row["cooldown_s"]),
+            float(row["max_gpu_temp_c"]),
+        )
+        for row in baseline_rows
+    }
+    amended_protocols = {
+        (
+            float(row["warmup_s"]),
+            float(row["duration_s"]),
+            float(row["cooldown_s"]),
+            float(row["max_gpu_temp_c"]),
+        )
+        for row in profile_rows
+    }
+    if original_protocols != {_ORIGINAL_PROFILE_PROTOCOL} or amended_protocols != {
+        expected_profile_protocol
+    }:
         raise ProfileError(
-            f"只接受经审计的 82°C -> 84°C profile 修订，实际 {original_limits} -> {amended_limits}"
+            "profile 修订协议与审计版本不一致，实际 "
+            f"{sorted(original_protocols)} -> {sorted(amended_protocols)}"
         )
     original_directories = {row["run_directory"] for row in baseline_rows}
     amended_directories = {row["run_directory"] for row in profile_rows}
     if original_directories & amended_directories:
-        raise ProfileError("温控修订必须使用与原计划完全分离的 raw 目录")
+        raise ProfileError("profile 修订必须使用与原计划完全分离的 raw 目录")
 
     profile_manifest = _read_json(
         profile_plan_file.with_name(f"{profile_plan_file.stem}-manifest.json")
@@ -176,24 +220,114 @@ def _verify_thermal_profile_amendment(
     )
     if (
         profile_manifest.get("root_dirty_at_generation") is not False
-        or profile_manifest.get("selected_stage") != "profile"
-        or int(profile_manifest.get("row_count", 0)) != PROFILE_RUN_COUNT
+        or profile_manifest.get("selected_stage") != expected_manifest_stage
+        or int(profile_manifest.get("row_count", 0)) != expected_manifest_rows
         or baseline_manifest.get("root_dirty_at_generation") is not False
     ):
-        raise ProfileError("温控修订计划与 baseline 父计划都必须来自干净提交")
+        raise ProfileError("profile 修订计划与 baseline 父计划都必须来自干净提交")
 
     return {
-        "mode": "thermal_profile_amendment_v1",
+        "mode": mode,
         "profile_plan_sha256": profile_plan_sha256,
         "baseline_plan_sha256": baseline_plan_sha256,
         "profile_row_count": PROFILE_RUN_COUNT,
-        "baseline_max_gpu_temp_c": 82.0,
-        "profile_max_gpu_temp_c": 84.0,
+        "baseline_protocol": {
+            "warmup_s": _ORIGINAL_PROFILE_PROTOCOL[0],
+            "duration_s": _ORIGINAL_PROFILE_PROTOCOL[1],
+            "cooldown_s": _ORIGINAL_PROFILE_PROTOCOL[2],
+            "max_gpu_temp_c": _ORIGINAL_PROFILE_PROTOCOL[3],
+        },
+        "profile_protocol": {
+            "warmup_s": expected_profile_protocol[0],
+            "duration_s": expected_profile_protocol[1],
+            "cooldown_s": expected_profile_protocol[2],
+            "max_gpu_temp_c": expected_profile_protocol[3],
+        },
+        "baseline_max_gpu_temp_c": _ORIGINAL_PROFILE_PROTOCOL[3],
+        "profile_max_gpu_temp_c": expected_profile_protocol[3],
         "changed_columns": sorted(changed_columns),
-        "allowed_changed_columns": sorted(_AMENDMENT_ALLOWED_COLUMNS),
+        "allowed_changed_columns": sorted(allowed_changed_columns),
         "raw_directories_disjoint": True,
+        "unmodified_fields_equal": True,
+    }
+
+
+def _verify_thermal_profile_amendment(
+    *,
+    repo_root: Path,
+    profile_plan_file: Path,
+    baseline_plan_file: Path,
+    profile_plan_sha256: str,
+    baseline_plan_sha256: str,
+) -> dict[str, Any]:
+    """证明旧 t84 计划只改变温控与非实验身份字段。"""
+
+    result = _verify_profile_plan_amendment(
+        repo_root=repo_root,
+        profile_plan_file=profile_plan_file,
+        baseline_plan_file=baseline_plan_file,
+        profile_plan_sha256=profile_plan_sha256,
+        baseline_plan_sha256=baseline_plan_sha256,
+        mode="thermal_profile_amendment_v1",
+        expected_profile_protocol=_THERMAL_PROFILE_PROTOCOL,
+        allowed_changed_columns=_AMENDMENT_ALLOWED_COLUMNS,
+        required_changed_columns={
+            "max_gpu_temp_c",
+            "config_sha256",
+            "run_directory",
+            "row_sha256",
+        },
+        expected_manifest_stage="profile",
+        expected_manifest_rows=PROFILE_RUN_COUNT,
+    )
+    # 保持 v1 证据 schema 完全不变，使既有 thermal-amendment.json 可逐字重算。
+    return {
+        "mode": result["mode"],
+        "profile_plan_sha256": result["profile_plan_sha256"],
+        "baseline_plan_sha256": result["baseline_plan_sha256"],
+        "profile_row_count": result["profile_row_count"],
+        "baseline_max_gpu_temp_c": result["baseline_max_gpu_temp_c"],
+        "profile_max_gpu_temp_c": result["profile_max_gpu_temp_c"],
+        "changed_columns": result["changed_columns"],
+        "allowed_changed_columns": result["allowed_changed_columns"],
+        "raw_directories_disjoint": result["raw_directories_disjoint"],
         "semantic_fields_equal": True,
     }
+
+
+def _verify_short_profile_amendment(
+    *,
+    repo_root: Path,
+    profile_plan_file: Path,
+    baseline_plan_file: Path,
+    profile_plan_sha256: str,
+    baseline_plan_sha256: str,
+) -> dict[str, Any]:
+    """证明 s30 计划仅采用声明的 10/30/10 时序与 t84 温度门。"""
+
+    result = _verify_profile_plan_amendment(
+        repo_root=repo_root,
+        profile_plan_file=profile_plan_file,
+        baseline_plan_file=baseline_plan_file,
+        profile_plan_sha256=profile_plan_sha256,
+        baseline_plan_sha256=baseline_plan_sha256,
+        mode="short_profile_amendment_s30_v2",
+        expected_profile_protocol=_SHORT_PROFILE_PROTOCOL,
+        allowed_changed_columns=_SHORT_AMENDMENT_ALLOWED_COLUMNS,
+        required_changed_columns={
+            "warmup_s",
+            "duration_s",
+            "cooldown_s",
+            "max_gpu_temp_c",
+            "config_sha256",
+            "run_directory",
+            "row_sha256",
+        },
+        expected_manifest_stage="all",
+        expected_manifest_rows=720,
+    )
+    result["semantic_fields_equal_except_timing"] = True
+    return result
 
 
 def _resolve_baseline_contract(
@@ -219,7 +353,18 @@ def _resolve_baseline_contract(
     baselines, payload = _load_solo_baselines(
         path=solo_baselines_file, expected_plan_sha256=baseline_sha256
     )
-    amendment = _verify_thermal_profile_amendment(
+    profile_rows = _profile_plan_rows(profile_plan_file)
+    protocol = {
+        (row.warmup_s, row.duration_s, row.cooldown_s, row.max_gpu_temp_c)
+        for row in profile_rows
+    }
+    if protocol == {_THERMAL_PROFILE_PROTOCOL}:
+        verify_amendment = _verify_thermal_profile_amendment
+    elif protocol == {_SHORT_PROFILE_PROTOCOL}:
+        verify_amendment = _verify_short_profile_amendment
+    else:
+        raise ProfileError(f"baseline 复用不支持该 profile 协议: {sorted(protocol)}")
+    amendment = verify_amendment(
         repo_root=repo_root,
         profile_plan_file=profile_plan_file,
         baseline_plan_file=baseline_plan_file,
@@ -355,8 +500,8 @@ def audit_profile_inputs(
         "pressure_levels": list(PRESSURES),
         "repeats": list(REPEATS),
         "plan_sha256": verification["plan_sha256"],
-        "baseline_contract": "thermal_profile_amendment_v1" if amendment else "same_plan",
-        "thermal_amendment": amendment,
+        "baseline_contract": amendment["mode"] if amendment else "same_plan",
+        "profile_amendment": amendment,
         "gpu_temperature_max_c": max(row.max_gpu_temp_c for row in rows),
         "solo_baselines_sha256": _file_sha256(solo_baselines_file),
         "calibration_sha256": _file_sha256(calibration_file),
@@ -711,7 +856,7 @@ def compute_profiles(
             "baseline_plan_sha256": (
                 amendment.get("baseline_plan_sha256") if amendment else audit["plan_sha256"]
             ),
-            "thermal_amendment": amendment,
+            "profile_amendment": amendment,
             "solo_baselines": _relative(repo_root, solo_baselines_file),
             "solo_baselines_sha256": _file_sha256(solo_baselines_file),
             "calibration": _relative(repo_root, calibration_file),
