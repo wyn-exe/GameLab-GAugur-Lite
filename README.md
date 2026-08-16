@@ -1730,11 +1730,13 @@ Safety-v2 的保护层为：
 - 单次时序仍为 `10 秒 warmup + 30 秒 measurement + 10 秒基础 cooldown`；
 - GPU 温度硬门降为 80°C；每秒采样一旦超过就将 attempt 标为 invalid、精确终止子进程并冷却；
 - 自适应 cooldown 目标随硬门变为 70°C，最长 300 秒；
-- 每一批开始前必须冷却到不高于 50°C；自动脚本每 15 秒检查一次，最多等 30 分钟；
+- 每一批开始前必须冷却到不高于 55°C；自动脚本每 15 秒检查一次，最多等 30 分钟；
 - Runner 使用 `--fail-fast`，任一 failed/invalid 后立即停止当前批次和整个自动流程，不会继续跑余下行，也不会自动重试；
 - 原始 JSONL 除温度、利用率和显存外，还记录 GPU 功耗、核心时钟、NVML clock-event reason 位以及软/硬热降频是否出现。
 
 温度门是最后一道异常保护，不是需要主动触发的实验目标。即使有硬门，采样间隔内仍可能短暂越过阈值，所以真正降低风险的是 0.25 GPU Compute 上限和批前冷启动；不能依靠不断提高温度门来完成数据量。
+
+初版 [`safety-v2-amendment.json`](artifacts/profiles/step7/safety-v2-amendment.json) 把批前门暂定为 50°C；在正式数据仍为 `0/480` 时，操作者实测本机稳定空闲温度约为 54°C，说明 50°C 对当前环境不可达，无法再表达“已回到稳定空闲态”。因此追加封存 [`safety-v2-idle-temperature-amendment.json`](artifacts/profiles/step7/safety-v2-idle-temperature-amendment.json)，只把确认实验和后续正式批次的启动门修订为 55°C。Candidate 002 从 49°C 开始、全过程最高 70°C、没有超过 80°C 或出现热降频；修订后从启动门到硬门仍保留 25°C 余量。80°C 运行中硬中止、70°C 自适应 cooldown、GPU Compute 0.25 执行上限、5% 分母 CV 门以及不可变计划均不改变。启动门是可重复性前置条件，不能被表述为硬件安全上限。
 
 Step 4 的旧 GPU Compute 吞吐分母对应实际压力 `0/0.25/0.5/0.75/1`，不能拿来除以新的 `0/0.0625/0.125/0.1875/0.25`。Safety-v2 因此要求重新运行完整 60-cell 校准：四类资源、五档归一化压力、三次重复；校准记录 requested/applied 两列，并将 observed 与 applied 比较。正式 profile 只接受同一 pressure-cap 合同下的新校准文件。这个校准约 8 分钟，GPU Compute 的最大执行量只有旧 0.25，同时也受 80°C 硬门保护。
 
@@ -1791,7 +1793,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_step7_safety_v2_acceptance.ps1
 ```
 
-自动执行不等于忽略异常：任何单测、计划哈希、源码身份、窗口、子进程、覆盖率、80°C 温度门或质量门失败都会终止整条命令并保留现场。正常的批间等待是脚本在等待 GPU 回到 50°C，不应手工跳过。运行期间仍需保持 Pyxel 窗口可见且不被遮挡。
+自动执行不等于忽略异常：任何单测、计划哈希、源码身份、窗口、子进程、覆盖率、80°C 温度门或质量门失败都会终止整条命令并保留现场。正常的批间等待是脚本在等待 GPU 回到修订后的 55°C，不应手工跳过。运行期间仍需保持 Pyxel 窗口可见且不被遮挡。
 
 本检查点没有启动任何 workload 或 benchmark。真实短验收为：
 
@@ -1972,6 +1974,8 @@ base SHA-256=c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade
 ```
 
 截至本检查点，`formal-calibration-confirmation-v1.json` 尚未生成，正式 profile 仍为 0/480。必须先提交并上传候选 002、审计、确认实现、测试与 README，之后才能运行六个追加单元。
+
+确认实验执行前又封存了空闲温度门修订：操作者报告当前稳定空闲 GPU 温度约 54°C，原 50°C 启动条件不可达；脚本现从 [`safety-v2-idle-temperature-amendment.json`](artifacts/profiles/step7/safety-v2-idle-temperature-amendment.json) 读取固定的 55°C 上限，拒绝无记录的临时参数覆盖。该变化不改写 Candidate 002，也不放宽 80°C 运行中硬门；六个追加单元仍以全部五次重复 CV `<=5%` 决定能否进入正式 profile。
 
 ### Step 8：采集真实共置组合
 
@@ -2371,7 +2375,7 @@ extra quads = 12 combinations × K            = 36
 total                                           720
 ```
 
-其中主共置数据为 180 run，额外测试为 36 run。24 个 solo 已按 20/60/20 秒长窗口完成；旧 profile 试运行全部作为安全证据排除，因此正式剩余量仍是 480 个 profile 加 216 个共置/额外 run。Safety-v2 继续使用 10/30/10 秒窗口，名义串行时间仍为 9.67 小时，但每批强制从不高于 50°C 开始，实际总时间取决于批间自然冷却，不能再承诺旧方案的 11–13 小时范围。自动脚本会完成等待，不会为了赶时间跳过温控。11 档压力消融不计入这 720 个正式主实验 run。
+其中主共置数据为 180 run，额外测试为 36 run。24 个 solo 已按 20/60/20 秒长窗口完成；旧 profile 试运行全部作为安全证据排除，因此正式剩余量仍是 480 个 profile 加 216 个共置/额外 run。Safety-v2 继续使用 10/30/10 秒窗口，名义串行时间仍为 9.67 小时，但每批强制从不高于修订后的 55°C 开始，实际总时间取决于批间自然冷却，不能再承诺旧方案的 11–13 小时范围。自动脚本会完成等待，不会为了赶时间跳过温控。11 档压力消融不计入这 720 个正式主实验 run。
 
 `smoke.yaml` 只用于在正式采集前验证游戏资源、自动输入、进程生命周期、CUDA benchmark 同步和数据 schema，不生成模型样本，也不构成缩小版实验。正式结果只接受 `formal-v1` 的完整组合 manifest。
 

@@ -18,12 +18,33 @@ $confirmation = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\forma
 $plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-safety-v2-s30.csv'
 $baselinePlan = Join-Path $repoRoot 'artifacts\plans\formal-v1.csv'
 $solo = Join-Path $repoRoot 'data\interim\formal-v1\solo-baselines.json'
+$idleTemperatureAmendment = Join-Path $repoRoot 'artifacts\profiles\step7\safety-v2-idle-temperature-amendment.json'
 
 Push-Location $repoRoot
 try {
     if (-not (Test-Path -LiteralPath $base -PathType Leaf)) {
         throw 'Missing warmup-v1 base calibration.'
     }
+    if (-not (Test-Path -LiteralPath $idleTemperatureAmendment -PathType Leaf)) {
+        throw 'Missing Safety-v2 idle-temperature amendment.'
+    }
+    $temperatureProtocol = Get-Content -LiteralPath $idleTemperatureAmendment -Raw | ConvertFrom-Json
+    if ($temperatureProtocol.status -ne 'sealed' `
+            -or [int]$temperatureProtocol.previous_batch_start_gpu_temp_max_c -ne 50 `
+            -or [int]$temperatureProtocol.revised_batch_start_gpu_temp_max_c -ne 55 `
+            -or [int]$temperatureProtocol.unchanged_max_gpu_temp_c -ne 80) {
+        throw 'Unexpected Safety-v2 idle-temperature amendment contract.'
+    }
+    $parentAmendment = Join-Path $repoRoot ([string]$temperatureProtocol.parent_safety_v2_amendment)
+    $parentHash = (Get-FileHash -LiteralPath $parentAmendment -Algorithm SHA256).Hash.ToLowerInvariant()
+    $baseHash = (Get-FileHash -LiteralPath $base -Algorithm SHA256).Hash.ToLowerInvariant()
+    $planHash = (Get-FileHash -LiteralPath $plan -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($parentHash -ne [string]$temperatureProtocol.parent_safety_v2_amendment_sha256 `
+            -or $baseHash -ne [string]$temperatureProtocol.base_calibration_sha256 `
+            -or $planHash -ne [string]$temperatureProtocol.formal_plan_sha256) {
+        throw 'Safety-v2 idle-temperature amendment hash binding failed.'
+    }
+    $startGpuTempMaxC = [int]$temperatureProtocol.revised_batch_start_gpu_temp_max_c
     if ($DryRun) {
         python scripts\run_step7_calibration_confirmation.py --dry-run
         exit $LASTEXITCODE
@@ -36,8 +57,8 @@ try {
             Select-Object -First 1
     )
     Write-Host "[Safety-v2 confirmation] Start GPU temperature: $gpuTemp C"
-    if ($gpuTemp -gt 50) {
-        throw 'GPU must cool to 50 C or below before confirmation.'
+    if ($gpuTemp -gt $startGpuTempMaxC) {
+        throw "GPU must cool to $startGpuTempMaxC C or below before confirmation."
     }
 
     Write-Host '[Safety-v2 confirmation] Running unit tests before six additional cells...'

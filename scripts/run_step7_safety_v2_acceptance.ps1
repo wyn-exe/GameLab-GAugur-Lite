@@ -29,6 +29,7 @@ $profileRuns = Join-Path $profileRoot 'profile-runs.jsonl'
 $profileSummary = Join-Path $profileRoot 'profile-summary.json'
 $profileVerification = Join-Path $artifactRoot 'formal-profile-verification.json'
 $planVerification = Join-Path $artifactRoot 'formal-plan-verification.json'
+$idleTemperatureAmendment = Join-Path $repoRoot 'artifacts\profiles\step7\safety-v2-idle-temperature-amendment.json'
 
 function Get-GpuTemperature {
     $raw = @(
@@ -42,7 +43,7 @@ function Get-GpuTemperature {
 
 function Wait-GpuCool {
     param(
-        [int]$TargetC = 50,
+        [int]$TargetC = 55,
         [int]$TimeoutSeconds = 1800
     )
     $started = Get-Date
@@ -64,7 +65,7 @@ function Wait-GpuCool {
     }
 }
 
-$required = @($plan, $baselinePlan, $solo, $calibration, $calibrationConfirmation)
+$required = @($plan, $baselinePlan, $solo, $calibration, $calibrationConfirmation, $idleTemperatureAmendment)
 $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
 if ($missing.Count -gt 0) {
     throw "Missing safety-v2 inputs: $($missing -join ', ')"
@@ -78,6 +79,24 @@ try {
     if ($forbiddenChanges.Count -gt 0) {
         throw "Source/config changes are forbidden during formal collection:`n$($forbiddenChanges -join "`n")"
     }
+
+    $temperatureProtocol = Get-Content -LiteralPath $idleTemperatureAmendment -Raw | ConvertFrom-Json
+    if ($temperatureProtocol.status -ne 'sealed' `
+            -or [int]$temperatureProtocol.previous_batch_start_gpu_temp_max_c -ne 50 `
+            -or [int]$temperatureProtocol.revised_batch_start_gpu_temp_max_c -ne 55 `
+            -or [int]$temperatureProtocol.unchanged_max_gpu_temp_c -ne 80) {
+        throw 'Unexpected Safety-v2 idle-temperature amendment contract.'
+    }
+    $parentAmendment = Join-Path $repoRoot ([string]$temperatureProtocol.parent_safety_v2_amendment)
+    $parentHash = (Get-FileHash -LiteralPath $parentAmendment -Algorithm SHA256).Hash.ToLowerInvariant()
+    $calibrationHash = (Get-FileHash -LiteralPath $calibration -Algorithm SHA256).Hash.ToLowerInvariant()
+    $planHash = (Get-FileHash -LiteralPath $plan -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($parentHash -ne [string]$temperatureProtocol.parent_safety_v2_amendment_sha256 `
+            -or $calibrationHash -ne [string]$temperatureProtocol.base_calibration_sha256 `
+            -or $planHash -ne [string]$temperatureProtocol.formal_plan_sha256) {
+        throw 'Safety-v2 idle-temperature amendment hash binding failed.'
+    }
+    $batchStartGpuTempMaxC = [int]$temperatureProtocol.revised_batch_start_gpu_temp_max_c
 
     Write-Host '[Safety-v2] Auditing frozen plan, reused solo baseline and capped calibration...'
     $auditRaw = python -m gaugur_lite features build-profiles `
@@ -117,7 +136,7 @@ try {
             batch_size = $BatchSize
             max_gpu_temp_c = 80
             cooldown_target_c = 70
-            batch_start_temp_c = 50
+            batch_start_temp_c = $batchStartGpuTempMaxC
             gpu_compute_cap = 0.25
             fail_fast = $true
         } | ConvertTo-Json -Depth 3
@@ -165,7 +184,7 @@ try {
         }
         $batchNumber = [int][Math]::Floor($firstPending / $BatchSize) + 1
         $temperatureLog = Join-Path $invocationRoot ("{0}-batch-{1:D3}-cooldown.json" -f $invocationTag, $batchNumber)
-        $samples = Wait-GpuCool -TargetC 50 -TimeoutSeconds 1800
+        $samples = Wait-GpuCool -TargetC $batchStartGpuTempMaxC -TimeoutSeconds 1800
         $samples | ConvertTo-Json -Depth 3 | Out-File -LiteralPath $temperatureLog -Encoding utf8
 
         $runReport = Join-Path $invocationRoot ("{0}-batch-{1:D3}-run.json" -f $invocationTag, $batchNumber)

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "status": "sealed",
+  "decision": "adapt_batch_start_gate_to_observed_idle_temperature",
+  "scope": [
+    "step7_calibration_confirmation",
+    "step7_safety_v2_formal_batches"
+  ],
+  "basis": {
+    "operator_reported_steady_idle_gpu_temp_c": 54,
+    "candidate_002_start_gpu_temp_c": 49,
+    "candidate_002_max_gpu_temp_c": 70,
+    "candidate_002_samples_above_80_c": 0,
+    "candidate_002_thermal_slowdown_samples": 0
+  },
+  "previous_batch_start_gpu_temp_max_c": 50,
+  "revised_batch_start_gpu_temp_max_c": 55,
+  "unchanged_max_gpu_temp_c": 80,
+  "remaining_hard_gate_headroom_c": 25,
+  "unchanged_gpu_compute_pressure_cap": 0.25,
+  "unchanged_denominator_cv_threshold_pct": 5.0,
+  "parent_safety_v2_amendment": "artifacts/profiles/step7/safety-v2-amendment.json",
+  "parent_safety_v2_amendment_sha256": "683183eca4dfa51b8f4d5e60a1b3f98d3c9363a39d6c9aaea3c1af6fd1fe63a3",
+  "formal_plan": "artifacts/plans/formal-v1-safety-v2-s30.csv",
+  "formal_plan_sha256": "c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2",
+  "base_calibration": "artifacts/calibration/step7-safety-v2/formal-calibration-warmup-v1.json",
+  "base_calibration_sha256": "c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade",
+  "interpretation": "The batch-start gate is an idle-state comparability precondition, not a hardware limit. The 80 C runtime abort gate remains unchanged."
+}
