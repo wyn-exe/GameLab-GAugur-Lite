@@ -1,0 +1,260 @@
+{
+  "amendment_id": "step7-step8-short-timing-s30-v2",
+  "checks": {
+    "all_696_remaining_rows_preserved": true,
+    "extra_12_groups_three_repeats_preserved": true,
+    "main_60_groups_three_repeats_preserved": true,
+    "new_raw_directories_disjoint": true,
+    "profile_cartesian_product_preserved": true,
+    "short_and_t84_directories_disjoint": true,
+    "short_stage_directories_pairwise_disjoint": true,
+    "single_short_profile_protocol": true,
+    "t84_trial_excluded": true,
+    "unmodified_fields_equal": true,
+    "unused_solo_rows_compatible": true
+  },
+  "decision": {
+    "adaptive_cooldown_max_s": 300,
+    "adaptive_cooldown_target_c": 74,
+    "execute_short_plan_solo_rows": false,
+    "original_protocol": {
+      "cooldown_s": 20.0,
+      "duration_s": 60.0,
+      "max_gpu_temp_c": 82.0,
+      "warmup_s": 20.0
+    },
+    "preserve_extra_test_groups": 12,
+    "preserve_extra_test_runs": 36,
+    "preserve_main_combination_groups": 60,
+    "preserve_main_runs": 180,
+    "preserve_profile_repeats": 3,
+    "preserve_profile_rows": 480,
+    "preserve_workloads": 8,
+    "reason": "保留全部实验单元和三次重复，将每个 run 的名义时序减半，为后续共置、模型与调度实验释放时间；t84 长协议 trial 完整封存且不与正式特征混用。",
+    "reuse_existing_solo_runs": 24,
+    "short_protocol": {
+      "cooldown_s": 10.0,
+      "duration_s": 30.0,
+      "max_gpu_temp_c": 84.0,
+      "sample_interval_s": 1.0,
+      "warmup_s": 10.0
+    }
+  },
+  "plans": {
+    "original": {
+      "path": "artifacts/plans/formal-v1.csv",
+      "sha256": "94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a"
+    },
+    "profile_baseline_compatibility": {
+      "allowed_changed_columns": [
+        "config_sha256",
+        "cooldown_s",
+        "duration_s",
+        "execution_index",
+        "max_gpu_temp_c",
+        "root_commit",
+        "row_sha256",
+        "run_directory",
+        "warmup_s"
+      ],
+      "baseline_max_gpu_temp_c": 82.0,
+      "baseline_plan_sha256": "94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a",
+      "baseline_protocol": {
+        "cooldown_s": 20.0,
+        "duration_s": 60.0,
+        "max_gpu_temp_c": 82.0,
+        "warmup_s": 20.0
+      },
+      "changed_columns": [
+        "config_sha256",
+        "cooldown_s",
+        "duration_s",
+        "max_gpu_temp_c",
+        "root_commit",
+        "row_sha256",
+        "run_directory",
+        "warmup_s"
+      ],
+      "mode": "short_profile_amendment_s30_v2",
+      "profile_max_gpu_temp_c": 84.0,
+      "profile_plan_sha256": "4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1",
+      "profile_protocol": {
+        "cooldown_s": 10.0,
+        "duration_s": 30.0,
+        "max_gpu_temp_c": 84.0,
+        "warmup_s": 10.0
+      },
+      "profile_row_count": 480,
+      "raw_directories_disjoint": true,
+      "semantic_fields_equal_except_timing": true,
+      "unmodified_fields_equal": true
+    },
+    "short_full": {
+      "combinations": "artifacts/plans/formal-v1-remaining-s30-combinations.json",
+      "manifest": "artifacts/plans/formal-v1-remaining-s30-manifest.json",
+      "path": "artifacts/plans/formal-v1-remaining-s30.csv",
+      "row_count": 720,
+      "sha256": "4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1"
+    },
+    "stage_compatibility": [
+      {
+        "changed_columns": [
+          "config_sha256",
+          "cooldown_s",
+          "duration_s",
+          "max_gpu_temp_c",
+          "root_commit",
+          "row_sha256",
+          "run_directory",
+          "warmup_s"
+        ],
+        "combinations": "artifacts/plans/formal-v1-remaining-s30-combinations.json",
+        "combinations_sha256": "10aac3972b66717d15a9f5c5e0a7e33d791ef473ebe7ce072482250abe6db546",
+        "manifest": "artifacts/plans/formal-v1-remaining-s30-manifest.json",
+        "manifest_sha256": "8d6d26c3134247f37c56df60e894473b884e0d36937906858eecbffc07b149f6",
+        "path": "artifacts/plans/formal-v1-remaining-s30.csv",
+        "raw_directories_disjoint": true,
+        "row_count": 24,
+        "sha256": "4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1",
+        "stage": "solo",
+        "unmodified_fields_equal": true
+      },
+      {
+        "changed_columns": [
+          "config_sha256",
+          "cooldown_s",
+          "duration_s",
+          "max_gpu_temp_c",
+          "root_commit",
+          "row_sha256",
+          "run_directory",
+          "warmup_s"
+        ],
+        "combinations": "artifacts/plans/formal-v1-remaining-s30-combinations.json",
+        "combinations_sha256": "10aac3972b66717d15a9f5c5e0a7e33d791ef473ebe7ce072482250abe6db546",
+        "manifest": "artifacts/plans/formal-v1-remaining-s30-manifest.json",
+        "manifest_sha256": "8d6d26c3134247f37c56df60e894473b884e0d36937906858eecbffc07b149f6",
+        "path": "artifacts/plans/formal-v1-remaining-s30.csv",
+        "raw_directories_disjoint": true,
+        "row_count": 480,
+        "sha256": "4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1",
+        "stage": "profile",
+        "unmodified_fields_equal": true
+      },
+      {
+        "changed_columns": [
+          "config_sha256",
+          "cooldown_s",
+          "duration_s",
+          "max_gpu_temp_c",
+          "root_commit",
+          "row_sha256",
+          "run_directory",
+          "warmup_s"
+        ],
+        "combinations": "artifacts/plans/formal-v1-remaining-s30-combinations.json",
+        "combinations_sha256": "10aac3972b66717d15a9f5c5e0a7e33d791ef473ebe7ce072482250abe6db546",
+        "manifest": "artifacts/plans/formal-v1-remaining-s30-manifest.json",
+        "manifest_sha256": "8d6d26c3134247f37c56df60e894473b884e0d36937906858eecbffc07b149f6",
+        "path": "artifacts/plans/formal-v1-remaining-s30.csv",
+        "raw_directories_disjoint": true,
+        "row_count": 180,
+        "sha256": "4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1",
+        "stage": "colocation-main",
+        "unmodified_fields_equal": true
+      },
+      {
+        "changed_columns": [
+          "config_sha256",
+          "cooldown_s",
+          "duration_s",
+          "max_gpu_temp_c",
+          "root_commit",
+          "row_sha256",
+          "run_directory",
+          "warmup_s"
+        ],
+        "combinations": "artifacts/plans/formal-v1-remaining-s30-combinations.json",
+        "combinations_sha256": "10aac3972b66717d15a9f5c5e0a7e33d791ef473ebe7ce072482250abe6db546",
+        "manifest": "artifacts/plans/formal-v1-remaining-s30-manifest.json",
+        "manifest_sha256": "8d6d26c3134247f37c56df60e894473b884e0d36937906858eecbffc07b149f6",
+        "path": "artifacts/plans/formal-v1-remaining-s30.csv",
+        "raw_directories_disjoint": true,
+        "row_count": 36,
+        "sha256": "4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1",
+        "stage": "colocation-extra-test",
+        "unmodified_fields_equal": true
+      }
+    ],
+    "t84_trial": {
+      "path": "artifacts/plans/formal-v1-profile-t84.csv",
+      "sha256": "f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7"
+    }
+  },
+  "schema_version": 1,
+  "scope": [
+    "profile",
+    "colocation-main",
+    "colocation-extra-test"
+  ],
+  "status": "passed",
+  "t84_timing_trial": {
+    "completed_run_count": 71,
+    "full_batch_elapsed_s": [
+      2393.9153331000007,
+      2441.783664200002,
+      2450.755004499999
+    ],
+    "included_in_final_profiles": false,
+    "invalid_attempt_count": 3,
+    "invalid_reason": "RunInvalidError:gpu_temperature_exceeded:85.0>84.0",
+    "invalid_run_ids": [
+      "formal-v1__profile__mega_wing__gpu_compute__p075__r02",
+      "formal-v1__profile__pyxel_platformer__gpu_compute__p075__r01",
+      "formal-v1__profile__pyxel_shooter__gpu_compute__p100__r03"
+    ],
+    "max_valid_gpu_temp_c": 84.0,
+    "median_full_batch_elapsed_s": 2441.783664200002,
+    "reports": [
+      {
+        "path": "artifacts/profiles/step7/t84/invocations/invocation-001-batch-001-run.json",
+        "sha256": "9e2500ba8c1b26fee691acd773e3f201b1e21676f33dafb49d0ece5e4a999e1f"
+      },
+      {
+        "path": "artifacts/profiles/step7/t84/invocations/invocation-002-batch-001-run.json",
+        "sha256": "4aa71359e5de0eeebd9e63a1664e6a9c004283445af5868cd1f8c8a52b9c05b1"
+      },
+      {
+        "path": "artifacts/profiles/step7/t84/invocations/invocation-003-batch-002-run.json",
+        "sha256": "301f330fc37a1589d9484230631a6b3ecc844fba9e1db8df73c41f284d84b8f0"
+      },
+      {
+        "path": "artifacts/profiles/step7/t84/invocations/invocation-005-batch-002-run.json",
+        "sha256": "510b5f8f7ae478211135dd88b1591b2b37541861e2c7363735c6971791175fe3"
+      },
+      {
+        "path": "artifacts/profiles/step7/t84/invocations/invocation-006-batch-003-run.json",
+        "sha256": "196cadfaa7ad919fa4d1f612d80d0ce44f7b061f56d6d228d7b3ec415f765c6f"
+      }
+    ],
+    "resolved_by_one_cold_retry": [
+      "formal-v1__profile__pyxel_platformer__gpu_compute__p075__r01",
+      "formal-v1__profile__pyxel_shooter__gpu_compute__p100__r03"
+    ],
+    "root_commit": "434ae13d8065d4785d85b25be407cb5a306a6205",
+    "source_tree_sha256": "63ca1121c2646132be156f49c928fd1a1e548a618896b79dd32c1de3c1f92bd7",
+    "unresolved_run_ids": [
+      "formal-v1__profile__mega_wing__gpu_compute__p075__r02"
+    ],
+    "valid_attempt_count": 71
+  },
+  "time_budget": {
+    "nominal_hours_saved": 9.666666666666666,
+    "note": "不含进程启动、批间冷启动等待、按 74°C 目标延长的 cooldown 和失败审计。",
+    "original_nominal_hours": 19.333333333333332,
+    "original_nominal_seconds_per_run": 100.0,
+    "remaining_row_count": 696,
+    "short_nominal_hours": 9.666666666666666,
+    "short_nominal_seconds_per_run": 50.0
+  }
+}

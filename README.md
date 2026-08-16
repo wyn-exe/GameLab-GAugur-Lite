@@ -17,8 +17,8 @@
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
-| Step 7 敏感度/强度 profile | 短协议待冻结 | 82°C pilot 与 71-run t84 timing trial 均已封存且不进入训练；保留 480 行完整设计，改用 10/30/10 秒短时序 |
-| Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 短时序、防混用证据与全阶段计划探针已实现，76 项单测通过，正式 clean-commit 计划待生成 |
+| Step 7 敏感度/强度 profile | 短协议计划已生成 | 82°C pilot 与 71-run t84 timing trial 均已封存且不进入训练；clean commit 上的 720-row 全阶段短协议计划已生成并独立验证，正式采集待冻结提交 |
+| Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 短时序、防混用证据和正式全阶段计划已实现，76 项单测与 720-row 不可变计划校验通过 |
 | 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；短时序 profile、60 个主组合、额外测试、模型与报告待生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
@@ -1574,7 +1574,7 @@ Step 6 的 24 个 solo baseline 不重跑：父计划哈希仍绑定 [`formal-v1
 
 #### 生成与执行顺序
 
-当前先提交短协议代码以及已封存的 t84 trial，确保工作树干净。随后执行一次准备命令；它会生成唯一的 720-row 短协议计划及 manifest/组合 sidecar、短协议修订证据，并只读审计 Step 6/Step 4 分母：
+正式计划按以下命令从干净工作树一次生成；它会生成唯一的 720-row 短协议计划及 manifest/组合 sidecar、短协议修订证据，并只读审计 Step 6/Step 4 分母：
 
 ```powershell
 conda activate gaugur-lite
@@ -1631,11 +1631,32 @@ artifacts/profiles/step7/
 
 硬门包含：696 行剩余实验的 `run_id`/组合/split/repeat 完整保留；新旧 raw 目录不重叠；t84 的 71 个有效单元和三次 invalid 均可从 index 重算且被排除；profile 480/160/32 计数准确；每个单元三次重复；正式 profile stage 只有一个 source-tree SHA-256 和 root commit；系统、workload 和 benchmark 同步覆盖率均不低于 0.95；最高温不超过 84°C；requested/observed pressure 最大误差不超过 0.05；压力 0 retention 偏差不超过 0.05；16 个独立吞吐分母 CV 不超过 5%。
 
-#### 当前真实验收与待冻结项
+#### 正式计划生成验收与待执行项
 
 已封存的 t84 trial 状态为：71 个有效单元、三次 `85°C>84°C` invalid、两个单元经一次冷启动恢复、一个单元未恢复；三个 24-row 首次批次各约 40.8 分钟。所有无效进程树均按 PID 身份终止，未使用全局 `taskkill`。旧 t84 计划 SHA-256 为 `f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7`，温控修订证据 SHA-256 为 `f7685d995744eb61ed969b71588dc21effe1e5005ca3b6b8bbb6c7dab486c935`。
 
-新的 s30 全阶段计划及其 SHA-256 必须等本次代码和 trial 数据提交后从 clean commit 生成，因此本节不预填临时哈希。生成、独立验证并再次提交后，再把真实 plan hash、source-tree hash、`0/480` 预检输出和后续批次验收填入此处。
+正式 s30 全阶段计划已从 clean commit `608d817cd8d44787fc0ba4c2f2ee507f0b4c987f` 生成；manifest 如实记录 `root_dirty_at_generation=false`、`selected_stage=all` 和 `row_count=720`。生成命令的真实输出为：
+
+```text
+[Short protocol] Generating one clean-commit 720-row plan for all stages...
+[Short protocol] Verifying the immutable 720-row all-stage plan...
+[Short protocol] Recomputing the sealed t84 trial and all-stage compatibility...
+[Short protocol] Auditing reused solo/calibration denominators for s30 profile...
+PASS short protocol: plan rows=720, remaining rows=696, nominal hours=9.67, excluded t84 valid runs=71
+```
+
+| 正式冻结产物/身份 | SHA-256 或值 |
+| --- | --- |
+| `formal-v1-remaining-s30.csv` | `4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1` |
+| `formal-v1-remaining-s30-manifest.json` | `8d6d26c3134247f37c56df60e894473b884e0d36937906858eecbffc07b149f6` |
+| `formal-v1-remaining-s30-combinations.json` | `10aac3972b66717d15a9f5c5e0a7e33d791ef473ebe7ce072482250abe6db546` |
+| `duration-amendment.json` | `c8ec75954ee71890909757e1306c6d81fe750e579e3a42445a4f64b33bdac751` |
+| 短协议 `config_sha256` | `a36b78d2998befbd10330adef8f5ab1f813a7a68144bd44a59f55bb779224525` |
+| 计划生成 commit | `608d817cd8d44787fc0ba4c2f2ee507f0b4c987f` |
+
+独立 `plan-verify` 的 7 项检查全部通过：720 行、720 个唯一 `run_id`、连续 execution index、逐行 SHA-256、计划 SHA-256、组合 sidecar SHA-256 和组合 split 完整性均一致。阶段计数为 `solo=24`、`profile=480`、`colocation-main=180`、`colocation-extra-test=36`；所有行只有 `10/30/10/84` 一个协议、同一 root commit 和 `data/raw/remaining-s30/` 一个 raw 根。`duration-amendment.json` 的 11 个兼容性/隔离检查全部为真，并明确记录 `included_in_final_profiles=false`、t84 `valid/invalid=71/3`、剩余名义时间与节省时间均为 9.67 小时。
+
+这四个新产物与本段 README 记录必须先提交上传，才能形成实际采集的冻结 commit。冻结后再执行 `-PreflightOnly`，届时把真实 source-tree SHA-256、执行 commit 和 `completed=0/480` 输出补入本节；当前没有启动任何 s30 游戏窗口，也没有产生正式 s30 attempt。
 
 短协议实现完成后的本地真实验收如下。计划探针写在 `.test-tmp/` 且 manifest 如实记录 `root_dirty_at_generation=true`，只用于验证展开结果，不冒充正式计划：
 
