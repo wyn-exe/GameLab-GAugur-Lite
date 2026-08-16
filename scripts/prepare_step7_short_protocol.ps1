@@ -4,6 +4,10 @@ param()
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+# Windows PowerShell 在新的 -File 进程中可能尚未创建该自动变量；
+# 先初始化，后续每个原生命令仍会用自己的真实退出码覆盖它。
+$global:LASTEXITCODE = 0
+
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
     $repoRoot
