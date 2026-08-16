@@ -172,6 +172,51 @@ def test_summary_builds_monotonic_requested_to_observed_curve(tmp_path: Path) ->
     assert result["resources"][0]["points"][1]["observed_pressure_mean"] == pytest.approx(0.5)
 
 
+def test_summary_compares_observed_with_capped_applied_pressure(tmp_path: Path) -> None:
+    repo_root = _make_repo_root(tmp_path)
+    request = CalibrationRequest(
+        **{
+            **_request(repo_root).__dict__,
+            "resources": ("gpu_compute",),
+            "levels": (0.0, 0.5, 1.0),
+            "pressure_caps": {
+                "cpu_compute": 1.0,
+                "memory_bandwidth": 1.0,
+                "gpu_compute": 0.25,
+                "gpu_memory": 1.0,
+            },
+        }
+    )
+    records = []
+    for level in request.levels:
+        for repeat in (1, 2):
+            records.append(
+                {
+                    "resource": "gpu_compute",
+                    "pressure_requested": level,
+                    "pressure_applied": level * 0.25,
+                    "repeat": repeat,
+                    "sample_count": 2,
+                    "observed_pressure": level * 0.25,
+                    "hardware_signal": 10.0,
+                    "worker": {"status": "completed"},
+                    "worker_directory": repo_root / "artifacts" / f"r{repeat}",
+                }
+            )
+
+    result = summarize_calibration_records(
+        request=request,
+        records=records,
+        repo_root=repo_root,
+        config_hash="a" * 64,
+        environment={"host": "test"},
+    )
+
+    assert result["status"] == "passed"
+    assert result["resources"][0]["points"][-1]["pressure_applied"] == 0.25
+    assert result["resources"][0]["max_abs_error"] == 0.0
+
+
 def test_verify_checks_metrics_hash_and_resource_quality_gates(tmp_path: Path) -> None:
     repo_root = _make_repo_root(tmp_path)
     artifacts = repo_root / "artifacts"

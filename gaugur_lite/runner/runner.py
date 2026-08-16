@@ -40,6 +40,7 @@ class ParsedPlanRow:
     workload_ids: tuple[str, ...]
     resource: str | None
     pressure_requested: float | None
+    pressure_applied: float | None
     repeat: int
     warmup_s: float
     duration_s: float
@@ -60,6 +61,8 @@ class ParsedPlanRow:
         if not workloads or len(set(workloads)) != len(workloads):
             raise ValueError("plan workload_ids 必须非空且唯一")
         pressure = float(row["pressure_requested"]) if row["pressure_requested"] else None
+        applied_cell = row.get("pressure_applied", "")
+        pressure_applied = float(applied_cell) if applied_cell else pressure
         return cls(
             raw=dict(row),
             execution_index=int(row["execution_index"]),
@@ -71,6 +74,7 @@ class ParsedPlanRow:
             workload_ids=workloads,
             resource=row["resource"] or None,
             pressure_requested=pressure,
+            pressure_applied=pressure_applied,
             repeat=int(row["repeat"]),
             warmup_s=float(row["warmup_s"]),
             duration_s=float(row["duration_s"]),
@@ -674,7 +678,11 @@ def run_one(
                 )
             )
         if row.mode == "pressure_profile":
-            if row.resource is None or row.pressure_requested is None:
+            if (
+                row.resource is None
+                or row.pressure_requested is None
+                or row.pressure_applied is None
+            ):
                 raise ValueError("pressure_profile 计划缺少 resource/pressure")
             benchmark_dir = attempt_dir / "benchmark"
             benchmark_dir.mkdir()
@@ -687,7 +695,7 @@ def run_one(
                 "--resource",
                 row.resource,
                 "--pressure",
-                str(row.pressure_requested),
+                str(row.pressure_applied),
                 "--runtime-s",
                 str(row.duration_s),
                 "--warmup-s",
@@ -911,6 +919,7 @@ def run_one(
             "workload_ids": list(row.workload_ids),
             "resource": row.resource,
             "pressure_requested": row.pressure_requested,
+            "pressure_applied": row.pressure_applied,
             "measurement_start_monotonic_ns": measurement_start_ns,
             "measurement_end_monotonic_ns": measurement_end_ns,
             "system_sample_count": len(system_rows),
@@ -919,6 +928,9 @@ def run_one(
             "workload_overlap_s": overlap_s,
             "workload_overlap_ratio": overlap_ratio,
             "gpu_temp_c_max": max(gpu_temperatures) if gpu_temperatures else None,
+            "gpu_thermal_slowdown_seen": any(
+                event.gpu_thermal_slowdown_active is True for event in system_rows
+            ),
             "gpu_temp_limit_c": row.max_gpu_temp_c,
             "window_sample_count": len(window_rows),
             "windows_pairwise_nonoverlap": all(item["healthy"] for item in window_rows),
@@ -1030,6 +1042,7 @@ def run_plan(
     batch_number: int | None = None,
     batch_size: int | None = None,
     dry_run: bool = False,
+    fail_fast: bool = False,
 ) -> dict[str, Any]:
     verification = verify_plan(repo_root=repo_root, plan_file=plan_file)
     if verification["status"] != "passed":
@@ -1169,7 +1182,7 @@ def run_plan(
     started = time.perf_counter()
     results = []
     for row in rows:
-        results.append(
+        result = (
             run_one(
                 repo_root=repo_root,
                 row=row,
@@ -1178,6 +1191,9 @@ def run_plan(
                 resume=resume,
             )
         )
+        results.append(result)
+        if fail_fast and result.get("status") not in {"completed", "skipped"}:
+            break
     completed = sum(item["status"] == "completed" for item in results)
     skipped = sum(item["status"] == "skipped" for item in results)
     failed = len(results) - completed - skipped
@@ -1191,6 +1207,9 @@ def run_plan(
         "progress_before": progress,
         "execution_provenance": execution_provenance,
         "selected_runs": len(rows),
+        "executed_runs": len(results),
+        "fail_fast": fail_fast,
+        "stopped_early": len(results) < len(rows),
         "completed": completed,
         "skipped": skipped,
         "failed_or_invalid": failed,

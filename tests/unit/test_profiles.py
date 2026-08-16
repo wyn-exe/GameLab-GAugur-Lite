@@ -11,6 +11,7 @@ from gaugur_lite.profiles import (
     ProfileError,
     _aggregate,
     _load_standalone_benchmarks,
+    _verify_safety_v2_profile_amendment,
     _verify_short_profile_amendment,
     _verify_thermal_profile_amendment,
     build_profiles,
@@ -27,15 +28,22 @@ def _amendment_rows(
     warmup: int = 20,
     duration: int = 60,
     cooldown: int = 20,
+    gpu_compute_cap: float | None = None,
 ) -> list[dict[str, str]]:
     rows = []
+    resources = ("cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory")
+    pressures = (0.0, 0.25, 0.5, 0.75, 1.0)
     for index in range(480):
-        rows.append(
-            {
+        resource = resources[(index // 5) % 4]
+        pressure = pressures[index % 5]
+        row = {
+                "schema_version": "2" if gpu_compute_cap is not None else "1",
                 "execution_index": str(index + 1),
                 "run_id": f"formal-v1__profile__cell_{index:03d}",
                 "experiment_id": "formal-v1",
                 "stage": "profile",
+                "resource": resource,
+                "pressure_requested": str(pressure),
                 "warmup_s": str(warmup),
                 "duration_s": str(duration),
                 "sample_interval_s": "1",
@@ -46,7 +54,10 @@ def _amendment_rows(
                 "run_directory": f"{directory_prefix}/{index:03d}",
                 "row_sha256": f"{index + (1 if limit == 82 else 1000):064x}",
             }
-        )
+        if gpu_compute_cap is not None:
+            cap = gpu_compute_cap if resource == "gpu_compute" else 1.0
+            row["pressure_applied"] = str(pressure * cap)
+        rows.append(row)
     return rows
 
 
@@ -203,25 +214,72 @@ def test_short_amendment_rejects_any_unlisted_change(
         )
 
 
-def _calibration_payload(*, unstable: bool = False) -> dict[str, object]:
+def test_safety_v2_amendment_caps_only_gpu_compute(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    original = tmp_path / "formal-v1.csv"
+    amended = tmp_path / "formal-v1-safety-v2-s30.csv"
+    original.write_text("placeholder\n", encoding="utf-8")
+    amended.write_text("placeholder\n", encoding="utf-8")
+    (tmp_path / "formal-v1-safety-v2-s30-manifest.json").write_text(
+        json.dumps(
+            {"root_dirty_at_generation": False, "selected_stage": "all", "row_count": 720}
+        ),
+        encoding="utf-8",
+    )
+    rows = {
+        original: _amendment_rows(
+            limit=82, directory_prefix="data/raw/formal-v1", config="a"
+        ),
+        amended: _amendment_rows(
+            limit=80,
+            directory_prefix="data/raw/safety-v2-s30/formal-v1",
+            config="b",
+            warmup=10,
+            duration=30,
+            cooldown=10,
+            gpu_compute_cap=0.25,
+        ),
+    }
+    monkeypatch.setattr(profiles, "load_plan_rows", lambda path: rows[path])
+
+    result = _verify_safety_v2_profile_amendment(
+        repo_root=tmp_path,
+        profile_plan_file=amended,
+        baseline_plan_file=original,
+        profile_plan_sha256="c" * 64,
+        baseline_plan_sha256="d" * 64,
+    )
+
+    assert result["mode"] == "safety_v2_capped_gpu_compute"
+    assert result["pressure_caps"]["gpu_compute"] == 0.25
+    assert result["profile_protocol"]["max_gpu_temp_c"] == 80.0
+
+
+def _calibration_payload(
+    *, unstable: bool = False, gpu_compute_cap: float = 1.0
+) -> dict[str, object]:
     runs = []
     for resource in ("cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"):
         for pressure in (0.0, 0.25, 0.5, 0.75, 1.0):
             for repeat in (1, 2, 3):
-                operations = 0 if pressure == 0 else int(1_000_000 * pressure)
+                cap = gpu_compute_cap if resource == "gpu_compute" else 1.0
+                applied = pressure * cap
+                operations = 0 if applied == 0 else int(1_000_000 * applied)
                 if unstable and resource == "cpu_compute" and pressure == 0.25 and repeat == 3:
                     operations *= 2
                 runs.append(
                     {
                         "resource": resource,
                         "pressure_requested": pressure,
+                        "pressure_applied": applied,
                         "repeat": repeat,
                         "run_key": f"{resource}-{pressure}-{repeat}",
-                        "observed_pressure": pressure,
+                        "observed_pressure": applied,
                         "worker": {
                             "status": "completed",
                             "resource": resource,
-                            "pressure_requested": pressure,
+                            "pressure_requested": applied,
                             "elapsed_s": 2.0,
                             "operations": operations,
                         },
@@ -239,6 +297,12 @@ def _calibration_payload(*, unstable: bool = False) -> dict[str, object]:
             "levels": [0.0, 0.25, 0.5, 0.75, 1.0],
             "repeats": 3,
             "resources": ["cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"],
+            "pressure_caps": {
+                "cpu_compute": 1.0,
+                "memory_bandwidth": 1.0,
+                "gpu_compute": gpu_compute_cap,
+                "gpu_memory": 1.0,
+            },
         },
         "runs": runs,
     }
@@ -260,6 +324,27 @@ def test_standalone_benchmark_rejects_unstable_denominator(tmp_path: Path) -> No
     path.write_text(json.dumps(_calibration_payload(unstable=True)), encoding="utf-8")
 
     with pytest.raises(ProfileError, match="吞吐 CV 超限"):
+        _load_standalone_benchmarks(path=path, cv_threshold_pct=5.0)
+
+
+def test_standalone_benchmark_requires_matching_safety_cap(tmp_path: Path) -> None:
+    path = tmp_path / "calibration.json"
+    path.write_text(
+        json.dumps(_calibration_payload(gpu_compute_cap=0.25)), encoding="utf-8"
+    )
+    caps = {
+        "cpu_compute": 1.0,
+        "memory_bandwidth": 1.0,
+        "gpu_compute": 0.25,
+        "gpu_memory": 1.0,
+    }
+
+    cells, _ = _load_standalone_benchmarks(
+        path=path, cv_threshold_pct=5.0, expected_pressure_caps=caps
+    )
+
+    assert cells[("gpu_compute", 1.0)]["pressure_applied"] == 0.25
+    with pytest.raises(ProfileError, match="pressure_caps 不兼容"):
         _load_standalone_benchmarks(path=path, cv_threshold_pct=5.0)
 
 

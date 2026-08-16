@@ -1,0 +1,125 @@
+{
+  "audio_mode": "muted",
+  "barrier_used": true,
+  "barrier_wait_s": 0.07501399999455316,
+  "controller": "jump_v1",
+  "controller_trace_sha256": "e32ffe7e0cf9dadfb34b3fc2acd05927a1e5fee5b13c8b0285f651ed17625dc3",
+  "display_scale": 2,
+  "draw_count": 1201,
+  "draw_interval_ms": {
+    "count": 900,
+    "max": 36.1414,
+    "mean": 33.31435944444445,
+    "min": 15.0607,
+    "p95": 34.8142
+  },
+  "draw_time_ms": {
+    "count": 901,
+    "max": 0.4693,
+    "mean": 0.06728512763596005,
+    "min": 0.02,
+    "p95": 0.1121
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 40.0848036,
+  "entrypoint": "games/pyxel/02_jump_game.py",
+  "game_fps": {
+    "count": 29,
+    "max": 30.969433169461738,
+    "mean": 30.03391416236151,
+    "min": 29.920001636913636,
+    "p05": 29.939307036775052,
+    "p95": 30.05843456642405,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 120,
+  "logical_width": 160,
+  "max_frames": 0,
+  "measurement_coverage_ratio": 1.0,
+  "measurement_coverage_s": 30.03242090000001,
+  "measurement_finished_monotonic_ns": 34725097853300,
+  "measurement_metric_rows": 30,
+  "measurement_started_monotonic_ns": 34695097140100,
+  "metric_rows": 40,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "planned_measurement_end_monotonic_ns": 34725092078200,
+  "planned_measurement_start_monotonic_ns": 34695092078200,
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "duration_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 1201,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 40,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 1201,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": null
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      },
+      {
+        "actual": 1.0,
+        "name": "measurement_coverage",
+        "passed": true,
+        "skipped": false,
+        "threshold": 0.95
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "formal-v1__profile__pyxel_jump__memory_bandwidth__p050__r01",
+  "schema_version": 1,
+  "seed": 1001,
+  "status": "completed",
+  "stop_reason": "duration_reached",
+  "target_fps": 30,
+  "title": "Pyxel Jump",
+  "update_count": 1201,
+  "update_time_ms": {
+    "count": 901,
+    "max": 0.1435,
+    "mean": 0.041110765815760265,
+    "min": 0.0088,
+    "p95": 0.0682
+  },
+  "warmup_requested_s": 10.0,
+  "window_observations": 30,
+  "workload_id": "pyxel_jump"
+}

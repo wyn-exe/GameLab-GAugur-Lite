@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -44,6 +44,15 @@ class CalibrationRequest:
     status_file: Path
     workers_root: Path
     plot_file: Path | None = None
+    pressure_caps: dict[str, float] = field(
+        default_factory=lambda: {
+            "cpu_compute": 1.0,
+            "memory_bandwidth": 1.0,
+            "gpu_compute": 1.0,
+            "gpu_memory": 1.0,
+        }
+    )
+    max_gpu_temp_c: float = 82.0
 
     def validate(self, repo_root: Path) -> None:
         if not self.resources or len(set(self.resources)) != len(self.resources):
@@ -56,6 +65,12 @@ class CalibrationRequest:
             raise ValueError("levels 必须严格递增且不重复")
         if any(not 0.0 <= level <= 1.0 for level in self.levels):
             raise ValueError("levels 必须位于 [0, 1]")
+        if set(self.pressure_caps) != set(BENCHMARK_RESOURCES):
+            raise ValueError("pressure_caps 必须完整声明四类资源")
+        if any(not 0 < cap <= 1 for cap in self.pressure_caps.values()):
+            raise ValueError("pressure_caps 必须位于 (0, 1]")
+        if not 30 <= self.max_gpu_temp_c <= 110:
+            raise ValueError("max_gpu_temp_c 必须位于 [30, 110]")
         if self.repeats < 2:
             raise ValueError("repeats 必须至少为 2")
         if self.warmup_s < 0 or self.duration_s <= 0 or self.sample_interval_s <= 0:
@@ -91,6 +106,12 @@ class CalibrationRequest:
             "dry_run": True,
             "resources": list(self.resources),
             "levels": list(self.levels),
+            "pressure_caps": dict(self.pressure_caps),
+            "applied_levels": {
+                resource: [level * self.pressure_caps[resource] for level in self.levels]
+                for resource in self.resources
+            },
+            "max_gpu_temp_c": self.max_gpu_temp_c,
             "repeats": self.repeats,
             "warmup_s": self.warmup_s,
             "duration_s": self.duration_s,
@@ -218,6 +239,7 @@ def _run_cell(
     stdout_file = worker_dir / "stdout.log"
     stderr_file = worker_dir / "stderr.log"
     runtime_s = request.warmup_s + request.duration_s + max(0.5, request.sample_interval_s / 2)
+    pressure_applied = level * request.pressure_caps[resource]
     command = [
         sys.executable,
         "-m",
@@ -227,7 +249,7 @@ def _run_cell(
         "--resource",
         resource,
         "--pressure",
-        str(level),
+        str(pressure_applied),
         "--runtime-s",
         str(runtime_s),
         "--cpu-workers",
@@ -287,11 +309,20 @@ def _run_cell(
                             "calibration_run_id": run_key,
                             "resource": resource,
                             "pressure_requested": level,
+                            "pressure_applied": pressure_applied,
                             "repeat": repeat,
                         }
                     )
                     writer.write(row)
                     records.append(row)
+                    if (
+                        event.gpu_temp_c is not None
+                        and float(event.gpu_temp_c) > request.max_gpu_temp_c
+                    ):
+                        raise RuntimeError(
+                            "gpu_temperature_exceeded:"
+                            f"{float(event.gpu_temp_c):.1f}>{request.max_gpu_temp_c:.1f}"
+                        )
                     sample_index += 1
                     next_sample += request.sample_interval_s
         process.wait(timeout=max(5.0, request.sample_interval_s * 3))
@@ -311,6 +342,7 @@ def _run_cell(
         return {
             "resource": resource,
             "pressure_requested": level,
+            "pressure_applied": pressure_applied,
             "repeat": repeat,
             "run_key": run_key,
             "elapsed_s": elapsed_s,
@@ -362,7 +394,8 @@ def summarize_calibration_records(
             ]
             observed_mean = statistics.fmean(observed_values) if observed_values else None
             observed_std = _sample_std(observed_values)
-            abs_error = abs(observed_mean - level) if observed_mean is not None else None
+            applied = level * request.pressure_caps[resource]
+            abs_error = abs(observed_mean - applied) if observed_mean is not None else None
             if observed_mean is None or observed_mean + 1e-9 < previous_observed:
                 monotonic = False
             if observed_mean is not None:
@@ -372,6 +405,7 @@ def summarize_calibration_records(
             points.append(
                 {
                     "pressure_requested": level,
+                    "pressure_applied": applied,
                     "repeat_count": len(cells),
                     "observed_pressure_mean": observed_mean,
                     "observed_pressure_std": observed_std,
@@ -433,6 +467,8 @@ def summarize_calibration_records(
         "request": {
             "resources": list(request.resources),
             "levels": list(request.levels),
+            "pressure_caps": dict(request.pressure_caps),
+            "max_gpu_temp_c": request.max_gpu_temp_c,
             "repeats": request.repeats,
             "warmup_s": request.warmup_s,
             "duration_s": request.duration_s,
@@ -462,9 +498,10 @@ def _write_plot(result: dict[str, Any], output_file: Path) -> None:
     for axis, resource_result in zip(axes.flat, result["resources"], strict=True):
         points = resource_result["points"]
         requested = [point["pressure_requested"] for point in points]
+        applied = [point["pressure_applied"] for point in points]
         observed = [point["observed_pressure_mean"] for point in points]
         error = [point["observed_pressure_std"] for point in points]
-        axis.plot([0, 1], [0, 1], "--", color="gray", label="requested")
+        axis.plot(requested, applied, "--", color="gray", label="expected applied")
         axis.errorbar(requested, observed, yerr=error, marker="o", capsize=3, label="observed")
         axis.set_title(resource_result["resource"])
         axis.set_xlabel("requested pressure")
@@ -482,6 +519,10 @@ def run_calibration(*, repo_root: Path, request: CalibrationRequest) -> dict[str
 
     request.validate(repo_root)
     local_config = load_local_config(request.config_path)
+    if dict(local_config.measurement.pressure_caps) != request.pressure_caps:
+        raise ValueError("CalibrationRequest pressure_caps 与主机配置不一致")
+    if local_config.host.max_gpu_temp_c != request.max_gpu_temp_c:
+        raise ValueError("CalibrationRequest max_gpu_temp_c 与主机配置不一致")
     config_hash = config_sha256(local_config.model_dump(mode="json"))
     environment = _environment_fingerprint(request.gpu_index)
     request.workers_root.mkdir(parents=True, exist_ok=False)

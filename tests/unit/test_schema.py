@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from gaugur_lite.config import config_sha256, stable_json_dumps
 from gaugur_lite.schema import (
     HostSpec,
+    MeasurementSpec,
     MetricEvent,
     RunMode,
     RunSpec,
@@ -46,6 +47,21 @@ def test_run_spec_generates_stable_profile_id() -> None:
     assert run.run_id == "formal-v1__profile__pyxel_shooter__gpu_compute__p050__r01"
     assert run.combination_key is None
     assert run.status is RunStatus.PLANNED
+    assert run.pressure_applied == 0.5
+
+
+def test_measurement_pressure_caps_must_be_complete_and_bounded() -> None:
+    spec = MeasurementSpec(
+        pressure_caps={
+            "cpu_compute": 1.0,
+            "memory_bandwidth": 1.0,
+            "gpu_compute": 0.25,
+            "gpu_memory": 1.0,
+        }
+    )
+    assert spec.pressure_caps["gpu_compute"] == 0.25
+    with pytest.raises(ValidationError, match="完整声明"):
+        MeasurementSpec(pressure_caps={"gpu_compute": 0.25})
 
 
 def test_colocation_run_is_order_independent() -> None:
@@ -137,4 +153,3 @@ def test_metric_event_rejects_non_json_finite_values() -> None:
             monotonic_time_ns=2,
             values={"fps": math.nan},
         )
-

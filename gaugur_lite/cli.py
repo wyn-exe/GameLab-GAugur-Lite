@@ -330,6 +330,11 @@ def experiment_run(
     batch_size: int | None = typer.Option(None, "--batch-size", min=1, help="正式批次包含的 stage 行数。"),
     report: Path | None = typer.Option(None, "--report", help="可选的独占运行报告 JSON。"),
     dry_run: bool = typer.Option(False, "--dry-run", help="只复核计划和 resume 决策。"),
+    fail_fast: bool = typer.Option(
+        False,
+        "--fail-fast",
+        help="任一 failed/invalid attempt 后立即停止当前批次。",
+    ),
 ) -> None:
     """顺序执行不可变计划；每行失败被隔离到自己的 attempt。"""
 
@@ -346,6 +351,7 @@ def experiment_run(
             batch_number=batch_number,
             batch_size=batch_size,
             dry_run=_effective_dry_run(ctx, dry_run),
+            fail_fast=fail_fast,
         )
         if report is not None and not result.get("dry_run"):
             write_json_atomic(report, result)
@@ -721,6 +727,7 @@ def benchmark_calibrate(
 
     try:
         repo_root = discover_repo_root(Path.cwd())
+        local_config = load_local_config(config)
         parsed_resources = _parse_csv_strings(resources, option_name="--resources")
         invalid_resources = [item for item in parsed_resources if item not in BENCHMARK_RESOURCES]
         if invalid_resources:
@@ -750,6 +757,8 @@ def benchmark_calibrate(
             status_file=status_path,
             workers_root=workers_path,
             plot_file=plot_path,
+            pressure_caps=dict(local_config.measurement.pressure_caps),
+            max_gpu_temp_c=local_config.host.max_gpu_temp_c,
         )
         request.validate(repo_root)
         if _effective_dry_run(ctx, dry_run):

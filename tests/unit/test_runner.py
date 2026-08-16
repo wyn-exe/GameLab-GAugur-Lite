@@ -175,6 +175,41 @@ def test_run_plan_continues_after_one_isolated_failure(tmp_path: Path, monkeypat
     assert len(result["results"]) == 2
 
 
+def test_run_plan_fail_fast_stops_after_first_invalid(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    rows = [
+        _row("data/raw/test-exp/first", "test-exp__solo__game_0__r01").raw,
+        _row("data/raw/test-exp/second", "test-exp__solo__game_1__r01").raw,
+    ]
+    monkeypatch.setattr(
+        runner,
+        "verify_plan",
+        lambda **_: {"status": "passed", "plan_sha256": "c" * 64},
+    )
+    monkeypatch.setattr(runner, "load_plan_rows", lambda _: rows)
+    monkeypatch.setattr(runner, "inspect_resume", lambda **_: {"action": "run", "attempt": 1})
+    calls: list[str] = []
+
+    def fake_run_one(*, row: ParsedPlanRow, **_: object) -> dict[str, object]:
+        calls.append(row.run_id)
+        return {"run_id": row.run_id, "status": "invalid", "valid": False}
+
+    monkeypatch.setattr(runner, "run_one", fake_run_one)
+    plan = tmp_path / "plan.csv"
+    plan.write_text("placeholder\n", encoding="utf-8")
+
+    result = runner.run_plan(
+        repo_root=tmp_path,
+        plan_file=plan,
+        resume=True,
+        fail_fast=True,
+    )
+
+    assert len(calls) == result["executed_runs"] == 1
+    assert result["stopped_early"] is True
+
+
 def test_run_plan_filters_stage_before_max_runs(tmp_path: Path, monkeypatch: object) -> None:
     solo = _row("data/raw/test-exp/solo", "test-exp__solo__game_0__r01").raw
     profile = dict(_row("data/raw/test-exp/profile", "test-exp__profile__game_1__r01").raw)

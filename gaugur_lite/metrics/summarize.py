@@ -52,6 +52,8 @@ def summarize_events(
         "gpu_clock_mhz",
         "gpu_power_w",
         "gpu_temp_c",
+        "gpu_clock_event_reasons",
+        "gpu_thermal_slowdown_active",
     )
     metrics: dict[str, Any] = {}
     for name in metric_names:

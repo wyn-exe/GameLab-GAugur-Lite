@@ -1,0 +1,53 @@
+{
+  "decision": "replace_with_safety_v2",
+  "deletion_performed": false,
+  "included_in_final_profiles": false,
+  "included_in_model_training": false,
+  "pilot": {
+    "a002_created": false,
+    "attempts_per_run": 1,
+    "execution_commit": "9f473f46f3374e2642c4fcff674c88bd55fa1a6c",
+    "execution_source_tree_sha256": "2126d7dc20614e291f82952cbadb113f9f01eea1f5895299e97e9d2fa0821969",
+    "global_kill_used": false,
+    "invalid_reason": "RunInvalidError:gpu_temperature_exceeded:85.0>84.0",
+    "invalid_run_id": "formal-v1__profile__pyxel_snake__gpu_compute__p100__r03",
+    "invalid_runs": 1,
+    "max_valid_gpu_temp_c": 82.0,
+    "plan": "artifacts/plans/formal-v1-remaining-s30.csv",
+    "plan_sha256": "4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1",
+    "run_report": "artifacts/profiles/step7/s30/invocations/invocation-001-batch-001-run.json",
+    "run_report_sha256": "a95e6c1dfae8e125a7b9a055d21f3471c0c42f6ffa0a11293d9b550b38b0915d",
+    "selected_runs": 24,
+    "valid_runs": 23
+  },
+  "safety_v2": {
+    "adaptive_cooldown_target_c": 70.0,
+    "batch_start_gpu_temp_max_c": 50.0,
+    "gpu_compute_applied_levels": [
+      0.0,
+      0.0625,
+      0.125,
+      0.1875,
+      0.25
+    ],
+    "gpu_compute_pressure_cap": 0.25,
+    "isolated_raw_root": "data/raw/safety-v2-s30",
+    "max_gpu_temp_c": 80.0,
+    "normalized_pressure_levels": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "requires_new_calibration": true
+  },
+  "schema_version": 1,
+  "status": "sealed",
+  "stop_evidence": {
+    "flaky_test_fixed_before_safety_v2": true,
+    "next_invocation_unit_log": "artifacts/profiles/step7/s30/invocations/invocation-002-unit-tests.txt",
+    "next_invocation_unit_log_sha256": "64539b61a2974ad7074bce3dd57f6e35e2b2900420d06925ff7fe38ba837a9a7",
+    "runner_started_after_unit_failure": false
+  }
+}

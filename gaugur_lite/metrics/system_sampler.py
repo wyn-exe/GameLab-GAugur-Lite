@@ -17,6 +17,7 @@ try:
         NVML_CLOCK_GRAPHICS,
         NVML_TEMPERATURE_GPU,
         nvmlDeviceGetClockInfo,
+        nvmlDeviceGetCurrentClocksEventReasons,
         nvmlDeviceGetHandleByIndex,
         nvmlDeviceGetMemoryInfo,
         nvmlDeviceGetPowerUsage,
@@ -24,12 +25,15 @@ try:
         nvmlDeviceGetUtilizationRates,
         nvmlInit,
         nvmlShutdown,
+        nvmlClocksEventReasonHwThermalSlowdown,
+        nvmlClocksEventReasonSwThermalSlowdown,
     )
 except (ImportError, OSError):  # 单元测试和无 NVIDIA 主机仍可导入模块。
     NVMLError = RuntimeError
     NVML_CLOCK_GRAPHICS = 0
     NVML_TEMPERATURE_GPU = 0
     nvmlDeviceGetClockInfo = None
+    nvmlDeviceGetCurrentClocksEventReasons = None
     nvmlDeviceGetHandleByIndex = None
     nvmlDeviceGetMemoryInfo = None
     nvmlDeviceGetPowerUsage = None
@@ -37,6 +41,8 @@ except (ImportError, OSError):  # 单元测试和无 NVIDIA 主机仍可导入�
     nvmlDeviceGetUtilizationRates = None
     nvmlInit = None
     nvmlShutdown = None
+    nvmlClocksEventReasonHwThermalSlowdown = 0
+    nvmlClocksEventReasonSwThermalSlowdown = 0
 
 
 def _safe_nvml(call: Callable[[], Any]) -> Any:
@@ -88,6 +94,7 @@ class SystemSampler:
         gpu_clock = None
         gpu_power_mw = None
         gpu_temp = None
+        gpu_clock_event_reasons = None
         if self._gpu_handle is not None:
             gpu_util = _safe_nvml(
                 lambda: nvmlDeviceGetUtilizationRates(self._gpu_handle)  # type: ignore[misc]
@@ -108,6 +115,15 @@ class SystemSampler:
                     self._gpu_handle, NVML_TEMPERATURE_GPU
                 )
             )
+            if nvmlDeviceGetCurrentClocksEventReasons is not None:
+                gpu_clock_event_reasons = _safe_nvml(
+                    lambda: nvmlDeviceGetCurrentClocksEventReasons(self._gpu_handle)  # type: ignore[misc]
+                )
+
+        thermal_mask = int(
+            nvmlClocksEventReasonSwThermalSlowdown
+            | nvmlClocksEventReasonHwThermalSlowdown
+        )
 
         return SystemMetricEvent(
             run_id=self.run_id,
@@ -127,6 +143,16 @@ class SystemSampler:
             gpu_clock_mhz=gpu_clock,
             gpu_power_w=(gpu_power_mw / 1000 if gpu_power_mw is not None else None),
             gpu_temp_c=gpu_temp,
+            gpu_clock_event_reasons=(
+                int(gpu_clock_event_reasons)
+                if gpu_clock_event_reasons is not None
+                else None
+            ),
+            gpu_thermal_slowdown_active=(
+                bool(int(gpu_clock_event_reasons) & thermal_mask)
+                if gpu_clock_event_reasons is not None
+                else None
+            ),
         )
 
     def __exit__(self, *_: Any) -> None:
@@ -134,4 +160,3 @@ class SystemSampler:
             nvmlShutdown()
         self._gpu_handle = None
         self._nvml_initialized = False
-

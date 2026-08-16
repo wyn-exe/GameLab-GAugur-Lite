@@ -207,6 +207,18 @@ class MeasurementSpec(StrictModel):
     repeats: int = Field(default=3, ge=1, le=100)
     qos_ratios: tuple[float, ...] = (0.70, 0.80, 0.90)
     random_seed: int = Field(default=20260811, ge=0)
+    # 模型压力仍归一化为 [0, 1]；cap 只限制实际送入资源 worker 的作用量。
+    pressure_caps: dict[
+        Literal["cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"],
+        float,
+    ] = Field(
+        default_factory=lambda: {
+            "cpu_compute": 1.0,
+            "memory_bandwidth": 1.0,
+            "gpu_compute": 1.0,
+            "gpu_memory": 1.0,
+        }
+    )
 
     @field_validator("qos_ratios")
     @classmethod
@@ -216,6 +228,16 @@ class MeasurementSpec(StrictModel):
         if len(set(value)) != len(value):
             raise ValueError("qos_ratios 不允许重复")
         return tuple(sorted(value))
+
+    @field_validator("pressure_caps")
+    @classmethod
+    def validate_pressure_caps(cls, value: dict[str, float]) -> dict[str, float]:
+        expected = {"cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"}
+        if set(value) != expected:
+            raise ValueError("pressure_caps 必须完整声明四类资源")
+        if any(not math.isfinite(cap) or not 0 < cap <= 1 for cap in value.values()):
+            raise ValueError("pressure_caps 每项必须是 (0, 1] 内有限数")
+        return dict(value)
 
     @model_validator(mode="after")
     def validate_sample_interval(self) -> "MeasurementSpec":
@@ -383,6 +405,7 @@ class RunSpec(StrictModel):
     controller: str | None = None
     resource: str | None = None
     pressure_requested: float | None = Field(default=None, ge=0, le=1)
+    pressure_applied: float | None = Field(default=None, ge=0, le=1)
     repeat: int = Field(default=1, ge=1, le=999)
     seed: int = Field(default=0, ge=0)
     warmup_s: float = Field(default=20.0, ge=0, le=3600)
@@ -435,6 +458,17 @@ class RunSpec(StrictModel):
     def canonicalize_ids(self) -> "RunSpec":
         if self.target_id in self.neighbor_ids:
             raise ValueError("target_id 不能同时出现在 neighbor_ids")
+        if self.pressure_requested is None and self.pressure_applied is not None:
+            raise ValueError("没有 pressure_requested 时不得单独设置 pressure_applied")
+        if self.pressure_requested is not None and self.pressure_applied is None:
+            # 兼容 v1 调用者；v2 计划生成器始终显式写入该字段。
+            object.__setattr__(self, "pressure_applied", self.pressure_requested)
+        if (
+            self.pressure_requested is not None
+            and self.pressure_applied is not None
+            and self.pressure_applied > self.pressure_requested + 1e-12
+        ):
+            raise ValueError("pressure_applied 不得高于归一化 pressure_requested")
 
         expected_combination = (
             make_combination_key((self.target_id, *self.neighbor_ids))
@@ -540,6 +574,8 @@ class SystemMetricEvent(StrictModel):
     gpu_clock_mhz: float | None = Field(default=None, ge=0)
     gpu_power_w: float | None = Field(default=None, ge=0)
     gpu_temp_c: float | None = Field(default=None, ge=0, le=150)
+    gpu_clock_event_reasons: int | None = Field(default=None, ge=0)
+    gpu_thermal_slowdown_active: bool | None = None
 
     @field_validator("run_id")
     @classmethod

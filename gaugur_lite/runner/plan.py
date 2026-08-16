@@ -32,7 +32,7 @@ PLAN_STAGES: tuple[PlanStage, ...] = (
     "all",
 )
 
-PLAN_COLUMNS: tuple[str, ...] = (
+LEGACY_PLAN_COLUMNS: tuple[str, ...] = (
     "schema_version",
     "execution_index",
     "run_id",
@@ -65,6 +65,13 @@ PLAN_COLUMNS: tuple[str, ...] = (
     "game_entrypoints",
     "game_sha256s",
     "row_sha256",
+)
+
+# v2 显式区分建模使用的归一化压力与 benchmark 实际执行压力。
+PLAN_COLUMNS: tuple[str, ...] = (
+    *LEGACY_PLAN_COLUMNS[: LEGACY_PLAN_COLUMNS.index("pressure_requested") + 1],
+    "pressure_applied",
+    *LEGACY_PLAN_COLUMNS[LEGACY_PLAN_COLUMNS.index("pressure_requested") + 1 :],
 )
 
 _FORMAL_EXTRA_QUADS: tuple[tuple[str, ...], ...] = (
@@ -368,6 +375,11 @@ def _build_row(
     neighbors = tuple(item for item in canonical_workloads if item != target_id)
     combination_key = _combination_key(canonical_workloads) if len(canonical_workloads) > 1 else None
     target = catalog_by_id[target_id]
+    pressure_applied = (
+        None
+        if pressure is None or resource is None
+        else pressure * float(local.measurement.pressure_caps[resource])
+    )
     run = RunSpec(
         experiment_id=experiment.name,
         mode=mode,
@@ -379,6 +391,7 @@ def _build_row(
         controller=target.controller,
         resource=resource,
         pressure_requested=pressure,
+        pressure_applied=pressure_applied,
         repeat=repeat,
         seed=0,
         warmup_s=local.measurement.warmup_s,
@@ -395,7 +408,7 @@ def _build_row(
         for item in canonical_workloads
     }
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "execution_index": 0,
         "run_id": run.run_id,
         "experiment_id": experiment.name,
@@ -409,6 +422,9 @@ def _build_row(
         "colocation_id": run.colocation_id or "",
         "resource": resource or "",
         "pressure_requested": "" if pressure is None else format(pressure, ".10g"),
+        "pressure_applied": (
+            "" if pressure_applied is None else format(pressure_applied, ".10g")
+        ),
         "repeat": repeat,
         "seed": seed,
         "warmup_s": format(local.measurement.warmup_s, ".10g"),
@@ -583,7 +599,7 @@ def build_plan(
         raise RuntimeError("计划出现重复 run_id")
 
     combination_manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "experiment_id": experiment.name,
         "config_sha256": config_hash,
         "main": {
@@ -635,7 +651,7 @@ def build_plan(
     combination_hash = _file_sha256(combination_manifest_path)
     stage_counts = dict(sorted(Counter(str(row["stage"]) for row in selected).items()))
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "completed",
         "experiment_id": experiment.name,
         "selected_stage": stage,
@@ -643,6 +659,7 @@ def build_plan(
         "stage_counts": stage_counts,
         "randomized": experiment.randomize_order,
         "random_seed": local.measurement.random_seed,
+        "pressure_caps": dict(local.measurement.pressure_caps),
         "config_sha256": config_hash,
         "root_commit": root_commit,
         "root_dirty_at_generation": root_dirty,
@@ -663,7 +680,8 @@ def build_plan(
 def load_plan_rows(plan_file: Path) -> list[dict[str, str]]:
     with plan_file.open("r", encoding="utf-8", newline="") as stream:
         reader = csv.DictReader(stream)
-        if tuple(reader.fieldnames or ()) != PLAN_COLUMNS:
+        columns = tuple(reader.fieldnames or ())
+        if columns not in {LEGACY_PLAN_COLUMNS, PLAN_COLUMNS}:
             raise ValueError("计划 CSV header 与 schema 不一致")
         return list(reader)
 

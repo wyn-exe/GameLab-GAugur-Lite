@@ -132,6 +132,12 @@ def test_build_and_verify_plan_with_all_physical_stages(tmp_path: Path) -> None:
         "solo": 4,
     }
     assert len(rows) == len({row["run_id"] for row in rows}) == 19
+    assert {row["schema_version"] for row in rows} == {"2"}
+    assert all(
+        row["pressure_applied"] == row["pressure_requested"]
+        for row in rows
+        if row["stage"] == "profile"
+    )
     assert verified["status"] == "passed"
     assert result["combinations"]["checks"]["main_extra_disjoint"] is True
 
@@ -157,3 +163,39 @@ def test_plan_sidecars_record_row_and_combination_hashes(tmp_path: Path) -> None
     assert manifest["row_count"] == 1
     assert len(manifest["plan_sha256"]) == 64
     assert len(manifest["combination_manifest_sha256"]) == 64
+
+
+def test_plan_records_normalized_and_capped_applied_pressure(tmp_path: Path) -> None:
+    local, experiment, workloads = _mini_repo(tmp_path)
+    local.write_text(
+        local.read_text(encoding="utf-8").replace(
+            "  random_seed: 123\n",
+            "  random_seed: 123\n"
+            "  pressure_caps:\n"
+            "    cpu_compute: 0.25\n"
+            "    memory_bandwidth: 1.0\n"
+            "    gpu_compute: 1.0\n"
+            "    gpu_memory: 1.0\n",
+        ),
+        encoding="utf-8",
+    )
+    experiment.write_text(
+        experiment.read_text(encoding="utf-8").replace(
+            "pressure_levels: [0.0]", "pressure_levels: [1.0]"
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "artifacts" / "profile.csv"
+
+    build_plan(
+        repo_root=tmp_path,
+        local_config_path=local,
+        experiment_path=experiment,
+        workload_catalog_path=workloads,
+        stage="profile",
+        output_file=output,
+    )
+    rows = load_plan_rows(output)
+
+    assert {row["pressure_requested"] for row in rows} == {"1"}
+    assert {row["pressure_applied"] for row in rows} == {"0.25"}

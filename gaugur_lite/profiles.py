@@ -35,6 +35,8 @@ _SHORT_AMENDMENT_ALLOWED_COLUMNS = _AMENDMENT_ALLOWED_COLUMNS | {
 _ORIGINAL_PROFILE_PROTOCOL = (20.0, 60.0, 20.0, 82.0)
 _THERMAL_PROFILE_PROTOCOL = (20.0, 60.0, 20.0, 84.0)
 _SHORT_PROFILE_PROTOCOL = (10.0, 30.0, 10.0, 84.0)
+_SAFETY_V2_PROFILE_PROTOCOL = (10.0, 30.0, 10.0, 80.0)
+_IDENTITY_PRESSURE_CAPS = {resource: 1.0 for resource in RESOURCES}
 
 
 class ProfileError(RuntimeError):
@@ -114,6 +116,7 @@ def _profile_plan_rows(plan_file: Path) -> list[ParsedPlanRow]:
         _ORIGINAL_PROFILE_PROTOCOL,
         _THERMAL_PROFILE_PROTOCOL,
         _SHORT_PROFILE_PROTOCOL,
+        _SAFETY_V2_PROFILE_PROTOCOL,
     }
     if len(protocols) != 1 or not protocols.issubset(accepted):
         raise ProfileError(
@@ -330,6 +333,108 @@ def _verify_short_profile_amendment(
     return result
 
 
+def _verify_safety_v2_profile_amendment(
+    *,
+    repo_root: Path,
+    profile_plan_file: Path,
+    baseline_plan_file: Path,
+    profile_plan_sha256: str,
+    baseline_plan_sha256: str,
+) -> dict[str, Any]:
+    """证明 safety-v2 只改变已声明的时序、温控、目录和实际作用压力。"""
+
+    del repo_root
+    current = [row for row in load_plan_rows(profile_plan_file) if row["stage"] == "profile"]
+    baseline = [row for row in load_plan_rows(baseline_plan_file) if row["stage"] == "profile"]
+    current_by_id = {row["run_id"]: row for row in current}
+    baseline_by_id = {row["run_id"]: row for row in baseline}
+    if (
+        len(current_by_id) != PROFILE_RUN_COUNT
+        or len(baseline_by_id) != PROFILE_RUN_COUNT
+        or set(current_by_id) != set(baseline_by_id)
+    ):
+        raise ProfileError("safety-v2 与 solo 父计划的 480 个归一化实验单元不一致")
+
+    ignored = {
+        "schema_version",
+        "execution_index",
+        "pressure_applied",
+        "warmup_s",
+        "duration_s",
+        "cooldown_s",
+        "max_gpu_temp_c",
+        "config_sha256",
+        "root_commit",
+        "run_directory",
+        "row_sha256",
+    }
+    for run_id, amended in current_by_id.items():
+        original = baseline_by_id[run_id]
+        common = set(amended) & set(original)
+        changed_semantic = {
+            key for key in common - ignored if str(amended[key]) != str(original[key])
+        }
+        if changed_semantic:
+            raise ProfileError(
+                f"safety-v2 改变了未授权实验语义: {run_id}: {sorted(changed_semantic)}"
+            )
+        requested = float(amended["pressure_requested"])
+        expected_applied = requested * (0.25 if amended["resource"] == "gpu_compute" else 1.0)
+        if abs(float(amended.get("pressure_applied", -1)) - expected_applied) > 1e-10:
+            raise ProfileError(f"safety-v2 实际压力映射非法: {run_id}")
+
+    protocols = {
+        (
+            float(row["warmup_s"]),
+            float(row["duration_s"]),
+            float(row["cooldown_s"]),
+            float(row["max_gpu_temp_c"]),
+        )
+        for row in current
+    }
+    if protocols != {_SAFETY_V2_PROFILE_PROTOCOL}:
+        raise ProfileError(f"safety-v2 协议非法: {sorted(protocols)}")
+    if {row["run_directory"] for row in current} & {
+        row["run_directory"] for row in baseline
+    }:
+        raise ProfileError("safety-v2 必须使用隔离的 raw 根目录")
+    manifest = _read_json(
+        profile_plan_file.with_name(f"{profile_plan_file.stem}-manifest.json")
+    )
+    if (
+        manifest.get("root_dirty_at_generation") is not False
+        or manifest.get("selected_stage") != "all"
+        or int(manifest.get("row_count", 0)) != 720
+    ):
+        raise ProfileError("safety-v2 计划必须由干净提交生成且完整包含 720 行")
+    return {
+        "mode": "safety_v2_capped_gpu_compute",
+        "profile_plan_sha256": profile_plan_sha256,
+        "baseline_plan_sha256": baseline_plan_sha256,
+        "profile_row_count": PROFILE_RUN_COUNT,
+        "baseline_protocol": {
+            "warmup_s": 20.0,
+            "duration_s": 60.0,
+            "cooldown_s": 20.0,
+            "max_gpu_temp_c": 82.0,
+        },
+        "profile_protocol": {
+            "warmup_s": 10.0,
+            "duration_s": 30.0,
+            "cooldown_s": 10.0,
+            "max_gpu_temp_c": 80.0,
+        },
+        "pressure_caps": {
+            "cpu_compute": 1.0,
+            "memory_bandwidth": 1.0,
+            "gpu_compute": 0.25,
+            "gpu_memory": 1.0,
+        },
+        "raw_directories_disjoint": True,
+        "normalized_experiment_cells_equal": True,
+    }
+
+
 def _resolve_baseline_contract(
     *,
     repo_root: Path,
@@ -362,6 +467,8 @@ def _resolve_baseline_contract(
         verify_amendment = _verify_thermal_profile_amendment
     elif protocol == {_SHORT_PROFILE_PROTOCOL}:
         verify_amendment = _verify_short_profile_amendment
+    elif protocol == {_SAFETY_V2_PROFILE_PROTOCOL}:
+        verify_amendment = _verify_safety_v2_profile_amendment
     else:
         raise ProfileError(f"baseline 复用不支持该 profile 协议: {sorted(protocol)}")
     amendment = verify_amendment(
@@ -376,10 +483,14 @@ def _resolve_baseline_contract(
 
 
 def _load_standalone_benchmarks(
-    *, path: Path, cv_threshold_pct: float
+    *,
+    path: Path,
+    cv_threshold_pct: float,
+    expected_pressure_caps: dict[str, float] | None = None,
 ) -> tuple[dict[tuple[str, float], dict[str, Any]], dict[str, Any]]:
     payload = _read_json(path)
     request = payload.get("request", {})
+    pressure_caps = dict(expected_pressure_caps or _IDENTITY_PRESSURE_CAPS)
     expected_request = {
         "cpu_workers": 8,
         "gpu_index": 0,
@@ -395,10 +506,16 @@ def _load_standalone_benchmarks(
     for key, expected in expected_request.items():
         if request.get(key) != expected:
             raise ProfileError(f"calibration benchmark 参数不兼容: {key}")
+    actual_caps = request.get("pressure_caps", _IDENTITY_PRESSURE_CAPS)
+    if actual_caps != pressure_caps:
+        raise ProfileError(
+            f"calibration pressure_caps 不兼容: {actual_caps} != {pressure_caps}"
+        )
     grouped: dict[tuple[str, float], list[dict[str, Any]]] = defaultdict(list)
     for run in payload.get("runs", []):
         resource = str(run.get("resource"))
         pressure = float(run.get("pressure_requested"))
+        pressure_applied = float(run.get("pressure_applied", pressure))
         repeat = int(run.get("repeat", 0))
         worker = run.get("worker", {})
         if (
@@ -407,7 +524,7 @@ def _load_standalone_benchmarks(
             or repeat not in REPEATS
             or worker.get("status") != "completed"
             or worker.get("resource") != resource
-            or float(worker.get("pressure_requested", -1)) != pressure
+            or abs(float(worker.get("pressure_requested", -1)) - pressure_applied) > 1e-10
             or float(worker.get("elapsed_s", 0)) <= 0
         ):
             raise ProfileError(f"calibration worker 状态非法: {run.get('run_key')}")
@@ -451,6 +568,7 @@ def _load_standalone_benchmarks(
             ),
             "resource": resource,
             "pressure_requested": pressure,
+            "pressure_applied": pressure * pressure_caps[resource],
             "run_keys": [item["run_key"] for item in items],
             "throughputs_ops_per_s": throughputs,
             "throughput_mean_ops_per_s": mean,
@@ -459,6 +577,26 @@ def _load_standalone_benchmarks(
             "observed_pressure_mean": statistics.fmean(observed),
         }
     return result, payload
+
+
+def _plan_pressure_caps(rows: list[ParsedPlanRow]) -> dict[str, float]:
+    caps: dict[str, float] = {}
+    for resource in RESOURCES:
+        resource_rows = [
+            row
+            for row in rows
+            if row.resource == resource and row.pressure_requested == 1.0
+        ]
+        applied = {row.pressure_applied for row in resource_rows}
+        if len(applied) != 1 or None in applied:
+            raise ProfileError(f"计划无法确定唯一实际压力上限: {resource}")
+        caps[resource] = float(next(iter(applied)))
+    for row in rows:
+        assert row.resource is not None and row.pressure_requested is not None
+        expected = row.pressure_requested * caps[row.resource]
+        if row.pressure_applied is None or abs(row.pressure_applied - expected) > 1e-10:
+            raise ProfileError(f"计划实际压力映射不一致: {row.run_id}")
+    return caps
 
 
 def audit_profile_inputs(
@@ -483,8 +621,11 @@ def audit_profile_inputs(
         solo_baselines_file=solo_baselines_file,
         baseline_plan_file=baseline_plan_file,
     )
+    pressure_caps = _plan_pressure_caps(rows)
     standalone, calibration = _load_standalone_benchmarks(
-        path=calibration_file, cv_threshold_pct=benchmark_cv_threshold_pct
+        path=calibration_file,
+        cv_threshold_pct=benchmark_cv_threshold_pct,
+        expected_pressure_caps=pressure_caps,
     )
     nonzero_cvs = [
         float(item["throughput_cv_pct"])
@@ -498,6 +639,7 @@ def audit_profile_inputs(
         "workload_count": len(baselines),
         "resource_count": len(RESOURCES),
         "pressure_levels": list(PRESSURES),
+        "pressure_caps": pressure_caps,
         "repeats": list(REPEATS),
         "plan_sha256": verification["plan_sha256"],
         "baseline_contract": amendment["mode"] if amendment else "same_plan",
@@ -554,6 +696,8 @@ def _collect_profile_record(
         or summary.get("workload_ids") != [workload_id]
         or summary.get("resource") != row.resource
         or float(summary.get("pressure_requested", -1)) != row.pressure_requested
+        or float(summary.get("pressure_applied", row.pressure_requested))
+        != row.pressure_applied
     ):
         raise ProfileError(f"profile summary 状态/身份非法: {row.run_id}")
     workloads = summary.get("workloads", [])
@@ -564,7 +708,7 @@ def _collect_profile_record(
         benchmark.get("status") != "completed"
         or benchmark.get("barrier_used") is not True
         or benchmark.get("resource") != row.resource
-        or float(benchmark.get("pressure_requested", -1)) != row.pressure_requested
+        or float(benchmark.get("pressure_requested", -1)) != row.pressure_applied
     ):
         raise ProfileError(f"profile benchmark 状态/身份非法: {row.run_id}")
     fps = workloads[0].get("game_fps", {})
@@ -572,8 +716,8 @@ def _collect_profile_record(
         raise ProfileError(f"profile FPS 缺失或非正: {row.run_id}")
     elapsed = float(benchmark.get("elapsed_s", 0))
     operations = int(benchmark.get("operations", -1))
-    if elapsed <= 0 or (row.pressure_requested == 0 and operations != 0) or (
-        row.pressure_requested > 0 and operations <= 0
+    if elapsed <= 0 or (row.pressure_applied == 0 and operations != 0) or (
+        row.pressure_applied > 0 and operations <= 0
     ):
         raise ProfileError(f"profile benchmark 吞吐字段非法: {row.run_id}")
     if row.resource == "gpu_memory":
@@ -590,6 +734,7 @@ def _collect_profile_record(
         "workload_id": workload_id,
         "resource": row.resource,
         "pressure_requested": row.pressure_requested,
+        "pressure_applied": row.pressure_applied,
         "pressure_observed": observed,
         "repeat": row.repeat,
         "run_id": row.run_id,
@@ -678,6 +823,7 @@ def _aggregate(
                 "workload_id": workload,
                 "resource": resource,
                 "pressure_requested": pressure,
+                "pressure_applied": items[0].get("pressure_applied", pressure),
                 "pressure_observed_mean": statistics.fmean(observed),
                 "pressure_observed_sample_std": _sample_std(observed),
                 "repeat_count": len(items),
@@ -770,8 +916,11 @@ def compute_profiles(
         solo_baselines_file=solo_baselines_file,
         baseline_plan_file=baseline_plan_file,
     )
+    pressure_caps = _plan_pressure_caps(rows)
     standalone, calibration_payload = _load_standalone_benchmarks(
-        path=calibration_file, cv_threshold_pct=benchmark_cv_threshold_pct
+        path=calibration_file,
+        cv_threshold_pct=benchmark_cv_threshold_pct,
+        expected_pressure_caps=pressure_caps,
     )
     records = [
         _collect_profile_record(
@@ -802,7 +951,13 @@ def compute_profiles(
     aggregates, curves, analysis = _aggregate(records)
     zero = [item for item in aggregates if item["pressure_requested"] == 0]
     max_zero_deviation = max(abs(float(item["sensitivity_mean"]) - 1.0) for item in zero)
-    max_observed_error = max(abs(float(item["pressure_observed"]) - float(item["pressure_requested"])) for item in records)
+    max_observed_error = max(
+        abs(
+            float(item["pressure_observed"])
+            - float(item.get("pressure_applied", item["pressure_requested"]))
+        )
+        for item in records
+    )
     source_hashes = sorted({str(item["execution_source_tree_sha256"]) for item in records})
     root_commits = sorted({str(item["execution_root_commit"]) for item in records})
     plan_manifest = _read_json(plan_file.with_name(f"{plan_file.stem}-manifest.json"))
@@ -816,7 +971,7 @@ def compute_profiles(
         "single_profile_source_tree": len(source_hashes) == 1,
         "single_profile_root_commit": len(root_commits) == 1,
         "pressure_zero_retention_near_one": max_zero_deviation <= pressure_zero_tolerance,
-        "requested_observed_pressure_close": max_observed_error <= observed_pressure_tolerance,
+        "applied_observed_pressure_close": max_observed_error <= observed_pressure_tolerance,
         "coverage": all(float(item["measurement_coverage_ratio"]) >= 0.95 and float(item["system_coverage_ratio"]) >= 0.95 and float(item["workload_overlap_ratio"]) >= 0.95 for item in records),
         "temperature": all(
             item["gpu_temp_c_max"] is None
@@ -845,7 +1000,7 @@ def compute_profiles(
             "workload_overlap_min": 0.95,
             "benchmark_cv_max_pct": benchmark_cv_threshold_pct,
             "pressure_zero_retention_abs_deviation_max": pressure_zero_tolerance,
-            "observed_pressure_abs_error_max": observed_pressure_tolerance,
+            "applied_observed_pressure_abs_error_max": observed_pressure_tolerance,
             "gpu_temperature_max_c": audit["gpu_temperature_max_c"],
         },
         "inputs": {
@@ -873,7 +1028,7 @@ def compute_profiles(
         "aggregate_cell_count": len(aggregates),
         "curve_count": len(curves),
         "max_pressure_zero_retention_abs_deviation": max_zero_deviation,
-        "max_requested_observed_pressure_abs_error": max_observed_error,
+        "max_applied_observed_pressure_abs_error": max_observed_error,
         "standalone_throughput_cv_max_pct": audit["standalone_throughput_cv_max_pct"],
         "curves": curves,
         "analysis": analysis,
@@ -1053,7 +1208,12 @@ def verify_profiles(
         baseline_plan_file=baseline_plan_file,
         benchmark_cv_threshold_pct=float(thresholds["benchmark_cv_max_pct"]),
         pressure_zero_tolerance=float(thresholds["pressure_zero_retention_abs_deviation_max"]),
-        observed_pressure_tolerance=float(thresholds["observed_pressure_abs_error_max"]),
+        observed_pressure_tolerance=float(
+            thresholds.get(
+                "applied_observed_pressure_abs_error_max",
+                thresholds.get("observed_pressure_abs_error_max", 0.05),
+            )
+        ),
     )
     stored_core = dict(stored)
     artifacts = stored_core.pop("artifacts", {})

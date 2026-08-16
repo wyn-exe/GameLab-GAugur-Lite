@@ -140,8 +140,9 @@ def test_harness_uses_shared_barrier_and_reports_measurement_coverage(tmp_path: 
     game = get_game("pyxel_jump")
     barrier = tmp_path / "barrier.json"
     # 给 harness/假 Pyxel 初始化留出余量，模拟父进程在 ready 后发布未来 barrier。
-    start_ns = time.perf_counter_ns() + 100_000_000
-    end_ns = start_ns + 60_000_000
+    # 60 ms 在繁忙 Windows CI 上会被单次调度抖动吃掉；使用仍很短但稳定的窗口。
+    start_ns = time.perf_counter_ns() + 250_000_000
+    end_ns = start_ns + 200_000_000
     barrier.write_text(
         json.dumps(
             {
@@ -155,12 +156,12 @@ def test_harness_uses_shared_barrier_and_reports_measurement_coverage(tmp_path: 
     )
     config = GameRunConfig(
         run_id="runner-barrier-test",
-        duration_s=0.06,
-        warmup_s=0.1,
+        duration_s=0.2,
+        warmup_s=0.25,
         max_frames=0,
         headless=True,
         audio_mode="muted",
-        metric_window_s=0.005,
+        metric_window_s=0.01,
         barrier_file=barrier,
     )
 

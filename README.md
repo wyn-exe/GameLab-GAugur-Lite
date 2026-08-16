@@ -1548,6 +1548,9 @@ Step 4 的 60 个 worker 本身就是相同四类 benchmark 的独占运行，�
 
 #### 10/30/10 秒短时序正式协议
 
+> **状态修订（2026-08-16）：本节描述的 84°C s30 方案已经停止，不再是正式数据源。**
+> 它实际完成 23 个有效 run 后，在 `gpu_compute/p100` 出现一次 `85°C>84°C`；随后一次调用只运行到单元测试失败，未创建 a002。全部结果作为安全 pilot 保留并排除，不得继续运行 `run_step7_acceptance.ps1`。当前正式方案见下方“Safety-v2”小节。
+
 短协议只缩短单次观察窗口，不缩减实验设计：
 
 | 项目 | 长协议 | 短协议 | 是否改变实验单元 |
@@ -1698,6 +1701,121 @@ included_in_final_profiles=false
 legacy thermal-amendment.json byte-for-byte recomputation: PASS
 PowerShell parser / Python compile / git diff --check: PASS
 ```
+
+#### Safety-v2：降载后的正式 profile 协议（当前有效）
+
+当前阶段不是寻找 GPU 热边界的压力测试，而是为 GAugur 模型采集可控、可重复的资源干扰曲线。旧映射在本机 `gpu_compute` 的中高档多次触及 85°C；继续把温度门从 82°C 提到 84°C 不能改善实验定义，只会让保护门接近负载的稳定工作点。因此停止旧路线，不把“触发热保护”当成模型标签。
+
+[`safety-v2-amendment.json`](artifacts/profiles/step7/safety-v2-amendment.json) 从冻结计划、首批 run report、24 个 index、有效 summary、高温 failure/cleanup/cooldown 和下一次单测日志重算以下事实：
+
+- s30 safety pilot 共选择 24 行，23 行有效、1 行因 `85°C>84°C` 无效；
+- 无效行是 `formal-v1__profile__pyxel_snake__gpu_compute__p100__r03/a001`，不存在 a002；
+- 高温后只终止拥有且校验过 PID 的两个进程树，没有全局杀进程，冷却记录到 64°C；
+- 下一次调用在单元测试阶段停止，没有启动 Runner；
+- 旧 pilot 保留但 `included_in_final_profiles=false`、`included_in_model_training=false`。
+
+Safety-v2 保留论文复现需要的 `8 workload × 4 resource × 5 pressure × 3 repeat = 480` 个 profile 单元，但把“建模压力”和“执行压力”分开：
+
+| resource | 模型归一化 `pressure_requested` | 实际 `pressure_applied` | 上限 |
+| --- | --- | --- | ---: |
+| `cpu_compute` | 0 / 0.25 / 0.5 / 0.75 / 1 | 与 requested 相同 | 1.0 |
+| `memory_bandwidth` | 0 / 0.25 / 0.5 / 0.75 / 1 | 与 requested 相同 | 1.0 |
+| `gpu_memory` | 0 / 0.25 / 0.5 / 0.75 / 1 | 与 requested 相同 | 1.0 |
+| `gpu_compute` | 0 / 0.25 / 0.5 / 0.75 / 1 | 0 / 0.0625 / 0.125 / 0.1875 / 0.25 | 0.25 |
+
+因此 GPU Compute 曲线的 $x=1$ 表示“本机安全执行域的 100%”，即旧 worker 的 0.25 duty，而不是 GPU 的热极限或满功耗极限。报告必须披露这一外部有效性限制；不能把它描述成 RTX 4060 的最大算力压力。`run_id` 继续由归一化压力生成，`pressure_applied` 则进入计划逐行哈希、worker 命令、attempt summary、校准分母和 observed-pressure 质量门。
+
+Safety-v2 的保护层为：
+
+- 单次时序仍为 `10 秒 warmup + 30 秒 measurement + 10 秒基础 cooldown`；
+- GPU 温度硬门降为 80°C；每秒采样一旦超过就将 attempt 标为 invalid、精确终止子进程并冷却；
+- 自适应 cooldown 目标随硬门变为 70°C，最长 300 秒；
+- 每一批开始前必须冷却到不高于 50°C；自动脚本每 15 秒检查一次，最多等 30 分钟；
+- Runner 使用 `--fail-fast`，任一 failed/invalid 后立即停止当前批次和整个自动流程，不会继续跑余下行，也不会自动重试；
+- 原始 JSONL 除温度、利用率和显存外，还记录 GPU 功耗、核心时钟、NVML clock-event reason 位以及软/硬热降频是否出现。
+
+温度门是最后一道异常保护，不是需要主动触发的实验目标。即使有硬门，采样间隔内仍可能短暂越过阈值，所以真正降低风险的是 0.25 GPU Compute 上限和批前冷启动；不能依靠不断提高温度门来完成数据量。
+
+Step 4 的旧 GPU Compute 吞吐分母对应实际压力 `0/0.25/0.5/0.75/1`，不能拿来除以新的 `0/0.0625/0.125/0.1875/0.25`。Safety-v2 因此要求重新运行完整 60-cell 校准：四类资源、五档归一化压力、三次重复；校准记录 requested/applied 两列，并将 observed 与 applied 比较。正式 profile 只接受同一 pressure-cap 合同下的新校准文件。这个校准约 8 分钟，GPU Compute 的最大执行量只有旧 0.25，同时也受 80°C 硬门保护。
+
+新的不可变计划使用独立 raw 根 `data/raw/safety-v2-s30/`，不会读取、覆盖或 resume `data/raw/formal-v1/`、`data/raw/step7-t84/` 或 `data/raw/remaining-s30/`。计划 CSV schema v2 新增 `pressure_applied`；loader 仍可只读验证既有 schema v1 计划，保证历史证据没有因升级失效。
+
+Safety-v2 分四个提交检查点执行：
+
+1. **当前检查点：实现与封存。** 提交代码、README、旧 s30 raw/acceptance 和 `safety-v2-amendment.json`；不得继续旧 s30。
+2. **计划检查点。** 从干净提交运行准备脚本，生成唯一 720-row Safety-v2 计划并提交。
+3. **校准检查点。** 从不高于 50°C 的冷机状态运行约 8 分钟校准，上传 60-cell 原始数据、图和验证结果。
+4. **正式 profile 检查点。** 先做无窗口预检，再用一个命令自动顺序完成全部剩余批次；脚本自行批前冷却，异常立即停机。
+
+当前检查点提交后，生成计划的完整 PowerShell 命令是：
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+git status --short
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\prepare_step7_safety_v2.ps1
+```
+
+计划产物必须先提交，之后才运行长命令校准：
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_safety_calibration.ps1
+```
+
+校准产物再次提交后，先执行只读预检：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_safety_v2_acceptance.ps1 `
+  -PreflightOnly
+```
+
+预检通过后，以下**一个命令**会按当前进度顺序运行全部批次，不再要求每批手动输入命令：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_safety_v2_acceptance.ps1
+```
+
+自动执行不等于忽略异常：任何单测、计划哈希、源码身份、窗口、子进程、覆盖率、80°C 温度门或质量门失败都会终止整条命令并保留现场。正常的批间等待是脚本在等待 GPU 回到 50°C，不应手工跳过。运行期间仍需保持 Pyxel 窗口可见且不被遮挡。
+
+本检查点没有启动任何 workload 或 benchmark。真实短验收为：
+
+```text
+PowerShell parser:
+PASS parser: scripts\prepare_step7_safety_v2.ps1
+PASS parser: scripts\run_step7_safety_calibration.ps1
+PASS parser: scripts\run_step7_safety_v2_acceptance.ps1
+
+unit tests:
+........................................................................ [ 87%]
+..........                                                               [100%]
+82 passed in 5.32s
+
+s30 safety pilot recomputation:
+status=sealed, valid/invalid=23/1, attempts_per_run=1
+max valid GPU temperature=82°C, invalid=85°C>84°C
+a002_created=false, runner_started_after_unit_failure=false
+included_in_final_profiles=false, included_in_model_training=false
+global_kill_used=false
+safety-v2-amendment.json SHA-256=683183eca4dfa51b8f4d5e60a1b3f98d3c9363a39d6c9aaea3c1af6fd1fe63a3
+
+temporary schema-v2 all-stage plan probe:
+plan verify=7/7 checks passed, rows/unique run_ids=720/720
+stage counts=solo 24, profile 480, colocation-main 180, extra-test 36
+protocol=10/30/10/80, raw root=data/raw/safety-v2-s30
+GPU Compute applied levels=0,0.0625,0.125,0.1875,0.25
+root_dirty_at_generation=true（仅实现探针，不是正式冻结计划）
+```
+
+此处只验收了实现、历史封存和无 GPU 单元测试；720-row Safety-v2 计划、60-cell 新校准以及 480 个正式 profile 的真实输出分别留在后续三个提交检查点填写，不能预先伪造为已完成。
 
 ### Step 8：采集真实共置组合
 
@@ -2097,43 +2215,37 @@ extra quads = 12 combinations × K            = 36
 total                                           720
 ```
 
-其中主共置数据为 180 run，额外测试为 36 run。24 个 solo 已按 20/60/20 秒长窗口完成；尚未采集的 696 个 profile/共置 run 使用 10/30/10 秒短协议，名义串行时间为 9.67 小时。考虑启动、批间冷启动等待、自适应 cooldown、失败审计和汇总，建议为三类剩余采集预留 11–13 小时并分段用 `--resume` 完成。11 档压力消融不计入这 720 个正式主实验 run。
+其中主共置数据为 180 run，额外测试为 36 run。24 个 solo 已按 20/60/20 秒长窗口完成；旧 profile 试运行全部作为安全证据排除，因此正式剩余量仍是 480 个 profile 加 216 个共置/额外 run。Safety-v2 继续使用 10/30/10 秒窗口，名义串行时间仍为 9.67 小时，但每批强制从不高于 50°C 开始，实际总时间取决于批间自然冷却，不能再承诺旧方案的 11–13 小时范围。自动脚本会完成等待，不会为了赶时间跳过温控。11 档压力消融不计入这 720 个正式主实验 run。
 
 `smoke.yaml` 只用于在正式采集前验证游戏资源、自动输入、进程生命周期、CUDA benchmark 同步和数据 schema，不生成模型样本，也不构成缩小版实验。正式结果只接受 `formal-v1` 的完整组合 manifest。
 
-## 14. 最终一键流程
+## 14. 最终流程（当前实现至 Step 7）
 
-当实现完成后：
+当前已经实现并验收到 Safety-v2 Step 7。必须按提交检查点执行，不能在源码未冻结时直接采集：
 
 ```powershell
 conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
 
-python -m gaugur_lite doctor --config configs\local.yaml
 python -m pytest tests\unit -q
 
-python -m gaugur_lite benchmark calibrate `
-  --config configs\local.yaml `
-  --experiment configs\experiments\formal.yaml
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\prepare_step7_safety_v2.ps1
 
-python -m gaugur_lite plan `
-  --experiment configs\experiments\formal.yaml `
-  --stage all `
-  --out artifacts\plans\formal-all.csv
+# 提交计划后运行：
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_safety_calibration.ps1
 
-python -m gaugur_lite run --plan artifacts\plans\formal-all.csv --resume
-python -m gaugur_lite summarize --experiment formal-v1
-python -m gaugur_lite features build-profiles --experiment formal-v1
-python -m gaugur_lite features build-dataset --experiment formal-v1 --out-dir data\processed\formal-v1
-python -m gaugur_lite features audit --dataset-dir data\processed\formal-v1
-python -m gaugur_lite train --dataset-dir data\processed\formal-v1 --task both
-python -m gaugur_lite evaluate --model-dir artifacts\models\formal-v1 --dataset-dir data\processed\formal-v1 --splits test,extra_test
-python -m gaugur_lite ablate --dataset-dir data\processed\formal-v1
-python -m gaugur_lite replay all --experiment formal-v1
-python -m gaugur_lite report --experiment formal-v1
-python -m gaugur_lite verify --report artifacts\reports\formal-v1\report.md
+# 提交校准后先预检，再用一次命令跑完 Step 7 全部批次：
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_safety_v2_acceptance.ps1 `
+  -PreflightOnly
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step7_safety_v2_acceptance.ps1
 ```
 
-所有命令必须幂等或安全支持 `--resume`，不得覆盖配置哈希不一致的已有数据。
+Step 8 及其后的 dataset/model/scheduler/report 命令会在各自实现阶段写入本节；在代码尚未实现前不再列出不可执行的占位“一键命令”。所有正式命令必须幂等或安全支持 `--resume`，不得覆盖配置哈希不一致的已有数据。
 
 ## 15. 测试策略
 

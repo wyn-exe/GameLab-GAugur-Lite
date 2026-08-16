@@ -28,6 +28,8 @@ def _event(sequence: int, monotonic_ns: int, wall_ns: int) -> SystemMetricEvent:
         gpu_clock_mhz=500,
         gpu_power_w=6,
         gpu_temp_c=50,
+        gpu_clock_event_reasons=0,
+        gpu_thermal_slowdown_active=False,
     )
 
 
@@ -92,6 +94,11 @@ def test_system_sampler_uses_psutil_and_nvml_without_real_gpu(monkeypatch: pytes
     monkeypatch.setattr(system_sampler, "nvmlDeviceGetClockInfo", lambda handle, clock: 800)
     monkeypatch.setattr(system_sampler, "nvmlDeviceGetPowerUsage", lambda handle: 9000)
     monkeypatch.setattr(system_sampler, "nvmlDeviceGetTemperature", lambda handle, sensor: 55)
+    monkeypatch.setattr(
+        system_sampler,
+        "nvmlDeviceGetCurrentClocksEventReasons",
+        lambda handle: system_sampler.nvmlClocksEventReasonSwThermalSlowdown,
+    )
 
     with system_sampler.SystemSampler(run_id="step2-test", process_pid=123) as sampler:
         event = sampler.sample(0)
@@ -100,4 +107,5 @@ def test_system_sampler_uses_psutil_and_nvml_without_real_gpu(monkeypatch: pytes
     assert event.gpu_util_pct == 6
     assert event.gpu_mem_used_bytes == 3000
     assert event.gpu_power_w == 9
+    assert event.gpu_thermal_slowdown_active is True
     assert calls == {"init": 1, "shutdown": 1}
