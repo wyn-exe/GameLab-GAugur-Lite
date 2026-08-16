@@ -17,7 +17,7 @@
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
-| Step 7 敏感度/强度 profile | 短协议计划已生成 | 82°C pilot 与 71-run t84 timing trial 均已封存且不进入训练；clean commit 上的 720-row 全阶段短协议计划已生成并独立验证，正式采集待冻结提交 |
+| Step 7 敏感度/强度 profile | 正式预检通过 | 82°C pilot 与 71-run t84 timing trial 均已封存且不进入训练；720-row 全阶段短协议计划已冻结，`0/480` 只读预检通过，正式采集待开始 |
 | Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 短时序、防混用证据和正式全阶段计划已实现，76 项单测与 720-row 不可变计划校验通过 |
 | 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；短时序 profile、60 个主组合、额外测试、模型与报告待生成 |
 
@@ -1594,6 +1594,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -PreflightOnly
 ```
 
+若从 PowerShell 7 外层调用 `powershell.exe`，并遇到 `Get-FileHash is not recognized`，这是 PS7 模块目录被传给 Windows PowerShell 5.1 导致的模块发现冲突；应从普通 Windows PowerShell/Anaconda Prompt 执行。也可仅在当前外层会话先运行 `$env:PSModulePath = ";$env:ProgramFiles\WindowsPowerShell\Modules;$env:WINDIR\system32\WindowsPowerShell\v1.0\Modules"`，再执行上述命令，不需要修改仓库或 Conda 环境。
+
 正式采集仍按 24 行一批安全续跑。每个完整批次名义约 20 分钟，20 批覆盖 480 行；可以在仓库外层使用自动循环，但任何单测、温度、窗口、子进程或数据质量异常都必须停止并审计，不能自动选择性重试：
 
 ```powershell
@@ -1656,7 +1658,21 @@ PASS short protocol: plan rows=720, remaining rows=696, nominal hours=9.67, excl
 
 独立 `plan-verify` 的 7 项检查全部通过：720 行、720 个唯一 `run_id`、连续 execution index、逐行 SHA-256、计划 SHA-256、组合 sidecar SHA-256 和组合 split 完整性均一致。阶段计数为 `solo=24`、`profile=480`、`colocation-main=180`、`colocation-extra-test=36`；所有行只有 `10/30/10/84` 一个协议、同一 root commit 和 `data/raw/remaining-s30/` 一个 raw 根。`duration-amendment.json` 的 11 个兼容性/隔离检查全部为真，并明确记录 `included_in_final_profiles=false`、t84 `valid/invalid=71/3`、剩余名义时间与节省时间均为 9.67 小时。
 
-这四个新产物与本段 README 记录必须先提交上传，才能形成实际采集的冻结 commit。冻结后再执行 `-PreflightOnly`，届时把真实 source-tree SHA-256、执行 commit 和 `completed=0/480` 输出补入本节；当前没有启动任何 s30 游戏窗口，也没有产生正式 s30 attempt。
+四个新产物与上一段 README 记录已冻结到 commit `03e65e77589e087c62bf18f0bccc9d7489e73c62`。在本地与 `origin/main` 一致且工作树干净时执行 `-PreflightOnly`，真实输出为：
+
+```text
+[Step 7] Verifying the sealed t84 trial and 10/30/10 short-protocol amendment...
+[Step 7] Auditing immutable plan, solo FPS denominators and standalone benchmark denominators...
+PASS inputs: profile rows=480, standalone cells=16, max throughput CV=3.7651%
+[Step 7] Computing global safe-resume progress and source-tree lock...
+PASS progress: completed=0/480, remaining=480
+status=passed, batch_size=24, total_batches=20, estimated_minutes_per_full_batch=20
+root_commit=03e65e77589e087c62bf18f0bccc9d7489e73c62
+source_tree_sha256=2126d7dc20614e291f82952cbadb113f9f01eea1f5895299e97e9d2fa0821969
+existing_source_tree_sha256s=[], existing_root_commits=[]
+```
+
+预检没有启动游戏窗口、没有创建 s30 attempt，执行后工作树仍保持干净。`existing_*=[]` 证明正式 raw 根中没有旧执行身份；从首个实际 s30 attempt 开始，后续 profile 批次必须保持同一个执行 commit 和 source-tree SHA-256，期间不得提交、切换分支或修改源码。
 
 短协议实现完成后的本地真实验收如下。计划探针写在 `.test-tmp/` 且 manifest 如实记录 `root_dirty_at_generation=true`，只用于验证展开结果，不冒充正式计划：
 
