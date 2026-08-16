@@ -5,6 +5,12 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $repoRoot
+}
+else {
+    "$repoRoot$([System.IO.Path]::PathSeparator)$env:PYTHONPATH"
+}
 $plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-profile-t84.csv'
 $manifest = Join-Path $repoRoot 'artifacts\plans\formal-v1-profile-t84-manifest.json'
 $combinations = Join-Path $repoRoot 'artifacts\plans\formal-v1-profile-t84-combinations.json'

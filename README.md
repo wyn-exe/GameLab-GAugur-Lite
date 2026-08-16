@@ -17,7 +17,7 @@
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
-| Step 7 敏感度/强度 profile | 温控修订中 | 原 82°C pilot 保留 23 个有效单元和 4 次同因失败；已实现隔离的 84°C profile-only 重启协议 |
+| Step 7 敏感度/强度 profile | 正式采集待开始 | 原 82°C pilot 已封存；[480-row t84 计划](artifacts/plans/formal-v1-profile-t84.csv)与[温控修订证据](artifacts/profiles/step7/thermal-amendment.json)已冻结，当前 0/480 |
 | Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 实现与 74 项温控修订单测已通过，480-run 正式采集待执行 |
 | 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；Step 7 原 pilot 不进入最终特征，修订后 profile、共置、模型与报告待生成 |
 
@@ -1554,7 +1554,7 @@ Step 6 的 24 个 solo baseline 不重跑：其实测最高温仅为 50°C，比
 
 #### 修订后的采集与恢复实现
 
-1. 父计划仍是 [`formal-v1.csv`](artifacts/plans/formal-v1.csv)，用于绑定已经验收的 solo baseline；新的 `formal-v1-profile-t84.csv` 只含 8 workload × 4 resource × 5 pressure × 3 repeat = 480 个 profile 行；
+1. 父计划仍是 [`formal-v1.csv`](artifacts/plans/formal-v1.csv)，用于绑定已经验收的 solo baseline；新的 [`formal-v1-profile-t84.csv`](artifacts/plans/formal-v1-profile-t84.csv) 只含 8 workload × 4 resource × 5 pressure × 3 repeat = 480 个 profile 行；
 2. 新配置 [`local.step7-t84.yaml`](configs/local.step7-t84.yaml) 保持 workload、压力、预热、测量窗口、重复次数和随机种子不变，只把温度改为 84°C，并把 raw 根目录隔离为 `data/raw/step7-t84/`；
 3. 修订计划只能从干净 Git 提交生成，计划 manifest 会记录生成 commit、配置哈希、计划哈希和 `root_dirty_at_generation=false`；
 4. `run --stage profile --batch-number N --batch-size 24` 在 stage 内按修订计划的随机顺序切片，20 批恰好覆盖 480 行；
@@ -1628,7 +1628,7 @@ artifacts/profiles/step7/
 
 分析不会预设论文观察一定在八个轻量游戏上成立：对 32 条曲线计算相对端点线性插值的最大偏差，并对 `1-S(1)` 与 intensity 计算 Pearson、Spearman 相关系数，如实报告结果。
 
-#### 当前真实验收（84°C 正式 480-run 尚未开始）
+#### 当前真实验收（84°C 正式计划已冻结，480-run 尚未开始）
 
 ```text
 ........................................................................ [ 97%]
@@ -1645,9 +1645,26 @@ temporary 480-row plan compatibility check: PASS
 run_id sets equal: true
 changed columns: config_sha256, execution_index, max_gpu_temp_c, root_commit, row_sha256, run_directory
 raw directory overlap: 0
+
+PASS Step 7 thermal amendment: rows=480,
+plan SHA-256=f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7,
+pilot=23, repeated trigger attempts=4
+
+PASS inputs: profile rows=480, standalone cells=16, max throughput CV=3.7651%
+PASS progress: completed=0/480, remaining=480
+batch_size=24, total_batches=20, estimated_minutes_per_full_batch=40
+source_tree_sha256=63ca1121c2646132be156f49c928fd1a1e548a618896b79dd32c1de3c1f92bd7
 ```
 
-当前能得出的结论是：Step 7 的原 82°C 方案已被真实数据证伪，四次同因失败已保留；隔离重启、父计划兼容性、动态温度质量门、采集中途 commit 拒绝和 74 项单元测试已通过。修订计划必须在提交后由准备脚本从干净工作树生成，其计划 SHA-256、正式表格、图和最终哈希要等 480 个修订后 run 全部完成再填入本节。
+冻结产物的 SHA-256 为：
+
+- t84 计划：`f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7`；
+- 计划 manifest：`7216585d8c51ff838549f70efee369bdb04815bdb980560ce1f8f854c468e09a`，记录生成提交 `89d531ccb56448ddbc56df7c9f440912802204cb` 且 `root_dirty_at_generation=false`；
+- 组合 sidecar：`fe927f19999c81c2855030bf855247c8b0eff0bdfac20625bda50a00054cd826`；
+- 温控设备查询：`cf6acece3b2dca720ef80cfcfad1d7d68a8c3e6b407edba09667c025078b653b`；
+- 温控修订证据：`f7685d995744eb61ed969b71588dc21effe1e5005ca3b6b8bbb6c7dab486c935`，6/6 项检查通过。
+
+当前能得出的结论是：Step 7 的原 82°C 方案已被真实数据证伪，四次同因失败已保留；隔离重启、父计划兼容性、动态温度质量门、采集中途 commit 拒绝和 74 项单元测试已通过；新的 480-row t84 计划已从干净提交生成并通过 0/480 无窗口预检。正式表格、图和最终哈希仍须等待 480 个修订后 run 全部完成再填入本节。
 
 ### Step 8：采集真实共置组合
 

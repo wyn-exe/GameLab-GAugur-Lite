@@ -9,6 +9,12 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $repoRoot
+}
+else {
+    "$repoRoot$([System.IO.Path]::PathSeparator)$env:PYTHONPATH"
+}
 if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'README.md') -PathType Leaf)) {
     throw "Repository marker README.md not found under $repoRoot"
 }

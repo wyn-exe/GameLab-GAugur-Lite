@@ -1,0 +1,120 @@
+{
+  "amendment_id": "step7-thermal-profile-t84-v1",
+  "checks": {
+    "amended_limit_below_device_target": true,
+    "amended_raw_directories_disjoint": true,
+    "four_same_reason_trigger_attempts": true,
+    "original_profile_attempts_excluded": true,
+    "semantic_profile_fields_equal": true,
+    "solo_baselines_below_original_limit": true
+  },
+  "decision": {
+    "abort_above_c": 84,
+    "amended_limit_c": 84,
+    "cooldown_target_c": 74,
+    "device_target_temperature_c": 87,
+    "margin_below_device_target_c": 3,
+    "original_limit_c": 82,
+    "reason": "四次独立冷启动均在同一 gpu_compute/p100 单元以 83°C>82°C 终止；继续重试不能解决协议冲突。",
+    "reuse_original_profile_attempts": false,
+    "reuse_solo_baselines": true
+  },
+  "device_temperature_query": {
+    "note": "笔记本驱动的部分 T.Limit 字段异常；仅使用可解析的 GPU Target Temperature。",
+    "path": "artifacts/profiles/step7/thermal-device-query.txt",
+    "sha256": "cf6acece3b2dca720ef80cfcfad1d7d68a8c3e6b407edba09667c025078b653b"
+  },
+  "pilot_82c": {
+    "completed_run_count": 23,
+    "included_in_final_profiles": false,
+    "invalid_attempt_count": 5,
+    "trigger_attempt_count": 4,
+    "trigger_attempts": [
+      {
+        "attempt": 1,
+        "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_compute__p100__r03/attempts/a001",
+        "finished_wall_time_ns": 1786813642454423600,
+        "reason": "RunInvalidError:gpu_temperature_exceeded:83.0>82.0",
+        "started_wall_time_ns": 1786813580129081100,
+        "status": "invalid",
+        "valid": false
+      },
+      {
+        "attempt": 2,
+        "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_compute__p100__r03/attempts/a002",
+        "finished_wall_time_ns": 1786845716598249200,
+        "reason": "RunInvalidError:gpu_temperature_exceeded:83.0>82.0",
+        "started_wall_time_ns": 1786845661217263500,
+        "status": "invalid",
+        "valid": false
+      },
+      {
+        "attempt": 3,
+        "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_compute__p100__r03/attempts/a003",
+        "finished_wall_time_ns": 1786846140352546300,
+        "reason": "RunInvalidError:gpu_temperature_exceeded:83.0>82.0",
+        "started_wall_time_ns": 1786846042994842700,
+        "status": "invalid",
+        "valid": false
+      },
+      {
+        "attempt": 4,
+        "directory": "data/raw/formal-v1/formal-v1__profile__pyxel_snake__gpu_compute__p100__r03/attempts/a004",
+        "finished_wall_time_ns": 1786846615412495900,
+        "reason": "RunInvalidError:gpu_temperature_exceeded:83.0>82.0",
+        "started_wall_time_ns": 1786846522258546100,
+        "status": "invalid",
+        "valid": false
+      }
+    ],
+    "trigger_run_id": "formal-v1__profile__pyxel_snake__gpu_compute__p100__r03",
+    "valid_attempt_count": 23
+  },
+  "plans": {
+    "amended_profile": {
+      "path": "artifacts/plans/formal-v1-profile-t84.csv",
+      "sha256": "f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7"
+    },
+    "compatibility": {
+      "allowed_changed_columns": [
+        "config_sha256",
+        "execution_index",
+        "max_gpu_temp_c",
+        "root_commit",
+        "row_sha256",
+        "run_directory"
+      ],
+      "baseline_max_gpu_temp_c": 82.0,
+      "baseline_plan_sha256": "94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a",
+      "changed_columns": [
+        "config_sha256",
+        "execution_index",
+        "max_gpu_temp_c",
+        "root_commit",
+        "row_sha256",
+        "run_directory"
+      ],
+      "mode": "thermal_profile_amendment_v1",
+      "profile_max_gpu_temp_c": 84.0,
+      "profile_plan_sha256": "f2c4fa20895d8563246784841ef4d8caadb99c3a0ee7f143ea9c0467cf6f87e7",
+      "profile_row_count": 480,
+      "raw_directories_disjoint": true,
+      "semantic_fields_equal": true
+    },
+    "original": {
+      "path": "artifacts/plans/formal-v1.csv",
+      "sha256": "94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a"
+    }
+  },
+  "schema_version": 1,
+  "scope": "profile_only",
+  "solo_baseline_reuse": {
+    "max_observed_gpu_temp_c": 50.0,
+    "original_limit_c": 82,
+    "run_count": 24,
+    "solo_runs": "data/interim/formal-v1/solo-runs.jsonl",
+    "solo_runs_sha256": "d2cc475c1850da01e319f8eb58f861635510d89e1289c11f946e6ad1ea3b7735",
+    "temperature_headroom_c": 32.0
+  },
+  "status": "passed"
+}
