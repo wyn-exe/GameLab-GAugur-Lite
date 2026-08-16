@@ -4,10 +4,6 @@ param()
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-# Windows PowerShell 在新的 -File 进程中可能尚未创建该自动变量；
-# 先初始化，后续每个原生命令仍会用自己的真实退出码覆盖它。
-$global:LASTEXITCODE = 0
-
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
     $repoRoot
@@ -31,12 +27,12 @@ Push-Location $repoRoot
 try {
     if ($existingPlanFiles.Count -eq 0) {
         # normal 会把未跟踪目录压缩为单行；仍能拒绝 dirty，又不会打印数千个 raw 文件。
-        $dirty = @(git status --porcelain=v1 --untracked-files=normal)
-        if ($LASTEXITCODE -ne 0) {
+        git rev-parse --is-inside-work-tree | Out-Null
+        if (-not $?) {
             throw 'git status failed'
         }
-        if ($dirty.Count -ne 0) {
-            throw "生成短时序计划前工作树必须干净；请先提交并上传 t84 trial 与短协议代码。`n$($dirty -join "`n")"
+        if ((git status --porcelain=v1 --untracked-files=normal | Measure-Object).Count -ne 0) {
+            throw 'The worktree must be clean before generating the short-protocol plan; run git status first.'
         }
         Write-Host '[Short protocol] Generating one clean-commit 720-row plan for all stages...'
         $planRaw = python -m gaugur_lite plan `
@@ -45,9 +41,10 @@ try {
             --out $plan `
             --config $config `
             --workloads $workloads
-        if ($LASTEXITCODE -ne 0) {
+        $planSucceeded = $?
+        if (-not $planSucceeded) {
             $planRaw | Out-Host
-            throw "Plan generation failed with exit code $LASTEXITCODE"
+            throw 'Plan generation failed'
         }
     }
     elseif ($existingPlanFiles.Count -ne $planFiles.Count) {
@@ -56,9 +53,10 @@ try {
 
     Write-Host '[Short protocol] Verifying the immutable 720-row all-stage plan...'
     $verifyRaw = python -m gaugur_lite plan-verify --plan $plan
-    if ($LASTEXITCODE -ne 0) {
+    $verificationSucceeded = $?
+    if (-not $verificationSucceeded) {
         $verifyRaw | Out-Host
-        throw "Plan verification failed with exit code $LASTEXITCODE"
+        throw 'Plan verification failed'
     }
     $verified = ($verifyRaw | Out-String) | ConvertFrom-Json
     if ($verified.status -ne 'passed' -or [int]$verified.row_count -ne 720) {
@@ -67,9 +65,10 @@ try {
 
     Write-Host '[Short protocol] Recomputing the sealed t84 trial and all-stage compatibility...'
     $amendmentRaw = python scripts\build_step7_duration_amendment.py --output $amendment
-    if ($LASTEXITCODE -ne 0) {
+    $amendmentSucceeded = $?
+    if (-not $amendmentSucceeded) {
         $amendmentRaw | Out-Host
-        throw "Short-protocol amendment evidence failed with exit code $LASTEXITCODE"
+        throw 'Short-protocol amendment evidence failed'
     }
     $amendmentResult = ($amendmentRaw | Out-String) | ConvertFrom-Json
 
@@ -84,9 +83,10 @@ try {
         --summary data\interim\formal-v1\profile-summary.json `
         --plot-dir artifacts\profiles\step7\s30\plots `
         --dry-run
-    if ($LASTEXITCODE -ne 0) {
+    $auditSucceeded = $?
+    if (-not $auditSucceeded) {
         $auditRaw | Out-Host
-        throw "Short profile input audit failed with exit code $LASTEXITCODE"
+        throw 'Short profile input audit failed'
     }
     $audit = ($auditRaw | Out-String) | ConvertFrom-Json
     if ($audit.baseline_contract -ne 'short_profile_amendment_s30_v2' `
