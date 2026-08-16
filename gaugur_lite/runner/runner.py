@@ -15,6 +15,11 @@ from typing import Any, IO
 
 import psutil
 
+from ..benchmarks.protocol import (
+    STABLE_BENCHMARK_PROTOCOL,
+    apply_stable_benchmark_environment,
+    stable_benchmark_environment_valid,
+)
 from ..config import config_sha256, stable_json_dumps
 from ..metrics.system_sampler import SystemSampler
 from ..metrics.writer import JsonlWriter, write_json_atomic
@@ -308,6 +313,8 @@ def _spawn_child(
     stderr = (output_directory / "stderr.log").open("x", encoding="utf-8", newline="\n")
     environment = os.environ.copy()
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    if kind == "benchmark":
+        apply_stable_benchmark_environment(environment)
     flags = 0
     if os.name == "nt":
         flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(
@@ -899,6 +906,12 @@ def run_one(
             )
             if benchmark_summary.get("status") != "completed" or benchmark_summary.get("barrier_used") is not True:
                 raise RunInvalidError("benchmark status/barrier 未通过")
+            if not stable_benchmark_environment_valid(
+                benchmark_summary.get("benchmark_environment", {})
+            ):
+                raise RunInvalidError(
+                    f"benchmark protocol 未落实: {STABLE_BENCHMARK_PROTOCOL}"
+                )
 
         phase("COOLDOWN")
         cooldown = _cooldown(row=row, run_id=row.run_id, output=attempt_dir)

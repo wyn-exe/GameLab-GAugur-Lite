@@ -17,6 +17,13 @@ from gaugur_lite.benchmarks.calibration import (
     verify_calibration,
 )
 from gaugur_lite.benchmarks.engine import BenchmarkWorkerConfig, run_benchmark_worker
+from gaugur_lite.benchmarks.protocol import (
+    NATIVE_THREAD_ENV_KEYS,
+    STABLE_BENCHMARK_PROTOCOL,
+    apply_stable_benchmark_environment,
+    benchmark_environment_snapshot,
+    stable_benchmark_environment_valid,
+)
 
 
 def _request(repo_root: Path) -> CalibrationRequest:
@@ -62,6 +69,32 @@ def test_worker_zero_pressure_writes_ready_and_completed_status(tmp_path: Path) 
     assert result["active_fraction"] == 0.0
     assert json.loads(ready.read_text(encoding="utf-8"))["status"] == "ready"
     assert json.loads(status.read_text(encoding="utf-8"))["status"] == "completed"
+
+
+def test_stable_benchmark_environment_is_complete_and_auditable() -> None:
+    environment: dict[str, str] = {"OPENBLAS_NUM_THREADS": "99"}
+    apply_stable_benchmark_environment(environment)
+    snapshot = benchmark_environment_snapshot(environment)
+
+    assert snapshot["protocol"] == STABLE_BENCHMARK_PROTOCOL
+    assert snapshot["native_thread_limit"] == 1
+    assert set(snapshot["environment"]) == set(NATIVE_THREAD_ENV_KEYS)  # type: ignore[arg-type]
+    assert stable_benchmark_environment_valid(snapshot)
+
+
+def test_stable_calibration_request_rejects_short_or_three_repeat_protocol(
+    tmp_path: Path,
+) -> None:
+    repo_root = _make_repo_root(tmp_path)
+    request = CalibrationRequest(
+        **{
+            **_request(repo_root).__dict__,
+            "benchmark_protocol": STABLE_BENCHMARK_PROTOCOL,
+        }
+    )
+
+    with pytest.raises(ValueError, match="5 repeats"):
+        request.validate(repo_root)
 
 
 def test_worker_waits_for_shared_barrier_and_separates_warmup(tmp_path: Path) -> None:

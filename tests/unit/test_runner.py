@@ -3,9 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from gaugur_lite.benchmarks.protocol import stable_benchmark_environment_valid
 from gaugur_lite.runner import runner
 from gaugur_lite.runner import window_layout
 from gaugur_lite.runner.runner import (
@@ -45,6 +47,55 @@ def _row(run_directory: str, run_id: str = "test-exp__solo__game_0__r01") -> Par
         "row_sha256": "b" * 64,
     }
     return ParsedPlanRow.from_csv(raw)
+
+
+def test_spawned_benchmark_receives_stable_native_thread_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, object] = {}
+
+    class FakePopen:
+        pid = 1234
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setattr(runner.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(
+        runner.psutil,
+        "Process",
+        lambda _: SimpleNamespace(create_time=lambda: 123.0),
+    )
+    output = tmp_path / "benchmark"
+    output.mkdir()
+    child = runner._spawn_child(
+        repo_root=tmp_path,
+        run_id="run-1",
+        name="benchmark:cpu_compute",
+        kind="benchmark",
+        command=["python", "run-1"],
+        output_directory=output,
+    )
+    environment = captured["env"]
+    assert isinstance(environment, dict)
+    assert stable_benchmark_environment_valid(
+        {
+            "protocol": environment["GAUGUR_BENCHMARK_PROTOCOL"],
+            "native_thread_limit": 1,
+            "environment": {
+                key: environment[key]
+                for key in (
+                    "OMP_NUM_THREADS",
+                    "OPENBLAS_NUM_THREADS",
+                    "MKL_NUM_THREADS",
+                    "NUMEXPR_NUM_THREADS",
+                    "BLIS_NUM_THREADS",
+                    "VECLIB_MAXIMUM_THREADS",
+                )
+            },
+        }
+    )
+    child.close_logs()
 
 
 def test_grid_rectangles_are_pairwise_disjoint() -> None:

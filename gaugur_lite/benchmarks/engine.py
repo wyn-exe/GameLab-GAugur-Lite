@@ -16,6 +16,7 @@ import numpy as np
 
 from ..config import stable_json_dumps
 from ..metrics.writer import write_json_atomic
+from .protocol import benchmark_environment_snapshot
 
 BenchmarkResource = Literal["cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"]
 BENCHMARK_RESOURCES: tuple[BenchmarkResource, ...] = (
@@ -261,6 +262,7 @@ def run_benchmark_worker(
     ready_path = Path(ready_file)
     status_path = Path(status_file)
     started_wall_ns = time.time_ns()
+    benchmark_environment = benchmark_environment_snapshot()
     load: _Load | None = None
     try:
         load = _create_load(config)
@@ -272,6 +274,7 @@ def run_benchmark_worker(
                 "pid": os.getpid(),
                 "resource": config.resource,
                 "pressure_requested": config.pressure,
+                "benchmark_environment": benchmark_environment,
                 "wall_time_ns": time.time_ns(),
             },
         )
@@ -313,6 +316,7 @@ def run_benchmark_worker(
             "pid": os.getpid(),
             "resource": config.resource,
             "pressure_requested": config.pressure,
+            "benchmark_environment": benchmark_environment,
             "started_wall_time_ns": started_wall_ns,
             "finished_wall_time_ns": time.time_ns(),
             "elapsed_s": elapsed_s,
@@ -343,6 +347,7 @@ def run_benchmark_worker(
             "pid": os.getpid(),
             "resource": config.resource,
             "pressure_requested": config.pressure,
+            "benchmark_environment": benchmark_environment,
             "started_wall_time_ns": started_wall_ns,
             "finished_wall_time_ns": time.time_ns(),
             "error_type": type(exc).__name__,

@@ -1,0 +1,372 @@
+{
+  "additional_cell_count": 6,
+  "artifacts": {
+    "metrics": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-metrics.jsonl",
+    "metrics_sha256": "1e7960e56d802f53a8e3fedf28cafea7cf30ac60eeb32d804d84992bdd11cd87",
+    "workers": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-workers"
+  },
+  "base_calibration": "artifacts/calibration/step7-safety-v2/formal-calibration-warmup-v1.json",
+  "base_calibration_sha256": "c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade",
+  "combined_cells": [
+    {
+      "base_run_keys": [
+        "step4-cpu_compute-p050-r01",
+        "step4-cpu_compute-p050-r02",
+        "step4-cpu_compute-p050-r03"
+      ],
+      "base_throughputs_ops_per_s": [
+        35407091.56430557,
+        32663789.405948076,
+        35891073.34077879
+      ],
+      "combined_throughput_cv_pct": 5.9177671113612815,
+      "combined_throughput_mean_ops_per_s": 33519579.460341264,
+      "combined_throughput_sample_std_ops_per_s": 1983610.6491706867,
+      "combined_throughputs_ops_per_s": [
+        35407091.56430557,
+        32663789.405948076,
+        35891073.34077879,
+        31697880.462952442,
+        31938062.527721424
+      ],
+      "confirmation_run_keys": [
+        "step4-cpu_compute-p050-r04",
+        "step4-cpu_compute-p050-r05"
+      ],
+      "confirmation_throughputs_ops_per_s": [
+        31697880.462952442,
+        31938062.527721424
+      ],
+      "pressure_requested": 0.5,
+      "resource": "cpu_compute",
+      "status": "failed"
+    },
+    {
+      "base_run_keys": [
+        "step4-gpu_compute-p050-r01",
+        "step4-gpu_compute-p050-r02",
+        "step4-gpu_compute-p050-r03"
+      ],
+      "base_throughputs_ops_per_s": [
+        340527424.43579483,
+        309708903.9301888,
+        314059262.2954375
+      ],
+      "combined_throughput_cv_pct": 4.153503822371354,
+      "combined_throughput_mean_ops_per_s": 323874637.25204146,
+      "combined_throughput_sample_std_ops_per_s": 13452145.437954899,
+      "combined_throughputs_ops_per_s": [
+        340527424.43579483,
+        309708903.9301888,
+        314059262.2954375,
+        319707328.734458,
+        335370266.8643282
+      ],
+      "confirmation_run_keys": [
+        "step4-gpu_compute-p050-r04",
+        "step4-gpu_compute-p050-r05"
+      ],
+      "confirmation_throughputs_ops_per_s": [
+        319707328.734458,
+        335370266.8643282
+      ],
+      "pressure_requested": 0.5,
+      "resource": "gpu_compute",
+      "status": "passed"
+    },
+    {
+      "base_run_keys": [
+        "step4-memory_bandwidth-p050-r01",
+        "step4-memory_bandwidth-p050-r02",
+        "step4-memory_bandwidth-p050-r03"
+      ],
+      "base_throughputs_ops_per_s": [
+        37660402264.463196,
+        34523155989.90103,
+        37827512582.13994
+      ],
+      "combined_throughput_cv_pct": 3.745154959345092,
+      "combined_throughput_mean_ops_per_s": 36504650585.53338,
+      "combined_throughput_sample_std_ops_per_s": 1367155731.7957006,
+      "combined_throughputs_ops_per_s": [
+        37660402264.463196,
+        34523155989.90103,
+        37827512582.13994,
+        35843266111.626396,
+        36668915979.53635
+      ],
+      "confirmation_run_keys": [
+        "step4-memory_bandwidth-p050-r04",
+        "step4-memory_bandwidth-p050-r05"
+      ],
+      "confirmation_throughputs_ops_per_s": [
+        35843266111.626396,
+        36668915979.53635
+      ],
+      "pressure_requested": 0.5,
+      "resource": "memory_bandwidth",
+      "status": "passed"
+    }
+  ],
+  "environment": {
+    "cuda_available": true,
+    "gpu_index": 0,
+    "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "logical_cpu_count": 32,
+    "physical_cpu_count": 24,
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.15",
+    "ram_total_bytes": 34070192128,
+    "torch": "2.4.1+cu121",
+    "torch_cuda_runtime": "12.1"
+  },
+  "environment_sha256": "a55ae66e188cd05f54a43f0f0d46e8bfa16a4b251481673c572d378cd43ae7fa",
+  "runs": [
+    {
+      "elapsed_s": 8.043636300000117,
+      "hardware_signal": 34.971428571428575,
+      "observed_pressure": 0.5195014056847261,
+      "pressure_applied": 0.5,
+      "pressure_requested": 0.5,
+      "repeat": 4,
+      "resource": "cpu_compute",
+      "run_key": "step4-cpu_compute-p050-r04",
+      "sample_count": 7,
+      "worker": {
+        "active_fraction": 0.5195014056847261,
+        "active_s": 3.3769059999981437,
+        "allocated_bytes": 0,
+        "barrier_used": false,
+        "barrier_wait_s": 0.0,
+        "capacity_bytes": 0,
+        "duty_cycle_s": 0.25,
+        "elapsed_s": 6.500282700000071,
+        "finished_wall_time_ns": 1786894631252639200,
+        "measurement_end_monotonic_ns": 1095960551300,
+        "measurement_start_monotonic_ns": 1089460245000,
+        "operations": 206045184,
+        "pid": 12680,
+        "planned_measurement_end_monotonic_ns": 1095960245200,
+        "planned_measurement_start_monotonic_ns": 1089460045300,
+        "pressure_requested": 0.5,
+        "resource": "cpu_compute",
+        "schema_version": 1,
+        "sleep_s": 3.111484000000246,
+        "started_wall_time_ns": 1786894623746079200,
+        "status": "completed",
+        "warmup_active_s": 0.5182102999995095,
+        "warmup_elapsed_s": 1.0001999000000978,
+        "warmup_operations": 30408704,
+        "warmup_sleep_s": 0.48012199999993754
+      },
+      "worker_directory": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-workers/cpu_compute/p050/r04"
+    },
+    {
+      "elapsed_s": 8.059758899999906,
+      "hardware_signal": 34.84285714285714,
+      "observed_pressure": 0.5181302203747566,
+      "pressure_applied": 0.5,
+      "pressure_requested": 0.5,
+      "repeat": 5,
+      "resource": "cpu_compute",
+      "run_key": "step4-cpu_compute-p050-r05",
+      "sample_count": 7,
+      "worker": {
+        "active_fraction": 0.5181302203747566,
+        "active_s": 3.3681812999973317,
+        "allocated_bytes": 0,
+        "barrier_used": false,
+        "barrier_wait_s": 0.0,
+        "capacity_bytes": 0,
+        "duty_cycle_s": 0.25,
+        "elapsed_s": 6.500646299999971,
+        "finished_wall_time_ns": 1786894639309978800,
+        "measurement_end_monotonic_ns": 1104017920100,
+        "measurement_start_monotonic_ns": 1097517245300,
+        "operations": 207618048,
+        "pid": 22856,
+        "planned_measurement_end_monotonic_ns": 1104017245500,
+        "planned_measurement_start_monotonic_ns": 1097516889100,
+        "pressure_requested": 0.5,
+        "resource": "cpu_compute",
+        "schema_version": 1,
+        "sleep_s": 3.1206693000003725,
+        "started_wall_time_ns": 1786894631802372100,
+        "status": "completed",
+        "warmup_active_s": 0.5150446000004649,
+        "warmup_elapsed_s": 1.0003564999999526,
+        "warmup_operations": 33554432,
+        "warmup_sleep_s": 0.4827983000002405
+      },
+      "worker_directory": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-workers/cpu_compute/p050/r05"
+    },
+    {
+      "elapsed_s": 10.005642399999942,
+      "hardware_signal": 14.0,
+      "observed_pressure": 0.12568495990233203,
+      "pressure_applied": 0.125,
+      "pressure_requested": 0.5,
+      "repeat": 4,
+      "resource": "gpu_compute",
+      "run_key": "step4-gpu_compute-p050-r04",
+      "sample_count": 7,
+      "worker": {
+        "active_fraction": 0.12568495990233203,
+        "active_s": 0.8170229999975618,
+        "allocated_bytes": 0,
+        "barrier_used": false,
+        "barrier_wait_s": 0.0,
+        "capacity_bytes": 0,
+        "duty_cycle_s": 0.25,
+        "elapsed_s": 6.500562999999829,
+        "finished_wall_time_ns": 1786894649118643400,
+        "measurement_end_monotonic_ns": 1113826467600,
+        "measurement_start_monotonic_ns": 1107325869400,
+        "operations": 2078277632,
+        "pid": 2772,
+        "planned_measurement_end_monotonic_ns": 1113825869800,
+        "planned_measurement_start_monotonic_ns": 1107325597300,
+        "pressure_requested": 0.125,
+        "resource": "gpu_compute",
+        "schema_version": 1,
+        "sleep_s": 5.669925800000101,
+        "started_wall_time_ns": 1786894639854674200,
+        "status": "completed",
+        "warmup_active_s": 0.1588337999974101,
+        "warmup_elapsed_s": 1.0002728000001753,
+        "warmup_operations": 275775488,
+        "warmup_sleep_s": 0.83985110000026
+      },
+      "worker_directory": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-workers/gpu_compute/p050/r04"
+    },
+    {
+      "elapsed_s": 9.945469099999855,
+      "hardware_signal": 14.571428571428571,
+      "observed_pressure": 0.1255623094180773,
+      "pressure_applied": 0.125,
+      "pressure_requested": 0.5,
+      "repeat": 5,
+      "resource": "gpu_compute",
+      "run_key": "step4-gpu_compute-p050-r05",
+      "sample_count": 7,
+      "worker": {
+        "active_fraction": 0.1255623094180773,
+        "active_s": 0.8161859999954686,
+        "allocated_bytes": 0,
+        "barrier_used": false,
+        "barrier_wait_s": 0.0,
+        "capacity_bytes": 0,
+        "duty_cycle_s": 0.25,
+        "elapsed_s": 6.5002468000000135,
+        "finished_wall_time_ns": 1786894659091059100,
+        "measurement_end_monotonic_ns": 1123798886800,
+        "measurement_start_monotonic_ns": 1117298608600,
+        "operations": 2179989504,
+        "pid": 7104,
+        "planned_measurement_end_monotonic_ns": 1123798609300,
+        "planned_measurement_start_monotonic_ns": 1117297912000,
+        "pressure_requested": 0.125,
+        "resource": "gpu_compute",
+        "schema_version": 1,
+        "sleep_s": 5.672547200000281,
+        "started_wall_time_ns": 1786894649875766700,
+        "status": "completed",
+        "warmup_active_s": 0.12553099999900041,
+        "warmup_elapsed_s": 1.0006973000001835,
+        "warmup_operations": 309329920,
+        "warmup_sleep_s": 0.8732401000002028
+      },
+      "worker_directory": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-workers/gpu_compute/p050/r05"
+    },
+    {
+      "elapsed_s": 8.155057700000043,
+      "hardware_signal": 21.3,
+      "observed_pressure": 0.526869330466273,
+      "pressure_applied": 0.5,
+      "pressure_requested": 0.5,
+      "repeat": 4,
+      "resource": "memory_bandwidth",
+      "run_key": "step4-memory_bandwidth-p050-r04",
+      "sample_count": 7,
+      "worker": {
+        "active_fraction": 0.526869330466273,
+        "active_s": 3.4249555999992936,
+        "allocated_bytes": 536870912,
+        "barrier_used": false,
+        "barrier_wait_s": 0.0,
+        "capacity_bytes": 0,
+        "duty_cycle_s": 0.25,
+        "elapsed_s": 6.500578800000085,
+        "finished_wall_time_ns": 1786894667395930000,
+        "measurement_end_monotonic_ns": 1132103753600,
+        "measurement_start_monotonic_ns": 1125603152600,
+        "operations": 233001975808,
+        "pid": 708,
+        "planned_measurement_end_monotonic_ns": 1132103153000,
+        "planned_measurement_start_monotonic_ns": 1125602960500,
+        "pressure_requested": 0.5,
+        "resource": "memory_bandwidth",
+        "schema_version": 1,
+        "sleep_s": 3.0622911000000386,
+        "started_wall_time_ns": 1786894659801652100,
+        "status": "completed",
+        "warmup_active_s": 0.5157420999996702,
+        "warmup_elapsed_s": 1.0001925999999912,
+        "warmup_operations": 35433480192,
+        "warmup_sleep_s": 0.48273299999982555
+      },
+      "worker_directory": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-workers/memory_bandwidth/p050/r04"
+    },
+    {
+      "elapsed_s": 8.193384500000093,
+      "hardware_signal": 16.771428571428572,
+      "observed_pressure": 0.5347574467479194,
+      "pressure_applied": 0.5,
+      "pressure_requested": 0.5,
+      "repeat": 5,
+      "resource": "memory_bandwidth",
+      "run_key": "step4-memory_bandwidth-p050-r05",
+      "sample_count": 7,
+      "worker": {
+        "active_fraction": 0.5347574467479194,
+        "active_s": 3.4762549000026866,
+        "allocated_bytes": 536870912,
+        "barrier_used": false,
+        "barrier_wait_s": 0.0,
+        "capacity_bytes": 0,
+        "duty_cycle_s": 0.25,
+        "elapsed_s": 6.500619899999947,
+        "finished_wall_time_ns": 1786894675584584000,
+        "measurement_end_monotonic_ns": 1140292417500,
+        "measurement_start_monotonic_ns": 1133791766600,
+        "operations": 238370684928,
+        "pid": 17772,
+        "planned_measurement_end_monotonic_ns": 1140291766900,
+        "planned_measurement_start_monotonic_ns": 1133791313400,
+        "pressure_requested": 0.5,
+        "resource": "memory_bandwidth",
+        "schema_version": 1,
+        "sleep_s": 3.010575799999515,
+        "started_wall_time_ns": 1786894667982432900,
+        "status": "completed",
+        "warmup_active_s": 0.5311679000005824,
+        "warmup_elapsed_s": 1.0004538000000593,
+        "warmup_operations": 36507222016,
+        "warmup_sleep_s": 0.46775330000036774
+      },
+      "worker_directory": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-workers/memory_bandwidth/p050/r05"
+    }
+  ],
+  "schema_version": 1,
+  "selected_cell_count": 3,
+  "selection_rule": {
+    "additional_repeats": 2,
+    "combined_repeat_count": 5,
+    "cv_sample_std": true,
+    "cv_threshold_pct": 5.0,
+    "eligibility_ceiling_pct": 10.0,
+    "selection": "all and only base cells with threshold < CV <= ceiling"
+  },
+  "status": "failed",
+  "timing_semantics": "worker_warmup_excluded_v1"
+}

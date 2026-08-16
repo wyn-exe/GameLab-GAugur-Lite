@@ -1,0 +1,179 @@
+{
+  "base_calibration": "artifacts/calibration/step7-safety-v2/formal-calibration-warmup-v1.json",
+  "base_calibration_sha256": "c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade",
+  "candidate_guarded_head": "7ac205a7f0363b1cbbc668fa9b0d968798a95fbb",
+  "checks": [
+    {
+      "actual": "c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade",
+      "expected": "c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade",
+      "name": "base_hash_binding",
+      "passed": true
+    },
+    {
+      "actual": "1e7960e56d802f53a8e3fedf28cafea7cf30ac60eeb32d804d84992bdd11cd87",
+      "expected": "1e7960e56d802f53a8e3fedf28cafea7cf30ac60eeb32d804d84992bdd11cd87",
+      "name": "metrics_hash_binding",
+      "passed": true
+    },
+    {
+      "name": "failed_status_preserved",
+      "passed": true
+    },
+    {
+      "name": "exact_three_selected_cells",
+      "passed": true
+    },
+    {
+      "name": "exact_six_r04_r05_runs",
+      "passed": true
+    },
+    {
+      "name": "all_workers_completed_and_match_disk",
+      "passed": true
+    },
+    {
+      "actual_rows": 42,
+      "expected_rows": 42,
+      "name": "metrics_complete",
+      "passed": true
+    },
+    {
+      "name": "combined_values_recomputed",
+      "passed": true
+    },
+    {
+      "name": "unchanged_5_pct_gate_rejects_only_cpu_compute_p050",
+      "passed": true
+    },
+    {
+      "name": "temperature_and_thermal_slowdown_safe",
+      "passed": true
+    }
+  ],
+  "confirmation": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1.json",
+  "confirmation_sha256": "d55b1ef32f7a151bdfc188a769d8d6a49ba8c2efad0132694086d8f8d7107dfa",
+  "decision": {
+    "cv_threshold_pct_unchanged": 5.0,
+    "fresh_protocol_required": true,
+    "included_in_model_training": false,
+    "included_in_profile_denominators": false,
+    "selective_retry_allowed": false
+  },
+  "gpu_temperature": {
+    "maximum_c": 59.0,
+    "minimum_c": 50.0,
+    "sample_count": 42,
+    "samples_above_80_c": 0,
+    "thermal_slowdown_samples": 0
+  },
+  "metrics": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-metrics.jsonl",
+  "metrics_sha256": "1e7960e56d802f53a8e3fedf28cafea7cf30ac60eeb32d804d84992bdd11cd87",
+  "schema_version": 1,
+  "standalone_throughput": {
+    "cells": [
+      {
+        "base_throughputs_ops_per_s": [
+          35407091.56430557,
+          32663789.405948076,
+          35891073.34077879
+        ],
+        "combined_throughput_cv_pct": 5.9177671113612815,
+        "combined_throughput_mean_ops_per_s": 33519579.460341264,
+        "combined_throughput_sample_std_ops_per_s": 1983610.6491706867,
+        "combined_throughputs_ops_per_s": [
+          35407091.56430557,
+          32663789.405948076,
+          35891073.34077879,
+          31697880.462952442,
+          31938062.527721424
+        ],
+        "confirmation_throughputs_ops_per_s": [
+          31697880.462952442,
+          31938062.527721424
+        ],
+        "passed_5_pct_gate": false,
+        "pressure_requested": 0.5,
+        "resource": "cpu_compute"
+      },
+      {
+        "base_throughputs_ops_per_s": [
+          340527424.43579483,
+          309708903.9301888,
+          314059262.2954375
+        ],
+        "combined_throughput_cv_pct": 4.153503822371354,
+        "combined_throughput_mean_ops_per_s": 323874637.25204146,
+        "combined_throughput_sample_std_ops_per_s": 13452145.437954899,
+        "combined_throughputs_ops_per_s": [
+          340527424.43579483,
+          309708903.9301888,
+          314059262.2954375,
+          319707328.734458,
+          335370266.8643282
+        ],
+        "confirmation_throughputs_ops_per_s": [
+          319707328.734458,
+          335370266.8643282
+        ],
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.5,
+        "resource": "gpu_compute"
+      },
+      {
+        "base_throughputs_ops_per_s": [
+          37660402264.463196,
+          34523155989.90103,
+          37827512582.13994
+        ],
+        "combined_throughput_cv_pct": 3.745154959345092,
+        "combined_throughput_mean_ops_per_s": 36504650585.53338,
+        "combined_throughput_sample_std_ops_per_s": 1367155731.7957006,
+        "combined_throughputs_ops_per_s": [
+          37660402264.463196,
+          34523155989.90103,
+          37827512582.13994,
+          35843266111.626396,
+          36668915979.53635
+        ],
+        "confirmation_throughputs_ops_per_s": [
+          35843266111.626396,
+          36668915979.53635
+        ],
+        "passed_5_pct_gate": true,
+        "pressure_requested": 0.5,
+        "resource": "memory_bandwidth"
+      }
+    ],
+    "failed_cell_count": 1,
+    "failed_cells": [
+      {
+        "base_throughputs_ops_per_s": [
+          35407091.56430557,
+          32663789.405948076,
+          35891073.34077879
+        ],
+        "combined_throughput_cv_pct": 5.9177671113612815,
+        "combined_throughput_mean_ops_per_s": 33519579.460341264,
+        "combined_throughput_sample_std_ops_per_s": 1983610.6491706867,
+        "combined_throughputs_ops_per_s": [
+          35407091.56430557,
+          32663789.405948076,
+          35891073.34077879,
+          31697880.462952442,
+          31938062.527721424
+        ],
+        "confirmation_throughputs_ops_per_s": [
+          31697880.462952442,
+          31938062.527721424
+        ],
+        "passed_5_pct_gate": false,
+        "pressure_requested": 0.5,
+        "resource": "cpu_compute"
+      }
+    ],
+    "threshold_pct": 5.0
+  },
+  "status": "rejected",
+  "status_file": "artifacts/calibration/step7-safety-v2/formal-calibration-confirmation-v1-status.json",
+  "status_file_sha256": "51010733b4d2251d269910f00792c8721f140d123b1676e0dab51b27594ffced"
+}

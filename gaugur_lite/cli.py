@@ -717,6 +717,11 @@ def benchmark_calibrate(
     memory_buffer_mib: int = typer.Option(64, "--memory-buffer-mib", min=8, max=4096),
     gpu_matrix_size: int = typer.Option(1024, "--gpu-matrix-size", min=128, max=4096),
     gpu_memory_max_mib: int = typer.Option(1024, "--gpu-memory-max-mib", min=64, max=12288),
+    benchmark_protocol: str | None = typer.Option(
+        None,
+        "--benchmark-protocol",
+        help="可选的正式 benchmark 执行合同。",
+    ),
     output: Path = typer.Option(
         Path("artifacts/calibration/step4/calibration.json"),
         "--output",
@@ -764,6 +769,7 @@ def benchmark_calibrate(
             plot_file=plot_path,
             pressure_caps=dict(local_config.measurement.pressure_caps),
             max_gpu_temp_c=local_config.host.max_gpu_temp_c,
+            benchmark_protocol=benchmark_protocol,
         )
         request.validate(repo_root)
         if _effective_dry_run(ctx, dry_run):

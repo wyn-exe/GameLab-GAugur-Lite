@@ -18,8 +18,13 @@ else {
 $plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-safety-v2-s30.csv'
 $baselinePlan = Join-Path $repoRoot 'artifacts\plans\formal-v1.csv'
 $solo = Join-Path $repoRoot 'data\interim\formal-v1\solo-baselines.json'
-$calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-warmup-v1.json'
-$calibrationConfirmation = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-confirmation-v1.json'
+$calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1.json'
+$calibrationAcceptance = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-acceptance.json'
+$calibrationMetrics = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-metrics.jsonl'
+$calibrationStatus = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-status.json'
+$calibrationWorkers = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-workers'
+$calibrationPlot = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\pressure-calibration-stable-v1.png'
+$calibrationVerification = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-verification.json'
 $artifactRoot = Join-Path $repoRoot 'artifacts\profiles\step7\safety-v2'
 $invocationRoot = Join-Path $artifactRoot 'invocations'
 $plotRoot = Join-Path $artifactRoot 'plots'
@@ -39,6 +44,33 @@ function Get-GpuTemperature {
         throw 'nvidia-smi temperature query failed.'
     }
     return [int]$raw[0].Trim()
+}
+
+function Get-DirectoryTreeSha256 {
+    param([Parameter(Mandatory = $true)][string]$Directory)
+
+    $rootPath = [System.IO.Path]::GetFullPath($Directory).TrimEnd('\')
+    $files = @(Get-ChildItem -LiteralPath $rootPath -Recurse -File | Sort-Object FullName)
+    $lines = foreach ($file in $files) {
+        if (-not $file.FullName.StartsWith("$rootPath\", [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Calibration artifact escaped the expected root: $($file.FullName)"
+        }
+        $relative = $file.FullName.Substring($rootPath.Length + 1).Replace('\', '/')
+        $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        "$relative`t$hash"
+    }
+    $payload = if ($lines.Count -gt 0) { ($lines -join "`n") + "`n" } else { '' }
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
+    }
+    finally {
+        $sha256.Dispose()
+    }
+    return [pscustomobject]@{
+        file_count = $files.Count
+        sha256 = ([System.BitConverter]::ToString($digest)).Replace('-', '').ToLowerInvariant()
+    }
 }
 
 function Wait-GpuCool {
@@ -65,8 +97,22 @@ function Wait-GpuCool {
     }
 }
 
-$required = @($plan, $baselinePlan, $solo, $calibration, $calibrationConfirmation, $idleTemperatureAmendment)
+$required = @(
+    $plan,
+    $baselinePlan,
+    $solo,
+    $calibration,
+    $calibrationAcceptance,
+    $calibrationMetrics,
+    $calibrationStatus,
+    $calibrationPlot,
+    $calibrationVerification,
+    $idleTemperatureAmendment
+)
 $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
+if (-not (Test-Path -LiteralPath $calibrationWorkers -PathType Container)) {
+    $missing += $calibrationWorkers
+}
 if ($missing.Count -gt 0) {
     throw "Missing safety-v2 inputs: $($missing -join ', ')"
 }
@@ -89,12 +135,28 @@ try {
     }
     $parentAmendment = Join-Path $repoRoot ([string]$temperatureProtocol.parent_safety_v2_amendment)
     $parentHash = (Get-FileHash -LiteralPath $parentAmendment -Algorithm SHA256).Hash.ToLowerInvariant()
-    $calibrationHash = (Get-FileHash -LiteralPath $calibration -Algorithm SHA256).Hash.ToLowerInvariant()
     $planHash = (Get-FileHash -LiteralPath $plan -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($parentHash -ne [string]$temperatureProtocol.parent_safety_v2_amendment_sha256 `
-            -or $calibrationHash -ne [string]$temperatureProtocol.base_calibration_sha256 `
             -or $planHash -ne [string]$temperatureProtocol.formal_plan_sha256) {
         throw 'Safety-v2 idle-temperature amendment hash binding failed.'
+    }
+    $candidateAcceptance = Get-Content -LiteralPath $calibrationAcceptance -Raw | ConvertFrom-Json
+    $calibrationHash = (Get-FileHash -LiteralPath $calibration -Algorithm SHA256).Hash.ToLowerInvariant()
+    $workerTree = Get-DirectoryTreeSha256 -Directory $calibrationWorkers
+    if ($candidateAcceptance.status -ne 'passed' `
+            -or $candidateAcceptance.benchmark_protocol -ne 'native_threads_1_warmup5_duration15_repeats5_v1' `
+            -or [int]$candidateAcceptance.cell_count -ne 100 `
+            -or [int]$candidateAcceptance.denominator_repeat_count -ne 5 `
+            -or [double]$candidateAcceptance.denominator_cv_max_pct -gt 5 `
+            -or $candidateAcceptance.calibration_sha256 -ne $calibrationHash `
+            -or $candidateAcceptance.metrics_sha256 -ne (Get-FileHash -LiteralPath $calibrationMetrics -Algorithm SHA256).Hash.ToLowerInvariant() `
+            -or $candidateAcceptance.status_sha256 -ne (Get-FileHash -LiteralPath $calibrationStatus -Algorithm SHA256).Hash.ToLowerInvariant() `
+            -or [int]$candidateAcceptance.worker_file_count -ne 400 `
+            -or [int]$workerTree.file_count -ne 400 `
+            -or $candidateAcceptance.worker_tree_sha256 -ne [string]$workerTree.sha256 `
+            -or $candidateAcceptance.plot_sha256 -ne (Get-FileHash -LiteralPath $calibrationPlot -Algorithm SHA256).Hash.ToLowerInvariant() `
+            -or $candidateAcceptance.verification_sha256 -ne (Get-FileHash -LiteralPath $calibrationVerification -Algorithm SHA256).Hash.ToLowerInvariant()) {
+        throw 'Candidate 003 acceptance or artifact hash binding failed.'
     }
     $batchStartGpuTempMaxC = [int]$temperatureProtocol.revised_batch_start_gpu_temp_max_c
 
@@ -104,7 +166,6 @@ try {
         --baseline-plan $baselinePlan `
         --solo-baselines $solo `
         --calibration $calibration `
-        --calibration-confirmation $calibrationConfirmation `
         --out $profiles `
         --runs-out $profileRuns `
         --summary $profileSummary `
@@ -117,7 +178,10 @@ try {
     $audit = ($auditRaw | Out-String) | ConvertFrom-Json
     if ($audit.baseline_contract -ne 'safety_v2_capped_gpu_compute' `
             -or [double]$audit.gpu_temperature_max_c -ne 80 `
-            -or [double]$audit.pressure_caps.gpu_compute -ne 0.25) {
+            -or [double]$audit.pressure_caps.gpu_compute -ne 0.25 `
+            -or $audit.calibration_benchmark_protocol -ne 'native_threads_1_warmup5_duration15_repeats5_v1' `
+            -or [int]$audit.standalone_repeat_count -ne 5 `
+            -or $null -ne $audit.calibration_confirmation) {
         throw 'Unexpected safety-v2 audit contract.'
     }
 
@@ -138,6 +202,8 @@ try {
             cooldown_target_c = 70
             batch_start_temp_c = $batchStartGpuTempMaxC
             gpu_compute_cap = 0.25
+            benchmark_protocol = $audit.calibration_benchmark_protocol
+            standalone_repeat_count = [int]$audit.standalone_repeat_count
             fail_fast = $true
         } | ConvertTo-Json -Depth 3
         return
@@ -237,7 +303,6 @@ try {
             --baseline-plan $baselinePlan `
             --solo-baselines $solo `
             --calibration $calibration `
-            --calibration-confirmation $calibrationConfirmation `
             --out $profiles `
             --runs-out $profileRuns `
             --summary $profileSummary `
@@ -250,23 +315,38 @@ try {
         throw "Partial final outputs exist; stop for audit: $($existingFinal -join ', ')"
     }
 
+    Write-Host '[Safety-v2] Independently recomputing profiles and hashes...'
     if (-not (Test-Path -LiteralPath $profileVerification -PathType Leaf)) {
-        Write-Host '[Safety-v2] Independently recomputing profiles and hashes...'
         $verifyRaw = python -m gaugur_lite features verify-profiles `
             --plan $plan `
             --baseline-plan $baselinePlan `
             --solo-baselines $solo `
             --calibration $calibration `
-            --calibration-confirmation $calibrationConfirmation `
             --profiles $profiles `
             --runs $profileRuns `
             --summary $profileSummary `
             --plot-dir $plotRoot `
             --output $profileVerification
-        if ($LASTEXITCODE -ne 0) {
-            $verifyRaw | Out-Host
-            throw "Independent profile verification failed with exit code $LASTEXITCODE"
-        }
+    }
+    else {
+        $verifyRaw = python -m gaugur_lite features verify-profiles `
+            --plan $plan `
+            --baseline-plan $baselinePlan `
+            --solo-baselines $solo `
+            --calibration $calibration `
+            --profiles $profiles `
+            --runs $profileRuns `
+            --summary $profileSummary `
+            --plot-dir $plotRoot
+    }
+    if ($LASTEXITCODE -ne 0) {
+        $verifyRaw | Out-Host
+        throw "Independent profile verification failed with exit code $LASTEXITCODE"
+    }
+    $verifiedProfiles = ($verifyRaw | Out-String) | ConvertFrom-Json
+    if ($verifiedProfiles.status -ne 'passed' `
+            -or @($verifiedProfiles.checks | Where-Object { $_.passed -ne $true }).Count -ne 0) {
+        throw 'Independent profile verification returned failed checks.'
     }
     Write-Host "PASS Step 7 safety-v2 acceptance: $artifactRoot"
 }

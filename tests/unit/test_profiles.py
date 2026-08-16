@@ -20,6 +20,11 @@ from gaugur_lite.profiles import (
     compute_profiles,
     verify_profiles,
 )
+from gaugur_lite.benchmarks.protocol import (
+    STABLE_BENCHMARK_PROTOCOL,
+    apply_stable_benchmark_environment,
+    benchmark_environment_snapshot,
+)
 
 
 def _amendment_rows(
@@ -309,6 +314,110 @@ def _calibration_payload(
         },
         "runs": runs,
     }
+
+
+def _stable_calibration_payload() -> dict[str, object]:
+    payload = _calibration_payload(gpu_compute_cap=0.25)
+    request = payload["request"]
+    assert isinstance(request, dict)
+    request.update(
+        {
+            "benchmark_protocol": STABLE_BENCHMARK_PROTOCOL,
+            "repeats": 5,
+            "warmup_s": 5.0,
+            "duration_s": 15.0,
+        }
+    )
+    environment: dict[str, str] = {}
+    apply_stable_benchmark_environment(environment)
+    snapshot = benchmark_environment_snapshot(environment)
+    runs = []
+    for resource in ("cpu_compute", "memory_bandwidth", "gpu_compute", "gpu_memory"):
+        for pressure in (0.0, 0.25, 0.5, 0.75, 1.0):
+            for repeat in (1, 2, 3, 4, 5):
+                cap = 0.25 if resource == "gpu_compute" else 1.0
+                applied = pressure * cap
+                runs.append(
+                    {
+                        "resource": resource,
+                        "pressure_requested": pressure,
+                        "pressure_applied": applied,
+                        "repeat": repeat,
+                        "run_key": f"{resource}-{pressure}-{repeat}",
+                        "observed_pressure": applied,
+                        "worker": {
+                            "status": "completed",
+                            "resource": resource,
+                            "pressure_requested": applied,
+                            "elapsed_s": 15.0,
+                            "operations": 0 if pressure == 0 else int(15_000_000 * applied),
+                            "benchmark_environment": snapshot,
+                        },
+                    }
+                )
+    payload["runs"] = runs
+    payload["cell_count"] = 100
+    payload["execution"] = {
+        "root_commit": "a" * 40,
+        "root_dirty_at_execution": False,
+        "source_tree_sha256": "b" * 64,
+    }
+    return payload
+
+
+def test_candidate003_accepts_exact_five_repeats_and_native_thread_contract(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "calibration.json"
+    path.write_text(json.dumps(_stable_calibration_payload()), encoding="utf-8")
+
+    cells, returned = _load_standalone_benchmarks(
+        path=path,
+        cv_threshold_pct=5.0,
+        expected_pressure_caps={
+            "cpu_compute": 1.0,
+            "memory_bandwidth": 1.0,
+            "gpu_compute": 0.25,
+            "gpu_memory": 1.0,
+        },
+    )
+
+    assert returned["denominator_repeat_count"] == 5
+    assert len(cells[("cpu_compute", 0.5)]["throughputs_ops_per_s"]) == 5
+    assert cells[("cpu_compute", 0.5)]["throughput_cv_pct"] == 0
+
+
+def test_candidate003_rejects_missing_native_thread_contract(tmp_path: Path) -> None:
+    payload = _stable_calibration_payload()
+    runs = payload["runs"]
+    assert isinstance(runs, list)
+    runs[0]["worker"].pop("benchmark_environment")
+    path = tmp_path / "calibration.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ProfileError, match="原生线程合同非法"):
+        _load_standalone_benchmarks(
+            path=path,
+            cv_threshold_pct=5.0,
+            expected_pressure_caps={
+                "cpu_compute": 1.0,
+                "memory_bandwidth": 1.0,
+                "gpu_compute": 0.25,
+                "gpu_memory": 1.0,
+            },
+        )
+
+
+def test_standalone_benchmark_rejects_unknown_protocol(tmp_path: Path) -> None:
+    payload = _calibration_payload()
+    request = payload["request"]
+    assert isinstance(request, dict)
+    request["benchmark_protocol"] = "unregistered_protocol"
+    path = tmp_path / "calibration.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ProfileError, match="未知 calibration benchmark_protocol"):
+        _load_standalone_benchmarks(path=path, cv_threshold_pct=5.0)
 
 
 def test_standalone_benchmark_uses_operations_per_elapsed_second(tmp_path: Path) -> None:

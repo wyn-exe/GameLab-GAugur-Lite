@@ -22,6 +22,14 @@ from ..config import config_sha256, load_local_config, stable_json_dumps
 from ..metrics.system_sampler import SystemSampler
 from ..metrics.writer import JsonlWriter, write_json_atomic
 from .engine import BENCHMARK_RESOURCES, BenchmarkResource
+from .protocol import (
+    STABLE_BENCHMARK_PROTOCOL,
+    STABLE_CALIBRATION_DURATION_S,
+    STABLE_CALIBRATION_REPEATS,
+    STABLE_CALIBRATION_WARMUP_S,
+    apply_stable_benchmark_environment,
+    stable_benchmark_environment_valid,
+)
 
 CALIBRATION_SCHEMA_VERSION = 1
 CALIBRATION_TIMING_SEMANTICS = "worker_warmup_excluded_v1"
@@ -56,6 +64,7 @@ class CalibrationRequest:
         }
     )
     max_gpu_temp_c: float = 82.0
+    benchmark_protocol: str | None = None
 
     def validate(self, repo_root: Path) -> None:
         if not self.resources or len(set(self.resources)) != len(self.resources):
@@ -88,6 +97,14 @@ class CalibrationRequest:
             raise ValueError("gpu_matrix_size 必须位于 [128, 4096]")
         if not 64 <= self.gpu_memory_max_mib <= 12288:
             raise ValueError("gpu_memory_max_mib 必须位于 [64, 12288]")
+        if self.benchmark_protocol not in (None, STABLE_BENCHMARK_PROTOCOL):
+            raise ValueError(f"未知 benchmark_protocol: {self.benchmark_protocol}")
+        if self.benchmark_protocol == STABLE_BENCHMARK_PROTOCOL and (
+            self.repeats != STABLE_CALIBRATION_REPEATS
+            or self.warmup_s != STABLE_CALIBRATION_WARMUP_S
+            or self.duration_s != STABLE_CALIBRATION_DURATION_S
+        ):
+            raise ValueError("stable benchmark protocol 必须使用 5 repeats、5 秒 warmup、15 秒测量")
         for path in self._all_output_paths():
             _inside_repo(repo_root, path)
             if path.exists():
@@ -107,6 +124,7 @@ class CalibrationRequest:
             "schema_version": CALIBRATION_SCHEMA_VERSION,
             "command": "benchmark calibrate",
             "timing_semantics": CALIBRATION_TIMING_SEMANTICS,
+            "benchmark_protocol": self.benchmark_protocol,
             "dry_run": True,
             "resources": list(self.resources),
             "levels": list(self.levels),
@@ -189,6 +207,54 @@ def _environment_fingerprint(gpu_index: int) -> dict[str, Any]:
     except (ImportError, RuntimeError):
         fingerprint.update({"torch": None, "cuda_available": False, "gpu_name": None})
     return fingerprint
+
+
+def _execution_provenance(repo_root: Path) -> dict[str, Any]:
+    """绑定实际校准源码；生成中的 artifacts 不会被误报为源码 dirty。"""
+
+    source_paths = sorted((repo_root / "gaugur_lite").rglob("*.py"))
+    pyproject = repo_root / "pyproject.toml"
+    if pyproject.is_file():
+        source_paths.append(pyproject)
+    hashes = {
+        path.relative_to(repo_root).as_posix(): _file_sha256(path) for path in source_paths
+    }
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+            shell=False,
+        ).stdout.strip()
+        dirty = bool(
+            subprocess.run(
+                [
+                    "git",
+                    "status",
+                    "--porcelain",
+                    "--untracked-files=all",
+                    "--",
+                    "gaugur_lite",
+                    "pyproject.toml",
+                ],
+                cwd=repo_root,
+                check=True,
+                capture_output=True,
+                text=True,
+                shell=False,
+            ).stdout.strip()
+        )
+    except (OSError, subprocess.SubprocessError):
+        commit = None
+        dirty = None
+    return {
+        "root_commit": commit,
+        "root_dirty_at_execution": dirty,
+        "source_tree_sha256": config_sha256(hashes),
+        "source_files": hashes,
+    }
 
 
 def _pressure_token(level: float) -> str:
@@ -293,6 +359,8 @@ def _run_cell(
     )
     environment = os.environ.copy()
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    if request.benchmark_protocol == STABLE_BENCHMARK_PROTOCOL:
+        apply_stable_benchmark_environment(environment)
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
     process: subprocess.Popen[str] | None = None
     records: list[dict[str, Any]] = []
@@ -487,11 +555,13 @@ def summarize_calibration_records(
         "config_sha256": config_hash,
         "environment": environment,
         "environment_sha256": config_sha256(environment),
+        "execution": _execution_provenance(repo_root),
         "resources": resources,
         "cell_count": len(records),
         "expected_cell_count": len(request.resources) * len(request.levels) * request.repeats,
         "request": {
             "timing_semantics": CALIBRATION_TIMING_SEMANTICS,
+            "benchmark_protocol": request.benchmark_protocol,
             "resources": list(request.resources),
             "levels": list(request.levels),
             "pressure_caps": dict(request.pressure_caps),
@@ -940,6 +1010,35 @@ def verify_calibration(*, repo_root: Path, calibration_file: Path) -> dict[str, 
             "expected": artifacts.get("metrics_sha256"),
         }
     )
+    if result.get("request", {}).get("benchmark_protocol") == STABLE_BENCHMARK_PROTOCOL:
+        request = result["request"]
+        checks.append(
+            {
+                "name": "stable_benchmark_protocol",
+                "passed": request.get("repeats") == STABLE_CALIBRATION_REPEATS
+                and request.get("warmup_s") == STABLE_CALIBRATION_WARMUP_S
+                and request.get("duration_s") == STABLE_CALIBRATION_DURATION_S
+                and all(
+                    stable_benchmark_environment_valid(
+                        run.get("worker", {}).get("benchmark_environment")
+                    )
+                    for run in result.get("runs", [])
+                ),
+                "actual": request.get("benchmark_protocol"),
+                "expected": STABLE_BENCHMARK_PROTOCOL,
+            }
+        )
+        execution = result.get("execution", {})
+        checks.append(
+            {
+                "name": "clean_execution_provenance",
+                "passed": execution.get("root_dirty_at_execution") is False
+                and bool(execution.get("root_commit"))
+                and bool(execution.get("source_tree_sha256")),
+                "actual": execution,
+                "expected": "clean commit and bound source tree",
+            }
+        )
     return {
         "schema_version": CALIBRATION_SCHEMA_VERSION,
         "status": "passed" if all(check["passed"] for check in checks) else "failed",

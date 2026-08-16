@@ -17,8 +17,8 @@
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
-| Step 7 敏感度/强度 profile | 正式预检通过 | 82°C pilot 与 71-run t84 timing trial 均已封存且不进入训练；720-row 全阶段短协议计划已冻结，`0/480` 只读预检通过，正式采集待开始 |
-| Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 短时序、防混用证据和正式全阶段计划已实现，76 项单测与 720-row 不可变计划校验通过 |
+| Step 7 敏感度/强度 profile | 最终执行待运行 | 失败候选均已封存且不进入训练；Candidate 003 与单命令安全续跑已实现，720-row 计划冻结，正式 profile 仍为 `0/480` |
+| Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 Candidate 003、线程合同与全阶段自动验收已实现，92 项单测与 720-row 不可变计划校验通过 |
 | 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；短时序 profile、60 个主组合、额外测试、模型与报告待生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
@@ -1738,16 +1738,16 @@ Safety-v2 的保护层为：
 
 初版 [`safety-v2-amendment.json`](artifacts/profiles/step7/safety-v2-amendment.json) 把批前门暂定为 50°C；在正式数据仍为 `0/480` 时，操作者实测本机稳定空闲温度约为 54°C，说明 50°C 对当前环境不可达，无法再表达“已回到稳定空闲态”。因此追加封存 [`safety-v2-idle-temperature-amendment.json`](artifacts/profiles/step7/safety-v2-idle-temperature-amendment.json)，只把确认实验和后续正式批次的启动门修订为 55°C。Candidate 002 从 49°C 开始、全过程最高 70°C、没有超过 80°C 或出现热降频；修订后从启动门到硬门仍保留 25°C 余量。80°C 运行中硬中止、70°C 自适应 cooldown、GPU Compute 0.25 执行上限、5% 分母 CV 门以及不可变计划均不改变。启动门是可重复性前置条件，不能被表述为硬件安全上限。
 
-Step 4 的旧 GPU Compute 吞吐分母对应实际压力 `0/0.25/0.5/0.75/1`，不能拿来除以新的 `0/0.0625/0.125/0.1875/0.25`。Safety-v2 因此要求重新运行完整 60-cell 校准：四类资源、五档归一化压力、三次重复；校准记录 requested/applied 两列，并将 observed 与 applied 比较。正式 profile 只接受同一 pressure-cap 合同下的新校准文件。这个校准约 8 分钟，GPU Compute 的最大执行量只有旧 0.25，同时也受 80°C 硬门保护。
+Step 4 的旧 GPU Compute 吞吐分母对应实际压力 `0/0.25/0.5/0.75/1`，不能拿来除以新的 `0/0.0625/0.125/0.1875/0.25`。Safety-v2 因此要求重新校准，并记录 requested/applied 两列、observed pressure、原生线程合同与源码 provenance。Candidate 001/002 的 60-cell 短校准已经作为负面证据封存；最终 Candidate 003 使用四类资源、五档压力、五次重复，共 100 个全新单元，不复用失败确认中的任何吞吐值。
 
 新的不可变计划使用独立 raw 根 `data/raw/safety-v2-s30/`，不会读取、覆盖或 resume `data/raw/formal-v1/`、`data/raw/step7-t84/` 或 `data/raw/remaining-s30/`。计划 CSV schema v2 新增 `pressure_applied`；loader 仍可只读验证既有 schema v1 计划，保证历史证据没有因升级失效。
 
-Safety-v2 分四个提交检查点执行：
+Safety-v2 的设计与负面结果按检查点封存，最终执行合并为一个可续跑命令：
 
 1. **实现与封存（已完成，commit `5ed80cf`）。** 提交代码、README、旧 s30 raw/acceptance 和 `safety-v2-amendment.json`；不得继续旧 s30。
 2. **计划冻结（已完成，commit `0631bc1`）。** 从干净提交运行准备脚本，生成唯一 720-row Safety-v2 计划、验证 JSON 和逐行兼容合同。
-3. **当前检查点：校准。** 候选 001 因旧 warmup 边界和 9.3946% CV 被拒绝；修复后的候选 002 已完成 60 cell，但有三个 0.5 档分母以 5.022%–5.189% 窄幅超过 5% 门。两次候选均完整保留；下一提交只追加固定失败集合的 r04/r05，不重跑已通过单元、不降低门槛。
-4. **正式 profile 检查点。** 先做无窗口预检，再用一个命令自动顺序完成全部剩余批次；脚本自行批前冷却，异常立即停机。
+3. **失败校准封存。** Candidate 001 因旧 warmup 边界和 9.3946% CV 被拒绝；Candidate 002 的固定 r04/r05 确认仍有 `cpu_compute/0.5=5.9178%`，也已拒绝且禁止继续选择性追加。
+4. **最终 Candidate 003 与正式 profile。** 固定原生数学线程为 1，使用 `5 秒 warmup + 15 秒测量 × 5 repeats` 完整重建 100 个校准单元；5% CV 门通过后，同一命令自动进入 480 个 profile，并按 24 行一批自行冷却、安全续跑和最终复核。
 
 计划检查点的完整 PowerShell 命令如下；已经真实运行，保留用于只读复核和新环境重建：
 
@@ -1761,39 +1761,25 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\prepare_step7_safety_v2.ps1
 ```
 
-计划产物必须先提交，之后才运行长命令校准：
+当前源码和所有失败证据提交后，可先执行无负载预检；它不会启动 benchmark 或游戏：
 
 ```powershell
 conda activate gaugur-lite
 Set-Location D:\github\GameLab-RLCG
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\run_step7_safety_calibration.ps1
-```
-
-若 60-cell base 出现符合本节规则的窄幅失败，必须先提交 base 与确认协议，再运行以下约 2 分钟的追加确认：
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\run_step7_calibration_confirmation.ps1
-```
-
-追加确认产物再次提交后，先执行只读预检：
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\run_step7_safety_v2_acceptance.ps1 `
+  -File scripts\run_step7_final.ps1 `
   -PreflightOnly
 ```
 
-预检通过后，以下**一个命令**会按当前进度顺序运行全部批次，不再要求每批手动输入命令：
+最终只运行以下一个命令。它先完成或复核 Candidate 003，再按当前进度顺序跑完全部 profile 批次；中断后仍执行同一命令，不得单独挑选 run 或校准单元：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\run_step7_safety_v2_acceptance.ps1
+  -File scripts\run_step7_final.ps1
 ```
 
-自动执行不等于忽略异常：任何单测、计划哈希、源码身份、窗口、子进程、覆盖率、80°C 温度门或质量门失败都会终止整条命令并保留现场。正常的批间等待是脚本在等待 GPU 回到修订后的 55°C，不应手工跳过。运行期间仍需保持 Pyxel 窗口可见且不被遮挡。
+自动执行不等于忽略异常：任何单测、Candidate 003 的 5% CV 门、计划哈希、源码身份、原生线程合同、窗口、子进程、覆盖率或 80°C 温度门失败都会终止整条命令并保留现场。Candidate 003 名义测量时间约 34 分钟；成功后才进入 480 个可见窗口 profile。校准验收会绑定 calibration、metrics、status、verification、plot 以及 400 个 worker 原始文件的 SHA-256。正常批间等待是脚本在等待 GPU 回到 55°C，不应手工跳过；游戏窗口必须持续可见且不被遮挡。Candidate 003 开始后至 480 行全部完成前，不得提交 Git、切换分支或改动源码；若系统中断，保持工作树不变并重新执行同一最终命令。
 
 本检查点没有启动任何 workload 或 benchmark。真实短验收为：
 
@@ -1976,6 +1962,76 @@ base SHA-256=c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade
 截至本检查点，`formal-calibration-confirmation-v1.json` 尚未生成，正式 profile 仍为 0/480。必须先提交并上传候选 002、审计、确认实现、测试与 README，之后才能运行六个追加单元。
 
 确认实验执行前又封存了空闲温度门修订：操作者报告当前稳定空闲 GPU 温度约 54°C，原 50°C 启动条件不可达；脚本现从 [`safety-v2-idle-temperature-amendment.json`](artifacts/profiles/step7/safety-v2-idle-temperature-amendment.json) 读取固定的 55°C 上限，拒绝无记录的临时参数覆盖。该变化不改写 Candidate 002，也不放宽 80°C 运行中硬门；六个追加单元仍以全部五次重复 CV `<=5%` 决定能否进入正式 profile。
+
+#### Candidate 002 追加确认：正式拒绝并封存
+
+追加确认在提交 `7ac205a7f0363b1cbbc668fa9b0d968798a95fbb` 上从外部和脚本内 50°C 开始。86 项单测通过后，确定性的三个单元均完成 r04/r05；6/6 worker 正常退出，42 条 telemetry 的 GPU 温度为 50–59°C，超过 80°C 的样本为 0，热降频样本为 0。原始 metrics SHA-256 与确认 JSON 内绑定值一致，因此本次不是温控、进程或文件损坏失败。
+
+全部五次重复的独立重算结果为：
+
+| Resource | r01–r05 吞吐量（ops/s） | 五重复样本 CV | 5% 门 |
+| --- | --- | ---: | --- |
+| `cpu_compute/0.5` | 35,407,091.56 / 32,663,789.41 / 35,891,073.34 / 31,697,880.46 / 31,938,062.53 | 5.9178% | FAIL |
+| `gpu_compute/0.5` | 340,527,424.44 / 309,708,903.93 / 314,059,262.30 / 319,707,328.73 / 335,370,266.86 | 4.1535% | PASS |
+| `memory_bandwidth/0.5` | 37,660,402,264.46 / 34,523,155,989.90 / 37,827,512,582.14 / 35,843,266,111.63 / 36,668,915,979.54 | 3.7452% | PASS |
+
+固定规则要求三个单元全部通过，因此不能只采用已经通过的 GPU/内存结果，也不能删除较低的 CPU 重复、把阈值事后改为 6%，或继续追加 r06/r07 直到偶然通过。Candidate 002 整体状态由 `requires_confirmation` 转为 `rejected`，继续保持 `included_in_profile_denominators=false`、`included_in_model_training=false`；正式 profile 仍为 `0/480`。
+
+独立脚本 [`audit_step7_failed_confirmation.py`](scripts/audit_step7_failed_confirmation.py) 不调用确认汇总代码，而是从 base、六份磁盘 worker status、42 条 JSONL 和 failed status 重新计算吞吐与样本 CV，并通过 10/10 项完整性、安全性及精确失败集合检查：
+
+```text
+[Safety-v2 confirmation] Start GPU temperature: 50 C
+86 passed in 6.21s
+additional_cell_count=6, status=failed
+cpu_compute/p0.50 combined CV=5.9178% > 5.0%
+
+REJECTED Candidate 002 confirmation: failed=cpu_compute/p0.50, combined CV=5.9178%, temperature=50-59 C
+PASS independent audit: 10/10 checks
+```
+
+| Candidate 002 确认证据 | SHA-256 |
+| --- | --- |
+| `formal-calibration-confirmation-v1.json` | `d55b1ef32f7a151bdfc188a769d8d6a49ba8c2efad0132694086d8f8d7107dfa` |
+| `formal-calibration-confirmation-v1-metrics.jsonl` | `1e7960e56d802f53a8e3fedf28cafea7cf30ac60eeb32d804d84992bdd11cd87` |
+| `formal-calibration-confirmation-v1-status.json` | `51010733b4d2251d269910f00792c8721f140d123b1676e0dab51b27594ffced` |
+| `rejected-candidate-002-confirmation-audit.json` | `3c0ba2c71d3ae7b404b37154cd702b5495d268db12ff3adbe531db2c631bd790` |
+
+失败形态与实现审查共同指出下一候选必须在执行前控制 CPU benchmark 的调度与短窗口稳定性：当前 worker 使用 8 个外层线程、NumPy/OpenBLAS，配置中 `cpu_affinity=null`，Windows 电源方案为“平衡”，而主机为 24 个物理核/32 个逻辑核。这里仅把这些记录为 Candidate 003 的设计输入，尚未修改 benchmark、配置或正式计划，也未运行任何选择性重试。
+
+#### Candidate 003：最终稳定分母协议与单命令执行
+
+Candidate 003 是独立的新候选，不读取 Candidate 002 的 r01–r05 吞吐作为分母。预注册合同 ID 为 `native_threads_1_warmup5_duration15_repeats5_v1`：
+
+- 四类资源、五档归一化压力全部重跑，每格五次重复，共 `4×5×5=100` 个单元；
+- 每个 worker 使用 5 秒真实 warmup 和 15 秒测量，较旧 1/6 秒短窗口降低启动与 duty-cycle 边界占比；
+- benchmark 子进程在启动 Python 前把 `OMP_NUM_THREADS`、`OPENBLAS_NUM_THREADS`、`MKL_NUM_THREADS`、`NUMEXPR_NUM_THREADS`、`BLIS_NUM_THREADS` 和 `VECLIB_MAXIMUM_THREADS` 全部固定为 `1`；
+- worker 的 ready/status 均记录实际继承的完整环境合同；校准验证器、profile loader 和正式 Runner 分别独立拒绝缺失或被改写的合同；
+- Windows 电源方案不从“平衡”切换为高性能，避免与 Step 6 已完成的 solo baseline 形成新的系统语义差异；不使用事后猜测的 P/E 核编号或只对通过结果设置亲和性；
+- 16 个非零分母均使用五次吞吐的样本 CV，门槛仍为 `<=5%`。任一失败即拒绝整个 Candidate 003，不允许 confirmation、删点或选择性重跑；
+- 校准 JSON 记录生成 commit、源码树 SHA-256 和 clean 状态；最终 480 个 profile 只接受同一 root commit、同一源码树及同一 benchmark 合同。
+
+实现入口为 [`run_step7_final.ps1`](scripts/run_step7_final.ps1)。它先调用 [`run_step7_candidate003_calibration.ps1`](scripts/run_step7_candidate003_calibration.ps1)，在 Candidate 003 通过后自动转入 [`run_step7_safety_v2_acceptance.ps1`](scripts/run_step7_safety_v2_acceptance.ps1)。正式 profile 仍使用已冻结的 720-row Safety-v2 计划，只执行其中 480 个 profile 行；计划的 workload、requested/applied pressure、三重复、10/30/10 秒时序、80°C 硬门和独立 raw 根均不改变。
+
+无负载开发验收为：
+
+```text
+Candidate 003 preflight:
+cell_count=100, repeats=5, warmup=5s, duration=15s
+benchmark_protocol=native_threads_1_warmup5_duration15_repeats5_v1
+estimated measurement=34 minutes
+
+PowerShell parser:
+PASS run_step7_candidate003_calibration.ps1
+PASS run_step7_safety_v2_acceptance.ps1
+PASS run_step7_final.ps1
+
+unit tests:
+........................................................................ [ 78%]
+....................                                                     [100%]
+92 passed in 5.67s
+```
+
+上述 `92 passed` 已由最终短验收确认。Candidate 003 与 480 个正式 profile 仍须由用户执行长命令取得真实数据，本文没有预写其成功结果。
 
 ### Step 8：采集真实共置组合
 
@@ -2381,31 +2437,23 @@ total                                           720
 
 ## 14. 最终流程（当前实现至 Step 7）
 
-当前已经实现并验收到 Safety-v2 Step 7。必须按提交检查点执行，不能在源码未冻结时直接采集：
+当前已完整实现 Safety-v2 Step 7。先提交并上传本阶段的源码、Candidate 002 失败证据和 README；确认工作区源码干净后，只使用新的最终入口：
 
 ```powershell
 conda activate gaugur-lite
 Set-Location D:\github\GameLab-RLCG
 
-python -m pytest tests\unit -q
-
+# 可选：只读预检，不启动 benchmark 或游戏
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\prepare_step7_safety_v2.ps1
-
-# 提交计划后运行：
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\run_step7_safety_calibration.ps1
-
-# 提交校准后先预检，再用一次命令跑完 Step 7 全部批次：
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\run_step7_safety_v2_acceptance.ps1 `
+  -File scripts\run_step7_final.ps1 `
   -PreflightOnly
 
+# 最终命令：Candidate 003 通过后自动跑完/续跑 480 个 profile
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File scripts\run_step7_safety_v2_acceptance.ps1
+  -File scripts\run_step7_final.ps1
 ```
 
-Step 8 及其后的 dataset/model/scheduler/report 命令会在各自实现阶段写入本节；在代码尚未实现前不再列出不可执行的占位“一键命令”。所有正式命令必须幂等或安全支持 `--resume`，不得覆盖配置哈希不一致的已有数据。
+旧的 `run_step7_safety_calibration.ps1` 和 `run_step7_calibration_confirmation.ps1` 只用于重算历史失败证据，不再是正式路线。最终命令不覆盖已有结果：Candidate 003 部分输出、CV 失败、任何 invalid attempt、温控中止或源码变化都会停止并保留现场；完整 Candidate 003 可只读复核，profile 则按计划和源码身份安全 `--resume`。Step 8 及其后的命令会在各自实现阶段写入本节。
 
 ## 15. 测试策略
 

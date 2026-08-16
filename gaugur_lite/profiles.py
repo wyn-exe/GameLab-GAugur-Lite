@@ -11,6 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from .benchmarks.calibration import CALIBRATION_TIMING_SEMANTICS
+from .benchmarks.protocol import (
+    STABLE_BENCHMARK_PROTOCOL,
+    STABLE_CALIBRATION_DURATION_S,
+    STABLE_CALIBRATION_REPEATS,
+    STABLE_CALIBRATION_WARMUP_S,
+    stable_benchmark_environment_valid,
+)
 from .config import config_sha256, stable_json_dumps
 from .runner.plan import load_plan_rows, verify_plan
 from .runner.runner import ParsedPlanRow, inspect_resume
@@ -493,6 +500,12 @@ def _load_standalone_benchmarks(
     payload = _read_json(path)
     request = payload.get("request", {})
     pressure_caps = dict(expected_pressure_caps or _IDENTITY_PRESSURE_CAPS)
+    benchmark_protocol = request.get("benchmark_protocol")
+    if benchmark_protocol not in (None, STABLE_BENCHMARK_PROTOCOL):
+        raise ProfileError(f"未知 calibration benchmark_protocol: {benchmark_protocol}")
+    stable_protocol = benchmark_protocol == STABLE_BENCHMARK_PROTOCOL
+    calibration_repeats = STABLE_CALIBRATION_REPEATS if stable_protocol else 3
+    calibration_repeat_ids = set(range(1, calibration_repeats + 1))
     expected_request = {
         "cpu_workers": 8,
         "gpu_index": 0,
@@ -500,11 +513,14 @@ def _load_standalone_benchmarks(
         "gpu_memory_max_mib": 1024,
         "memory_buffer_mib": 64,
         "levels": list(PRESSURES),
-        "repeats": 3,
+        "repeats": calibration_repeats,
         "resources": list(RESOURCES),
     }
-    if payload.get("status") != "passed" or payload.get("cell_count") != 60:
-        raise ProfileError("Step 4 calibration 未通过或不是 60 个独立单元")
+    expected_cell_count = len(RESOURCES) * len(PRESSURES) * calibration_repeats
+    if payload.get("status") != "passed" or payload.get("cell_count") != expected_cell_count:
+        raise ProfileError(
+            f"calibration 未通过或不是 {expected_cell_count} 个独立单元"
+        )
     for key, expected in expected_request.items():
         if request.get(key) != expected:
             raise ProfileError(f"calibration benchmark 参数不兼容: {key}")
@@ -521,6 +537,15 @@ def _load_standalone_benchmarks(
             "Safety-v2 calibration timing_semantics 不兼容: "
             f"{request.get('timing_semantics')} != {CALIBRATION_TIMING_SEMANTICS}"
         )
+    if stable_protocol and (
+        float(request.get("warmup_s", -1)) != STABLE_CALIBRATION_WARMUP_S
+        or float(request.get("duration_s", -1)) != STABLE_CALIBRATION_DURATION_S
+        or confirmation_path is not None
+        or payload.get("execution", {}).get("root_dirty_at_execution") is not False
+        or not payload.get("execution", {}).get("root_commit")
+        or not payload.get("execution", {}).get("source_tree_sha256")
+    ):
+        raise ProfileError("Candidate 003 benchmark 时序、provenance 或 confirmation 合同非法")
     grouped: dict[tuple[str, float], list[dict[str, Any]]] = defaultdict(list)
     for run in payload.get("runs", []):
         resource = str(run.get("resource"))
@@ -531,19 +556,26 @@ def _load_standalone_benchmarks(
         if (
             resource not in RESOURCES
             or pressure not in PRESSURES
-            or repeat not in REPEATS
+            or repeat not in calibration_repeat_ids
             or worker.get("status") != "completed"
             or worker.get("resource") != resource
             or abs(float(worker.get("pressure_requested", -1)) - pressure_applied) > 1e-10
             or float(worker.get("elapsed_s", 0)) <= 0
         ):
             raise ProfileError(f"calibration worker 状态非法: {run.get('run_key')}")
+        if stable_protocol and not stable_benchmark_environment_valid(
+            worker.get("benchmark_environment")
+        ):
+            raise ProfileError(f"calibration 原生线程合同非法: {run.get('run_key')}")
         operations = int(worker.get("operations", -1))
         if (pressure == 0 and operations != 0) or (pressure > 0 and operations <= 0):
             raise ProfileError(f"calibration operations 非法: {run.get('run_key')}")
         grouped[(resource, pressure)].append(run)
-    if len(grouped) != len(RESOURCES) * len(PRESSURES) or any(len(items) != 3 for items in grouped.values()):
-        raise ProfileError("calibration 未完整覆盖 4×5×3")
+    if len(grouped) != len(RESOURCES) * len(PRESSURES) or any(
+        {int(item["repeat"]) for item in items} != calibration_repeat_ids
+        for items in grouped.values()
+    ):
+        raise ProfileError(f"calibration 未完整覆盖 4×5×{calibration_repeats}")
 
     result: dict[tuple[str, float], dict[str, Any]] = {}
     unstable: dict[tuple[str, float], dict[str, Any]] = {}
@@ -696,6 +728,7 @@ def _load_standalone_benchmarks(
         raise ProfileError("base calibration 已通过，不允许附加非必要 confirmation")
 
     returned_payload = dict(payload)
+    returned_payload["denominator_repeat_count"] = calibration_repeats
     returned_payload["denominator_confirmation"] = (
         {
             "sha256": _file_sha256(confirmation_path),
@@ -778,6 +811,10 @@ def audit_profile_inputs(
         "solo_baselines_sha256": _file_sha256(solo_baselines_file),
         "calibration_sha256": _file_sha256(calibration_file),
         "calibration_environment_sha256": calibration.get("environment_sha256"),
+        "calibration_benchmark_protocol": calibration.get("request", {}).get(
+            "benchmark_protocol"
+        ),
+        "standalone_repeat_count": calibration.get("denominator_repeat_count"),
         "calibration_confirmation": (
             {
                 "path": _relative(repo_root, calibration_confirmation_file),
@@ -850,6 +887,10 @@ def _collect_profile_record(
         or float(benchmark.get("pressure_requested", -1)) != row.pressure_applied
     ):
         raise ProfileError(f"profile benchmark 状态/身份非法: {row.run_id}")
+    benchmark_environment = benchmark.get("benchmark_environment")
+    benchmark_environment_valid = stable_benchmark_environment_valid(benchmark_environment)
+    if not isinstance(benchmark_environment, dict):
+        benchmark_environment = {}
     fps = workloads[0].get("game_fps", {})
     if any(fps.get(key) is None or float(fps[key]) <= 0 for key in ("mean", "p05", "min")):
         raise ProfileError(f"profile FPS 缺失或非正: {row.run_id}")
@@ -895,6 +936,8 @@ def _collect_profile_record(
         "benchmark_operations": operations,
         "benchmark_elapsed_s": elapsed,
         "benchmark_active_fraction": float(benchmark.get("active_fraction", 0)),
+        "benchmark_protocol": benchmark_environment.get("protocol"),
+        "benchmark_native_thread_contract_valid": benchmark_environment_valid,
         "benchmark_throughput_colocated_ops_per_s": operations / elapsed if operations else None,
         "hardware_signal_name": signal_name,
         "hardware_signal_mean": signal_mean,
@@ -1102,6 +1145,11 @@ def compute_profiles(
     )
     source_hashes = sorted({str(item["execution_source_tree_sha256"]) for item in records})
     root_commits = sorted({str(item["execution_root_commit"]) for item in records})
+    stable_protocol = (
+        calibration_payload.get("request", {}).get("benchmark_protocol")
+        == STABLE_BENCHMARK_PROTOCOL
+    )
+    calibration_execution = calibration_payload.get("execution", {})
     plan_manifest = _read_json(plan_file.with_name(f"{plan_file.stem}-manifest.json"))
     checks = {
         "plan_verified": True,
@@ -1112,6 +1160,13 @@ def compute_profiles(
         "three_repeats_per_cell": set(Counter((item["workload_id"], item["resource"], item["pressure_requested"]) for item in records).values()) == {3},
         "single_profile_source_tree": len(source_hashes) == 1,
         "single_profile_root_commit": len(root_commits) == 1,
+        "stable_benchmark_protocol": not stable_protocol
+        or all(item["benchmark_native_thread_contract_valid"] for item in records),
+        "calibration_profile_source_match": not stable_protocol
+        or (
+            source_hashes == [str(calibration_execution.get("source_tree_sha256"))]
+            and root_commits == [str(calibration_execution.get("root_commit"))]
+        ),
         "pressure_zero_retention_near_one": max_zero_deviation <= pressure_zero_tolerance,
         "applied_observed_pressure_close": max_observed_error <= observed_pressure_tolerance,
         "coverage": all(float(item["measurement_coverage_ratio"]) >= 0.95 and float(item["system_coverage_ratio"]) >= 0.95 and float(item["workload_overlap_ratio"]) >= 0.95 for item in records),
@@ -1159,6 +1214,10 @@ def compute_profiles(
             "calibration": _relative(repo_root, calibration_file),
             "calibration_sha256": _file_sha256(calibration_file),
             "calibration_environment_sha256": calibration_payload.get("environment_sha256"),
+            "calibration_benchmark_protocol": calibration_payload.get("request", {}).get(
+                "benchmark_protocol"
+            ),
+            "calibration_execution": calibration_execution,
             "calibration_confirmation": audit.get("calibration_confirmation"),
             "solo_execution_source_tree_sha256s": baseline_payload.get("execution", {}).get("source_tree_sha256s", []),
         },
