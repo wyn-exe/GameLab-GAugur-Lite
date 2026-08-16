@@ -1742,12 +1742,12 @@ Step 4 的旧 GPU Compute 吞吐分母对应实际压力 `0/0.25/0.5/0.75/1`，�
 
 Safety-v2 分四个提交检查点执行：
 
-1. **当前检查点：实现与封存。** 提交代码、README、旧 s30 raw/acceptance 和 `safety-v2-amendment.json`；不得继续旧 s30。
-2. **计划检查点。** 从干净提交运行准备脚本，生成唯一 720-row Safety-v2 计划并提交。
+1. **实现与封存（已完成，commit `5ed80cf`）。** 提交代码、README、旧 s30 raw/acceptance 和 `safety-v2-amendment.json`；不得继续旧 s30。
+2. **当前检查点：计划冻结（已生成，待提交）。** 从干净提交运行准备脚本，生成唯一 720-row Safety-v2 计划、验证 JSON 和逐行兼容合同。
 3. **校准检查点。** 从不高于 50°C 的冷机状态运行约 8 分钟校准，上传 60-cell 原始数据、图和验证结果。
 4. **正式 profile 检查点。** 先做无窗口预检，再用一个命令自动顺序完成全部剩余批次；脚本自行批前冷却，异常立即停机。
 
-当前检查点提交后，生成计划的完整 PowerShell 命令是：
+计划检查点的完整 PowerShell 命令如下；已经真实运行，保留用于只读复核和新环境重建：
 
 ```powershell
 conda activate gaugur-lite
@@ -1815,7 +1815,28 @@ GPU Compute applied levels=0,0.0625,0.125,0.1875,0.25
 root_dirty_at_generation=true（仅实现探针，不是正式冻结计划）
 ```
 
-此处只验收了实现、历史封存和无 GPU 单元测试；720-row Safety-v2 计划、60-cell 新校准以及 480 个正式 profile 的真实输出分别留在后续三个提交检查点填写，不能预先伪造为已完成。
+正式计划已从干净提交 `5ed80cf2bad8dd330eb4d739a19a5dced2b18149` 生成，manifest 记录 `schema_version=2`、`root_dirty_at_generation=false`、`selected_stage=all` 和唯一 `config_sha256=97d038c3fba55e8663b4a244a72f2c6af5e355cf1641eb229b1e93540dede9b9`。真实输出为：
+
+```text
+[Safety-v2] Generating one clean-commit 720-row plan...
+[Safety-v2] Verifying plan hashes and pressure mapping...
+[Safety-v2] Proving normalized 720-row compatibility with the parent plan...
+[Safety-v2] Recomputing sealed s30 pilot evidence...
+PASS safety-v2 plan: rows=720, profile=480, max temp=80 C,
+GPU applied levels=0,0.0625,0.125,0.1875,0.25
+```
+
+| Safety-v2 计划产物 | SHA-256 |
+| --- | --- |
+| `formal-v1-safety-v2-s30.csv` | `c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2` |
+| `formal-v1-safety-v2-s30-manifest.json` | `37986c20e237c414136d2947cdd176537381f7a0ebccb9429a7dccb1f4fef7ea` |
+| `formal-v1-safety-v2-s30-combinations.json` | `1276454a971f8c33f01e202b0c980265b00e5cec16843923aca91e92dd3e5e61` |
+| `formal-v1-safety-v2-s30-verification.json` | `828a6631166f348d7627f815f380a59ec67caf7e91f38668b45efbb3ee80ca4a` |
+| `formal-v1-safety-v2-s30-contract.json` | `ecee5bd407883cf3bd10b029eef64121f50049591efee21ca2a973bd3855a224` |
+
+独立计划验证 7/7 项通过：计划与组合 SHA-256、720 行计数、连续 execution index、720 个唯一 run ID、逐行 SHA-256 和组合/split 完整性全部一致。兼容合同逐行比较新旧计划的 23 个归一化实验字段，证明 720 个 run ID、workload、组合、split、resource、`pressure_requested`、repeat、seed、游戏哈希和采样间隔没有改变；四个 stage 仍为 `24/480/180/36`，新旧 raw 目录完全不重叠。根目录 [`.gitattributes`](.gitattributes) 将 `artifacts/`、`data/raw/` 和 `data/interim/` 标为不做文本换行转换，避免 Windows `core.autocrlf=true` 在重新检出时改变哈希绑定的 CSV/JSON/JSONL 字节。计划生成及这些验证都没有启动 workload 或 benchmark。
+
+本检查点只完成正式计划冻结；60-cell Safety-v2 新校准和 480 个正式 profile 尚未运行，不能预先写成完成。提交并上传上述五个计划产物及合同脚本后，才进入约 8 分钟的校准检查点。
 
 ### Step 8：采集真实共置组合
 
