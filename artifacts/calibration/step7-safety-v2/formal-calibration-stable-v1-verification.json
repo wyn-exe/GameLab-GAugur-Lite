@@ -1,0 +1,128 @@
+{
+  "calibration": "artifacts/calibration/step7-safety-v2/formal-calibration-stable-v1.json",
+  "calibration_sha256": "70113e5ded0e136f00ea5f7f96d55c911cf06c7942a5b49f6c541d66adfd4d1d",
+  "checks": [
+    {
+      "actual": 1,
+      "expected": 1,
+      "name": "schema_version",
+      "passed": true
+    },
+    {
+      "actual": "passed",
+      "expected": "passed",
+      "name": "calibration_status",
+      "passed": true
+    },
+    {
+      "actual": 100,
+      "expected": 100,
+      "name": "cell_count",
+      "passed": true
+    },
+    {
+      "actual": 4,
+      "expected": 4,
+      "name": "resource_count",
+      "passed": true
+    },
+    {
+      "actual": {
+        "all_levels_have_repeats": true,
+        "hardware_signal_available": true,
+        "max_abs_error_at_most_0_05": true,
+        "observed_pressure_monotonic": true
+      },
+      "expected": true,
+      "name": "cpu_compute_quality_gate",
+      "passed": true
+    },
+    {
+      "actual": {
+        "all_levels_have_repeats": true,
+        "hardware_signal_available": true,
+        "max_abs_error_at_most_0_05": true,
+        "observed_pressure_monotonic": true
+      },
+      "expected": true,
+      "name": "memory_bandwidth_quality_gate",
+      "passed": true
+    },
+    {
+      "actual": {
+        "all_levels_have_repeats": true,
+        "hardware_signal_available": true,
+        "max_abs_error_at_most_0_05": true,
+        "observed_pressure_monotonic": true
+      },
+      "expected": true,
+      "name": "gpu_compute_quality_gate",
+      "passed": true
+    },
+    {
+      "actual": {
+        "all_levels_have_repeats": true,
+        "hardware_signal_available": true,
+        "max_abs_error_at_most_0_05": true,
+        "observed_pressure_monotonic": true
+      },
+      "expected": true,
+      "name": "gpu_memory_quality_gate",
+      "passed": true
+    },
+    {
+      "actual": "84e8ab75e2a6c0ae52704c90c51395b73da7ed01e9d918ad8b8356b493f6d4c5",
+      "expected": "84e8ab75e2a6c0ae52704c90c51395b73da7ed01e9d918ad8b8356b493f6d4c5",
+      "name": "metrics_sha256",
+      "passed": true
+    },
+    {
+      "actual": "native_threads_1_warmup5_duration15_repeats5_v1",
+      "expected": "native_threads_1_warmup5_duration15_repeats5_v1",
+      "name": "stable_benchmark_protocol",
+      "passed": true
+    },
+    {
+      "actual": {
+        "root_commit": "a64ef29c7fc8797ddce43266fd219c8b86555f4f",
+        "root_dirty_at_execution": false,
+        "source_files": {
+          "gaugur_lite/__init__.py": "40ce80d3950239110ee0c5c723744d91db53da3c5bf5423cc6d7d31f6140c09e",
+          "gaugur_lite/__main__.py": "08370caec634f97ccdc7e2ece318d99b6f1ca80eb817e4940b259ac4fa729a65",
+          "gaugur_lite/baselines.py": "f888c7058ee65a4c6a436580f095adb20919d572ec2c390e9e7504347a1cf884",
+          "gaugur_lite/benchmarks/__init__.py": "590acbe2ff3876d23f658d4288489e34ce9939c090df182c3d518a1c699cca61",
+          "gaugur_lite/benchmarks/calibration.py": "cb70cf771e2530a9f8f5668b0f3e1d46515ae99c6cbf2deb8e8f0af6bcceb24f",
+          "gaugur_lite/benchmarks/engine.py": "4fa7d1790592ea0600a32adb2fa463501595706191e536df2a6f0542516dc032",
+          "gaugur_lite/benchmarks/protocol.py": "59c64567223643b4fb13e5fdf53863a3473c04cc023c48ed5c51334f646dbe09",
+          "gaugur_lite/cli.py": "c968022340c0cac1e34b232b13fe5872938fd44a04b84c034e97cdf4463563fb",
+          "gaugur_lite/config.py": "27b53f4558b9437a4405f09c6aeb6669962be31816c83e61973830f0ec240082",
+          "gaugur_lite/doctor.py": "37bb15b312cc7fa8a1dbabff3baf39760ab04bacd11f44a4804820796354cb77",
+          "gaugur_lite/metrics/__init__.py": "0aec1d02734c7a9e2a39ed1be350e9f0afb78d7d9dcc849030f2d09c4020831c",
+          "gaugur_lite/metrics/summarize.py": "411dfa0b1392f4dcdcbf7fa8a6e027c44aba9d85047a1493eb1ef01bd6843670",
+          "gaugur_lite/metrics/system_sampler.py": "b0cc5ca0c45c9dac956efaecd1793140734ebd0a6545dcc6355e611acae5af19",
+          "gaugur_lite/metrics/telemetry.py": "52e79cd75e38f5d4e65f80d8bb8150296969e970160e12f28bae23ed012a39f9",
+          "gaugur_lite/metrics/writer.py": "18e8c5b53946fe958d2f6b9cba218dd483b149cf90618092916a35864b375ca0",
+          "gaugur_lite/profiles.py": "5e89f3f0a4de3c491e391093f229188ae90ca1f41ebffad1e85500d7253181a0",
+          "gaugur_lite/runner/__init__.py": "955a52e9207d2f139633b5ddb986fec3df9a8a2cfe62a2d2b66ec45374f1c242",
+          "gaugur_lite/runner/plan.py": "377fc179a9601faa0a609c730adfc09cfaab76836edbe2945553fc1a42bd51f5",
+          "gaugur_lite/runner/runner.py": "1418a4aaf8a6e6bf0eadd448e1326d3eda7a88cf23205309862ec0bd374019f2",
+          "gaugur_lite/runner/window_layout.py": "d4514b058f3818de54db298866e6a837e7214a4962f0caf7151fc09d5b834e6b",
+          "gaugur_lite/schema.py": "9c7bfc1515d8faa8a99edfb05e33ce42eee3a6529a85afe60007d96a68638b42",
+          "gaugur_lite/workloads/__init__.py": "a00c5a8f4d39322460971110fe0a5d170478e9cb8f32269a4ac62d5148941e48",
+          "gaugur_lite/workloads/controllers.py": "4817786830425b71c69376c9f259e8e2c76dd727be9142ef3ae2ef47899d8794",
+          "gaugur_lite/workloads/launcher.py": "cd57805a1fed4c4e4f36e00d2b45ac8c0280973b3ac7395d6685c29fd941aed9",
+          "gaugur_lite/workloads/pyxel_game.py": "13b024afa3c33e783276caae9eb18c461e489358181cd65e8e3c9c0282e4df89",
+          "gaugur_lite/workloads/registry.py": "21d154b156a51b4e99da30d367ca969173c05f9ebc97fb7a1ad822b5175c4d62",
+          "gaugur_lite/workloads/window_probe.py": "4a01cedfe96b87d8a5bf8fcbe770858d231cdb77a0bdf7fb114eb2bf95f38cd9",
+          "pyproject.toml": "3096335850c3d3a26e819c88d0e77823ebf1bc4580d309eb5e251775c4091223"
+        },
+        "source_tree_sha256": "7c9e859943e526386c7534c695f7a3e9015b5be6eae3d3664608e4b39ea2aa15"
+      },
+      "expected": "clean commit and bound source tree",
+      "name": "clean_execution_provenance",
+      "passed": true
+    }
+  ],
+  "schema_version": 1,
+  "status": "passed"
+}
