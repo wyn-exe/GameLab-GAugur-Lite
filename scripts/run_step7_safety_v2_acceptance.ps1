@@ -18,13 +18,14 @@ else {
 $plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-safety-v2-s30.csv'
 $baselinePlan = Join-Path $repoRoot 'artifacts\plans\formal-v1.csv'
 $solo = Join-Path $repoRoot 'data\interim\formal-v1\solo-baselines.json'
-$calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1.json'
-$calibrationAcceptance = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-acceptance.json'
-$calibrationMetrics = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-metrics.jsonl'
-$calibrationStatus = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-status.json'
-$calibrationWorkers = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-workers'
-$calibrationPlot = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\pressure-calibration-stable-v1.png'
-$calibrationVerification = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v1-verification.json'
+$calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2.json'
+$calibrationAcceptance = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-acceptance.json'
+$calibrationMetrics = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-metrics.jsonl'
+$calibrationStatus = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-status.json'
+$calibrationWorkers = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-workers'
+$calibrationPlot = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\pressure-calibration-stable-v2.png'
+$calibrationVerification = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-verification.json'
+$candidate003Audit = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\rejected-candidate-003-audit.json'
 $artifactRoot = Join-Path $repoRoot 'artifacts\profiles\step7\safety-v2'
 $invocationRoot = Join-Path $artifactRoot 'invocations'
 $plotRoot = Join-Path $artifactRoot 'plots'
@@ -107,6 +108,7 @@ $required = @(
     $calibrationStatus,
     $calibrationPlot,
     $calibrationVerification,
+    $candidate003Audit,
     $idleTemperatureAmendment
 )
 $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
@@ -144,10 +146,14 @@ try {
     $calibrationHash = (Get-FileHash -LiteralPath $calibration -Algorithm SHA256).Hash.ToLowerInvariant()
     $workerTree = Get-DirectoryTreeSha256 -Directory $calibrationWorkers
     if ($candidateAcceptance.status -ne 'passed' `
-            -or $candidateAcceptance.benchmark_protocol -ne 'native_threads_1_warmup5_duration15_repeats5_v1' `
+            -or [int]$candidateAcceptance.candidate -ne 4 `
+            -or $candidateAcceptance.benchmark_protocol -ne 'native_threads_1_warmup5_duration15_repeats5_cv10_v2' `
             -or [int]$candidateAcceptance.cell_count -ne 100 `
             -or [int]$candidateAcceptance.denominator_repeat_count -ne 5 `
-            -or [double]$candidateAcceptance.denominator_cv_max_pct -gt 5 `
+            -or [double]$candidateAcceptance.denominator_cv_threshold_pct -ne 10 `
+            -or [double]$candidateAcceptance.denominator_cv_max_pct -gt 10 `
+            -or $candidateAcceptance.candidate003_reused -ne $false `
+            -or $candidateAcceptance.candidate003_rejection_audit_sha256 -ne (Get-FileHash -LiteralPath $candidate003Audit -Algorithm SHA256).Hash.ToLowerInvariant() `
             -or $candidateAcceptance.calibration_sha256 -ne $calibrationHash `
             -or $candidateAcceptance.metrics_sha256 -ne (Get-FileHash -LiteralPath $calibrationMetrics -Algorithm SHA256).Hash.ToLowerInvariant() `
             -or $candidateAcceptance.status_sha256 -ne (Get-FileHash -LiteralPath $calibrationStatus -Algorithm SHA256).Hash.ToLowerInvariant() `
@@ -156,7 +162,7 @@ try {
             -or $candidateAcceptance.worker_tree_sha256 -ne [string]$workerTree.sha256 `
             -or $candidateAcceptance.plot_sha256 -ne (Get-FileHash -LiteralPath $calibrationPlot -Algorithm SHA256).Hash.ToLowerInvariant() `
             -or $candidateAcceptance.verification_sha256 -ne (Get-FileHash -LiteralPath $calibrationVerification -Algorithm SHA256).Hash.ToLowerInvariant()) {
-        throw 'Candidate 003 acceptance or artifact hash binding failed.'
+        throw 'Candidate004 acceptance or artifact hash binding failed.'
     }
     $batchStartGpuTempMaxC = [int]$temperatureProtocol.revised_batch_start_gpu_temp_max_c
 
@@ -179,8 +185,10 @@ try {
     if ($audit.baseline_contract -ne 'safety_v2_capped_gpu_compute' `
             -or [double]$audit.gpu_temperature_max_c -ne 80 `
             -or [double]$audit.pressure_caps.gpu_compute -ne 0.25 `
-            -or $audit.calibration_benchmark_protocol -ne 'native_threads_1_warmup5_duration15_repeats5_v1' `
+            -or $audit.calibration_benchmark_protocol -ne 'native_threads_1_warmup5_duration15_repeats5_cv10_v2' `
             -or [int]$audit.standalone_repeat_count -ne 5 `
+            -or [double]$audit.standalone_throughput_cv_threshold_pct -ne 10 `
+            -or [double]$audit.standalone_throughput_cv_max_pct -gt 10 `
             -or $null -ne $audit.calibration_confirmation) {
         throw 'Unexpected safety-v2 audit contract.'
     }

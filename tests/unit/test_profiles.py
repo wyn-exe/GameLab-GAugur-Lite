@@ -21,6 +21,7 @@ from gaugur_lite.profiles import (
     verify_profiles,
 )
 from gaugur_lite.benchmarks.protocol import (
+    CANDIDATE003_BENCHMARK_PROTOCOL,
     STABLE_BENCHMARK_PROTOCOL,
     apply_stable_benchmark_environment,
     benchmark_environment_snapshot,
@@ -365,7 +366,7 @@ def _stable_calibration_payload() -> dict[str, object]:
     return payload
 
 
-def test_candidate003_accepts_exact_five_repeats_and_native_thread_contract(
+def test_candidate004_accepts_exact_five_repeats_and_native_thread_contract(
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "calibration.json"
@@ -387,7 +388,88 @@ def test_candidate003_accepts_exact_five_repeats_and_native_thread_contract(
     assert cells[("cpu_compute", 0.5)]["throughput_cv_pct"] == 0
 
 
-def test_candidate003_rejects_missing_native_thread_contract(tmp_path: Path) -> None:
+def test_candidate004_uses_preregistered_ten_percent_cv_gate(tmp_path: Path) -> None:
+    payload = _stable_calibration_payload()
+    runs = payload["runs"]
+    assert isinstance(runs, list)
+    selected = [
+        run
+        for run in runs
+        if run["resource"] == "cpu_compute" and run["pressure_requested"] == 0.25
+    ]
+    for run, operations in zip(
+        selected, [15_000_000, 15_000_000, 15_000_000, 15_000_000, 17_700_000], strict=True
+    ):
+        run["worker"]["operations"] = operations
+    path = tmp_path / "calibration.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    cells, returned = _load_standalone_benchmarks(
+        path=path,
+        cv_threshold_pct=5.0,
+        expected_pressure_caps={
+            "cpu_compute": 1.0,
+            "memory_bandwidth": 1.0,
+            "gpu_compute": 0.25,
+            "gpu_memory": 1.0,
+        },
+    )
+
+    assert 5 < cells[("cpu_compute", 0.25)]["throughput_cv_pct"] < 10
+    assert returned["denominator_cv_threshold_pct"] == 10.0
+
+
+def test_candidate004_rejects_cv_above_ten_percent(tmp_path: Path) -> None:
+    payload = _stable_calibration_payload()
+    runs = payload["runs"]
+    assert isinstance(runs, list)
+    selected = [
+        run
+        for run in runs
+        if run["resource"] == "cpu_compute" and run["pressure_requested"] == 0.25
+    ]
+    for run, operations in zip(
+        selected, [15_000_000, 15_000_000, 15_000_000, 15_000_000, 19_500_000], strict=True
+    ):
+        run["worker"]["operations"] = operations
+    path = tmp_path / "calibration.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ProfileError, match="吞吐 CV 超限"):
+        _load_standalone_benchmarks(
+            path=path,
+            cv_threshold_pct=5.0,
+            expected_pressure_caps={
+                "cpu_compute": 1.0,
+                "memory_bandwidth": 1.0,
+                "gpu_compute": 0.25,
+                "gpu_memory": 1.0,
+            },
+        )
+
+
+def test_candidate004_loader_rejects_candidate003_protocol(tmp_path: Path) -> None:
+    payload = _stable_calibration_payload()
+    request = payload["request"]
+    runs = payload["runs"]
+    assert isinstance(request, dict)
+    assert isinstance(runs, list)
+    request["benchmark_protocol"] = CANDIDATE003_BENCHMARK_PROTOCOL
+    environment: dict[str, str] = {}
+    apply_stable_benchmark_environment(
+        environment, protocol=CANDIDATE003_BENCHMARK_PROTOCOL
+    )
+    snapshot = benchmark_environment_snapshot(environment)
+    for run in runs:
+        run["worker"]["benchmark_environment"] = snapshot
+    path = tmp_path / "candidate003.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ProfileError, match="未知 calibration benchmark_protocol"):
+        _load_standalone_benchmarks(path=path, cv_threshold_pct=5.0)
+
+
+def test_candidate004_rejects_missing_native_thread_contract(tmp_path: Path) -> None:
     payload = _stable_calibration_payload()
     runs = payload["runs"]
     assert isinstance(runs, list)

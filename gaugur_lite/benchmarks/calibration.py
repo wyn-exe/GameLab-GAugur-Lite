@@ -27,6 +27,7 @@ from .protocol import (
     STABLE_CALIBRATION_DURATION_S,
     STABLE_CALIBRATION_REPEATS,
     STABLE_CALIBRATION_WARMUP_S,
+    SUPPORTED_STABLE_BENCHMARK_PROTOCOLS,
     apply_stable_benchmark_environment,
     stable_benchmark_environment_valid,
 )
@@ -97,9 +98,11 @@ class CalibrationRequest:
             raise ValueError("gpu_matrix_size 必须位于 [128, 4096]")
         if not 64 <= self.gpu_memory_max_mib <= 12288:
             raise ValueError("gpu_memory_max_mib 必须位于 [64, 12288]")
-        if self.benchmark_protocol not in (None, STABLE_BENCHMARK_PROTOCOL):
+        if self.benchmark_protocol is not None and (
+            self.benchmark_protocol not in SUPPORTED_STABLE_BENCHMARK_PROTOCOLS
+        ):
             raise ValueError(f"未知 benchmark_protocol: {self.benchmark_protocol}")
-        if self.benchmark_protocol == STABLE_BENCHMARK_PROTOCOL and (
+        if self.benchmark_protocol in SUPPORTED_STABLE_BENCHMARK_PROTOCOLS and (
             self.repeats != STABLE_CALIBRATION_REPEATS
             or self.warmup_s != STABLE_CALIBRATION_WARMUP_S
             or self.duration_s != STABLE_CALIBRATION_DURATION_S
@@ -359,8 +362,10 @@ def _run_cell(
     )
     environment = os.environ.copy()
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
-    if request.benchmark_protocol == STABLE_BENCHMARK_PROTOCOL:
-        apply_stable_benchmark_environment(environment)
+    if request.benchmark_protocol in SUPPORTED_STABLE_BENCHMARK_PROTOCOLS:
+        apply_stable_benchmark_environment(
+            environment, protocol=str(request.benchmark_protocol)
+        )
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
     process: subprocess.Popen[str] | None = None
     records: list[dict[str, Any]] = []
@@ -1010,7 +1015,8 @@ def verify_calibration(*, repo_root: Path, calibration_file: Path) -> dict[str, 
             "expected": artifacts.get("metrics_sha256"),
         }
     )
-    if result.get("request", {}).get("benchmark_protocol") == STABLE_BENCHMARK_PROTOCOL:
+    benchmark_protocol = result.get("request", {}).get("benchmark_protocol")
+    if benchmark_protocol in SUPPORTED_STABLE_BENCHMARK_PROTOCOLS:
         request = result["request"]
         checks.append(
             {
@@ -1020,12 +1026,13 @@ def verify_calibration(*, repo_root: Path, calibration_file: Path) -> dict[str, 
                 and request.get("duration_s") == STABLE_CALIBRATION_DURATION_S
                 and all(
                     stable_benchmark_environment_valid(
-                        run.get("worker", {}).get("benchmark_environment")
+                        run.get("worker", {}).get("benchmark_environment"),
+                        expected_protocol=str(benchmark_protocol),
                     )
                     for run in result.get("runs", [])
                 ),
                 "actual": request.get("benchmark_protocol"),
-                "expected": STABLE_BENCHMARK_PROTOCOL,
+                "expected": benchmark_protocol,
             }
         )
         execution = result.get("execution", {})

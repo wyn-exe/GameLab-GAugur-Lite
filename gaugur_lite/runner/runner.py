@@ -907,7 +907,8 @@ def run_one(
             if benchmark_summary.get("status") != "completed" or benchmark_summary.get("barrier_used") is not True:
                 raise RunInvalidError("benchmark status/barrier 未通过")
             if not stable_benchmark_environment_valid(
-                benchmark_summary.get("benchmark_environment", {})
+                benchmark_summary.get("benchmark_environment", {}),
+                expected_protocol=STABLE_BENCHMARK_PROTOCOL,
             ):
                 raise RunInvalidError(
                     f"benchmark protocol 未落实: {STABLE_BENCHMARK_PROTOCOL}"

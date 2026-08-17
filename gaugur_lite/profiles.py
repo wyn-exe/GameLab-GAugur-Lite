@@ -16,6 +16,7 @@ from .benchmarks.protocol import (
     STABLE_CALIBRATION_DURATION_S,
     STABLE_CALIBRATION_REPEATS,
     STABLE_CALIBRATION_WARMUP_S,
+    STABLE_DENOMINATOR_CV_THRESHOLD_PCT,
     stable_benchmark_environment_valid,
 )
 from .config import config_sha256, stable_json_dumps
@@ -504,6 +505,9 @@ def _load_standalone_benchmarks(
     if benchmark_protocol not in (None, STABLE_BENCHMARK_PROTOCOL):
         raise ProfileError(f"未知 calibration benchmark_protocol: {benchmark_protocol}")
     stable_protocol = benchmark_protocol == STABLE_BENCHMARK_PROTOCOL
+    effective_cv_threshold_pct = (
+        STABLE_DENOMINATOR_CV_THRESHOLD_PCT if stable_protocol else cv_threshold_pct
+    )
     calibration_repeats = STABLE_CALIBRATION_REPEATS if stable_protocol else 3
     calibration_repeat_ids = set(range(1, calibration_repeats + 1))
     expected_request = {
@@ -545,7 +549,7 @@ def _load_standalone_benchmarks(
         or not payload.get("execution", {}).get("root_commit")
         or not payload.get("execution", {}).get("source_tree_sha256")
     ):
-        raise ProfileError("Candidate 003 benchmark 时序、provenance 或 confirmation 合同非法")
+        raise ProfileError("Candidate 004 benchmark 时序、provenance 或 confirmation 合同非法")
     grouped: dict[tuple[str, float], list[dict[str, Any]]] = defaultdict(list)
     for run in payload.get("runs", []):
         resource = str(run.get("resource"))
@@ -564,7 +568,8 @@ def _load_standalone_benchmarks(
         ):
             raise ProfileError(f"calibration worker 状态非法: {run.get('run_key')}")
         if stable_protocol and not stable_benchmark_environment_valid(
-            worker.get("benchmark_environment")
+            worker.get("benchmark_environment"),
+            expected_protocol=STABLE_BENCHMARK_PROTOCOL,
         ):
             raise ProfileError(f"calibration 原生线程合同非法: {run.get('run_key')}")
         operations = int(worker.get("operations", -1))
@@ -615,7 +620,9 @@ def _load_standalone_benchmarks(
             "throughput_cv_pct": cv,
             "observed_pressure_mean": statistics.fmean(observed),
         }
-        if cv is not None and (not math.isfinite(cv) or cv > cv_threshold_pct):
+        if cv is not None and (
+            not math.isfinite(cv) or cv > effective_cv_threshold_pct
+        ):
             unstable[(resource, pressure)] = result[(resource, pressure)]
 
     confirmation_payload: dict[str, Any] | None = None
@@ -633,7 +640,7 @@ def _load_standalone_benchmarks(
             or confirmation_payload.get("base_calibration_sha256") != calibration_sha
             or confirmation_payload.get("environment_sha256") != payload.get("environment_sha256")
             or confirmation_payload.get("timing_semantics") != CALIBRATION_TIMING_SEMANTICS
-            or float(rule.get("cv_threshold_pct", -1)) != cv_threshold_pct
+            or float(rule.get("cv_threshold_pct", -1)) != effective_cv_threshold_pct
             or int(rule.get("additional_repeats", -1)) != 2
             or int(rule.get("combined_repeat_count", -1)) != 5
         ):
@@ -692,7 +699,7 @@ def _load_standalone_benchmarks(
                 or stored.get("combined_throughputs_ops_per_s") != combined
                 or abs(float(stored.get("combined_throughput_cv_pct", -1)) - cv) > 1e-10
                 or not math.isfinite(cv)
-                or cv > cv_threshold_pct
+                or cv > effective_cv_threshold_pct
             ):
                 raise ProfileError(
                     f"追加确认后独立 benchmark 吞吐 CV 仍超限: {key[0]}/{key[1]}={cv:.3f}%"
@@ -729,6 +736,7 @@ def _load_standalone_benchmarks(
 
     returned_payload = dict(payload)
     returned_payload["denominator_repeat_count"] = calibration_repeats
+    returned_payload["denominator_cv_threshold_pct"] = effective_cv_threshold_pct
     returned_payload["denominator_confirmation"] = (
         {
             "sha256": _file_sha256(confirmation_path),
@@ -826,7 +834,9 @@ def audit_profile_inputs(
         ),
         "standalone_nonzero_cell_count": len(nonzero_cvs),
         "standalone_throughput_cv_max_pct": max(nonzero_cvs),
-        "standalone_throughput_cv_threshold_pct": benchmark_cv_threshold_pct,
+        "standalone_throughput_cv_threshold_pct": calibration.get(
+            "denominator_cv_threshold_pct", benchmark_cv_threshold_pct
+        ),
     }
 
 
@@ -888,7 +898,10 @@ def _collect_profile_record(
     ):
         raise ProfileError(f"profile benchmark 状态/身份非法: {row.run_id}")
     benchmark_environment = benchmark.get("benchmark_environment")
-    benchmark_environment_valid = stable_benchmark_environment_valid(benchmark_environment)
+    benchmark_environment_valid = stable_benchmark_environment_valid(
+        benchmark_environment,
+        expected_protocol=STABLE_BENCHMARK_PROTOCOL,
+    )
     if not isinstance(benchmark_environment, dict):
         benchmark_environment = {}
     fps = workloads[0].get("game_fps", {})
@@ -1175,7 +1188,8 @@ def compute_profiles(
             or float(item["gpu_temp_c_max"]) <= float(audit["gpu_temperature_max_c"])
             for item in records
         ),
-        "standalone_benchmark_stable": audit["standalone_throughput_cv_max_pct"] <= benchmark_cv_threshold_pct,
+        "standalone_benchmark_stable": audit["standalone_throughput_cv_max_pct"]
+        <= audit["standalone_throughput_cv_threshold_pct"],
         "sensitivity_and_intensity_both_present": all(item["sensitivity_mean"] is not None and (item["pressure_requested"] == 0 or item["intensity_slowdown_mean"] is not None) for item in aggregates),
         "nonlinearity_and_correlation_analyzed": analysis["curve_count"] == 32,
     }
@@ -1195,7 +1209,7 @@ def compute_profiles(
             "measurement_coverage_min": 0.95,
             "system_coverage_min": 0.95,
             "workload_overlap_min": 0.95,
-            "benchmark_cv_max_pct": benchmark_cv_threshold_pct,
+            "benchmark_cv_max_pct": audit["standalone_throughput_cv_threshold_pct"],
             "pressure_zero_retention_abs_deviation_max": pressure_zero_tolerance,
             "applied_observed_pressure_abs_error_max": observed_pressure_tolerance,
             "gpu_temperature_max_c": audit["gpu_temperature_max_c"],
