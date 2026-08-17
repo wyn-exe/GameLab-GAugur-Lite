@@ -28,6 +28,12 @@ from .config import (
     load_local_config,
     stable_json_dumps,
 )
+from .colocation import (
+    ColocationError,
+    audit_colocation_inputs,
+    build_colocation_truth,
+    verify_colocation_truth,
+)
 from .doctor import build_doctor_report
 from .metrics.telemetry import format_result, run_overhead, run_probe
 from .metrics.writer import write_json_atomic
@@ -76,7 +82,7 @@ benchmark_app = typer.Typer(
 )
 features_app = typer.Typer(
     name="features",
-    help="构建与独立复核 GAugur 敏感度/强度特征。",
+    help="构建与独立复核 GAugur profile 和共置 truth 特征。",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -575,6 +581,99 @@ def features_verify_profiles(
         json.JSONDecodeError,
     ) as exc:
         typer.echo(f"PROFILE_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@features_app.command("build-colocation")
+def features_build_colocation(
+    ctx: typer.Context,
+    plan: Path = typer.Option(..., "--plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    solo_baselines: Path = typer.Option(..., "--solo-baselines", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    runs_output: Path = typer.Option(..., "--runs-out", help="独占创建的 216-row 物理 run JSONL。"),
+    truth_output: Path = typer.Option(..., "--truth-out", help="独占创建的 600-row target truth Parquet。"),
+    summary: Path = typer.Option(..., "--summary", help="独占创建的共置质量门 JSON。"),
+    plot: Path = typer.Option(..., "--plot", help="独占创建的实测 retention PNG。"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="只预检计划和 frozen solo baseline，不读取 attempt。"),
+) -> None:
+    """构建 Step 8 的物理 run 记录和按目标展开的实测 truth table。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        if _effective_dry_run(ctx, dry_run):
+            result = audit_colocation_inputs(
+                repo_root=repo_root,
+                plan_file=plan,
+                solo_baselines_file=solo_baselines,
+            )
+            result["dry_run"] = True
+            result["mutations_planned"] = [
+                runs_output.as_posix(),
+                truth_output.as_posix(),
+                summary.as_posix(),
+                plot.as_posix(),
+            ]
+        else:
+            result = build_colocation_truth(
+                repo_root=repo_root,
+                plan_file=plan,
+                solo_baselines_file=solo_baselines,
+                runs_output_file=runs_output,
+                truth_output_file=truth_output,
+                summary_file=summary,
+                plot_file=plot,
+            )
+    except (
+        ColocationError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        typer.echo(f"COLOCATION_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+
+
+@features_app.command("verify-colocation")
+def features_verify_colocation(
+    plan: Path = typer.Option(..., "--plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    solo_baselines: Path = typer.Option(..., "--solo-baselines", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    runs: Path = typer.Option(..., "--runs", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    truth: Path = typer.Option(..., "--truth", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    summary: Path = typer.Option(..., "--summary", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    plot: Path = typer.Option(..., "--plot", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    output: Path | None = typer.Option(None, "--output", help="可选的独占验证 JSON。"),
+) -> None:
+    """从 216 个 raw attempts 独立重算并核对 Step 8 全部派生产物。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        if output is not None and output.exists():
+            raise FileExistsError(f"验证输出已存在，拒绝覆盖: {output}")
+        result = verify_colocation_truth(
+            repo_root=repo_root,
+            plan_file=plan,
+            solo_baselines_file=solo_baselines,
+            runs_file=runs,
+            truth_file=truth,
+            summary_file=summary,
+            plot_file=plot,
+        )
+        if output is not None:
+            write_json_atomic(output, result)
+    except (
+        ColocationError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        typer.echo(f"COLOCATION_ERROR: {type(exc).__name__}: {exc}", err=True)
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] != "passed":

@@ -18,8 +18,9 @@
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
 | Step 7 敏感度/强度 profile | 已完成 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
-| Python 实现              | 分阶段实现中 | Step 0–7 已完成；pooled 数据审计、线程合同与自动验收已落实，98 项单测和 Safety-v2 全部质量门通过 |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与 480 个正式 profile run 已生成；60 个主组合、额外测试、模型与报告待生成 |
+| Step 8 真实共置组合      | 实现与预检完成 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[truth table 构建器](gaugur_lite/colocation.py)；正式采集等待干净提交后启动 |
+| Python 实现              | 分阶段实现中 | Step 0–8 的 plan、runner、profile、共置 truth 构建与自动验收已落实，102 项单测通过 |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与 480 个正式 profile run 已生成；Step 8 的 180 个主共置与 36 个四元外推 run 尚未启动 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -2185,26 +2186,38 @@ PASS Step 7 safety-v2 acceptance: artifacts/profiles/step7/safety-v2
 7. 组合 ID 使用排序后的 workload ID，避免 A+B 与 B+A 重复；
 8. 主组合与额外组合使用相同的 warmup、测量、冷却和质量门槛。
 
-#### 计划命令
+#### 正式执行命令
+
+Step 8 复用已经冻结且通过 Step 7 的 Safety-v2 720-row 计划，只执行其中 180 个主共置与 36 个额外测试行。正式采集前必须把本阶段代码和 README 提交到干净工作树；脚本会拒绝脏源码、过热启动、无效 attempt 或混合执行身份，并保留现场而不自动重试。
 
 ```powershell
-python -m gaugur_lite plan `
-  --experiment configs\experiments\formal.yaml `
-  --stage colocation-main `
-  --out artifacts\plans\formal-colocation-main.csv
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
 
-python -m gaugur_lite run `
-  --plan artifacts\plans\formal-colocation-main.csv `
-  --resume
+# 只读：核对 Step 7、冻结计划、Step 6 baseline 和 216 个安全 resume 决策
+pwsh.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step8_final.ps1 `
+  -BatchSize 12 `
+  -PreflightOnly
 
-python -m gaugur_lite plan `
-  --experiment configs\experiments\formal.yaml `
-  --stage colocation-extra-test `
-  --out artifacts\plans\formal-colocation-extra-test.csv
+# 真实：分批采集/断点恢复 180 main + 36 extra，随后构建并独立复核 truth table 和 PNG
+pwsh.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step8_final.ps1 `
+  -BatchSize 12
+```
 
-python -m gaugur_lite run `
-  --plan artifacts\plans\formal-colocation-extra-test.csv `
-  --resume
+完成后会独占写入：
+
+```text
+data/interim/formal-v1/safety-v2/
+├─ colocation-runs.jsonl       # 216 个同步物理 run
+├─ colocation-truth.parquet    # 600 个按 target 展开的实测 truth
+└─ colocation-summary.json     # 质量门、留存率范围和 provenance
+
+artifacts/colocation/step8/safety-v2/
+├─ plots/retention-by-size.png
+├─ formal-colocation-verification.json
+└─ formal-colocation-acceptance.json
 ```
 
 #### 验收
@@ -2217,6 +2230,46 @@ python -m gaugur_lite run `
 - 同次组合拆出的目标样本共享同一个 `colocation_id`；
 - 同一 key 的三个重复共享 `combination_key`，且只能属于一个 split；
 - 进程停止后 CPU/GPU 回到空载。
+
+#### Step 8 实现与真实预检（2026-08-17）
+
+本阶段新增 `features build-colocation` / `features verify-colocation`：前者从所有有效 raw attempt 提取 216 个物理 run，并按目标展开为 600 行 truth；后者重新读取 raw attempt、逐字节复核 JSONL/Parquet/PNG 哈希。`retention_ratio > 1` 与负的 `loss_ratio` 会原样保留，不会裁剪到 1。
+
+新增的 4 项 Step 8 单测和既有单测均在本机 Conda 环境实际通过：
+
+```text
+python -m pytest tests\unit\test_colocation.py -q
+4 passed in 1.68s
+
+python -m pytest tests\unit -q
+102 passed in 6.20s
+```
+
+只读预检也已实际执行；它没有启动 Pyxel、benchmark 或创建任何正式 attempt，确认冻结 Safety-v2 计划与已完成 Step 6/7 产物兼容，当前 216 个共置 run 均尚待启动：
+
+```json
+{
+  "status": "passed",
+  "plan_sha256": "c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2",
+  "main_rows": 180,
+  "extra_rows": 36,
+  "expected_main_targets": 456,
+  "expected_extra_targets": 144,
+  "main_completed": 0,
+  "main_remaining": 180,
+  "extra_completed": 0,
+  "extra_remaining": 36,
+  "warmup_s": 10,
+  "duration_s": 30,
+  "cooldown_s": 10,
+  "max_gpu_temp_c": 80,
+  "batch_start_temp_c": 55,
+  "batch_size": 12,
+  "fail_fast": true
+}
+```
+
+正式采集尚未在本工作树启动：当前实现和 README 仍未由用户提交，按不可混合 provenance 的规则不能让未提交源码进入正式数据。提交后运行上面的非 `PreflightOnly` 命令；最终验收将把 216/216、600 行 truth、图表和独立复核的真实输出补入本节。
 
 ### Step 9：构建模型数据集
 
@@ -2528,9 +2581,9 @@ total                                           720
 
 `smoke.yaml` 只用于在正式采集前验证游戏资源、自动输入、进程生命周期、CUDA benchmark 同步和数据 schema，不生成模型样本，也不构成缩小版实验。正式结果只接受 `formal-v1` 的完整组合 manifest。
 
-## 14. 最终流程（当前实现至 Step 7）
+## 14. 最终流程（当前实现至 Step 8 的采集前预检）
 
-Safety-v2 Step 7 已真实完成并通过 12/12 独立复核。当前应提交并上传 `data/raw/safety-v2-s30/`、`data/interim/formal-v1/safety-v2/`、`artifacts/profiles/step7/safety-v2/` 和本 README，然后停在本阶段；下一次继续实现 Step 8 的 60 个主组合与 12 个额外测试组合。以下命令保留为 Step 7 的只读预检/断点恢复入口，当前 `480/480` 状态无需再次运行长负载：
+Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；Step 8 的 truth 构建、独立复核与安全采集入口已实现，并已通过只读预检。当前应提交并上传本阶段的 `gaugur_lite/colocation.py`、CLI、Step 8 scripts、tests 和 README；提交完成后再运行 Step 8 的真实 216-run 采集。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载：
 
 ```powershell
 conda activate gaugur-lite
@@ -2546,7 +2599,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_step7_final.ps1
 ```
 
-旧的 `run_step7_safety_calibration.ps1`、`run_step7_calibration_confirmation.ps1`、`run_step7_candidate003_calibration.ps1` 和 `run_step7_candidate004_calibration.ps1` 只用于重算历史候选，不再是正式路线。最终命令不会启动第三轮校准，也不覆盖已有结果：pooled 来源或哈希不一致、任何 invalid attempt、温控中止或源码变化都会停止并保留现场；profile 按计划和源码身份安全 `--resume`。Step 8 及其后的命令会在各自实现阶段写入本节。
+旧的 `run_step7_safety_calibration.ps1`、`run_step7_calibration_confirmation.ps1`、`run_step7_candidate003_calibration.ps1` 和 `run_step7_candidate004_calibration.ps1` 只用于重算历史候选，不再是正式路线。最终命令不会启动第三轮校准，也不覆盖已有结果：pooled 来源或哈希不一致、任何 invalid attempt、温控中止或源码变化都会停止并保留现场；profile 按计划和源码身份安全 `--resume`。Step 8 的正式入口是 `run_step8_final.ps1`，它同样维持 source-tree、root commit、温控、窗口和 artifact 哈希的质量门。
 
 ## 15. 测试策略
 
