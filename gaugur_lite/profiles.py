@@ -12,6 +12,11 @@ from typing import Any
 
 from .benchmarks.calibration import CALIBRATION_TIMING_SEMANTICS
 from .benchmarks.protocol import (
+    CANDIDATE003_BENCHMARK_PROTOCOL,
+    POOLED_CALIBRATION_PROTOCOL,
+    POOLED_CALIBRATION_REPEATS,
+    POOLED_CAMPAIGN_DRIFT_THRESHOLD_PCT,
+    POOLED_DENOMINATOR_RSE_THRESHOLD_PCT,
     STABLE_BENCHMARK_PROTOCOL,
     STABLE_CALIBRATION_DURATION_S,
     STABLE_CALIBRATION_REPEATS,
@@ -502,13 +507,25 @@ def _load_standalone_benchmarks(
     request = payload.get("request", {})
     pressure_caps = dict(expected_pressure_caps or _IDENTITY_PRESSURE_CAPS)
     benchmark_protocol = request.get("benchmark_protocol")
-    if benchmark_protocol not in (None, STABLE_BENCHMARK_PROTOCOL):
+    if benchmark_protocol not in (
+        None,
+        STABLE_BENCHMARK_PROTOCOL,
+        POOLED_CALIBRATION_PROTOCOL,
+    ):
         raise ProfileError(f"未知 calibration benchmark_protocol: {benchmark_protocol}")
     stable_protocol = benchmark_protocol == STABLE_BENCHMARK_PROTOCOL
+    pooled_protocol = benchmark_protocol == POOLED_CALIBRATION_PROTOCOL
+    pooled_source_hashes: dict[int, str] = {}
     effective_cv_threshold_pct = (
-        STABLE_DENOMINATOR_CV_THRESHOLD_PCT if stable_protocol else cv_threshold_pct
+        STABLE_DENOMINATOR_CV_THRESHOLD_PCT
+        if stable_protocol or pooled_protocol
+        else cv_threshold_pct
     )
-    calibration_repeats = STABLE_CALIBRATION_REPEATS if stable_protocol else 3
+    calibration_repeats = (
+        POOLED_CALIBRATION_REPEATS
+        if pooled_protocol
+        else STABLE_CALIBRATION_REPEATS if stable_protocol else 3
+    )
     calibration_repeat_ids = set(range(1, calibration_repeats + 1))
     expected_request = {
         "cpu_workers": 8,
@@ -550,6 +567,46 @@ def _load_standalone_benchmarks(
         or not payload.get("execution", {}).get("source_tree_sha256")
     ):
         raise ProfileError("Candidate 004 benchmark 时序、provenance 或 confirmation 合同非法")
+    if pooled_protocol:
+        quality = payload.get("quality", {})
+        criteria = quality.get("criteria", {})
+        compatibility = payload.get("compatibility", {})
+        source_campaigns = payload.get("source_campaigns", [])
+        derivation = payload.get("derivation", {})
+        if (
+            float(request.get("warmup_s", -1)) != STABLE_CALIBRATION_WARMUP_S
+            or float(request.get("duration_s", -1)) != STABLE_CALIBRATION_DURATION_S
+            or confirmation_path is not None
+            or quality.get("status") != "passed"
+            or quality.get("nonzero_cell_count") != 16
+            or float(criteria.get("throughput_cv_max_pct", -1))
+            != STABLE_DENOMINATOR_CV_THRESHOLD_PCT
+            or float(criteria.get("throughput_standard_error_max_pct", -1))
+            != POOLED_DENOMINATOR_RSE_THRESHOLD_PCT
+            or float(criteria.get("campaign_mean_drift_max_pct", -1))
+            != POOLED_CAMPAIGN_DRIFT_THRESHOLD_PCT
+            or compatibility.get("profile_worker_benchmark_protocol")
+            != STABLE_BENCHMARK_PROTOCOL
+            or not compatibility.get("benchmark_engine_sha256")
+            or [item.get("candidate") for item in source_campaigns] != [3, 4]
+            or any(item.get("status") != "rejected_as_standalone" for item in source_campaigns)
+            or derivation.get("post_hoc_method_amendment") is not True
+            or derivation.get("user_confirmed") is not True
+            or derivation.get("new_measurements_created") is not False
+            or derivation.get("complete_campaigns_only") is not True
+            or derivation.get("source_run_count") != 200
+            or derivation.get("selected_source_run_count") != 200
+            or derivation.get("selective_retry_or_cherry_picking") is not False
+        ):
+            raise ProfileError("pooled calibration 的来源、质量门或事后修订合同非法")
+        pooled_source_hashes = {
+            int(item["candidate"]): str(item.get("artifacts", {}).get("calibration_sha256"))
+            for item in source_campaigns
+        }
+        if set(pooled_source_hashes) != {3, 4} or any(
+            len(value) != 64 for value in pooled_source_hashes.values()
+        ):
+            raise ProfileError("pooled calibration 来源 calibration hash 非法")
     grouped: dict[tuple[str, float], list[dict[str, Any]]] = defaultdict(list)
     for run in payload.get("runs", []):
         resource = str(run.get("resource"))
@@ -567,11 +624,33 @@ def _load_standalone_benchmarks(
             or float(worker.get("elapsed_s", 0)) <= 0
         ):
             raise ProfileError(f"calibration worker 状态非法: {run.get('run_key')}")
-        if stable_protocol and not stable_benchmark_environment_valid(
-            worker.get("benchmark_environment"),
-            expected_protocol=STABLE_BENCHMARK_PROTOCOL,
+        expected_worker_protocol = (
+            str(run.get("source_benchmark_protocol"))
+            if pooled_protocol
+            else STABLE_BENCHMARK_PROTOCOL
+        )
+        if (stable_protocol or pooled_protocol) and not stable_benchmark_environment_valid(
+            worker.get("benchmark_environment"), expected_protocol=expected_worker_protocol
         ):
             raise ProfileError(f"calibration 原生线程合同非法: {run.get('run_key')}")
+        if pooled_protocol:
+            candidate = int(run.get("source_candidate", 0))
+            source_repeat = int(run.get("source_repeat", 0))
+            expected_candidate = 3 if repeat <= 5 else 4
+            expected_source_repeat = repeat if repeat <= 5 else repeat - 5
+            expected_source_protocol = (
+                CANDIDATE003_BENCHMARK_PROTOCOL
+                if candidate == 3
+                else STABLE_BENCHMARK_PROTOCOL
+            )
+            if (
+                candidate != expected_candidate
+                or source_repeat != expected_source_repeat
+                or expected_worker_protocol != expected_source_protocol
+                or not run.get("source_run_key")
+                or run.get("source_calibration_sha256") != pooled_source_hashes[candidate]
+            ):
+                raise ProfileError(f"pooled calibration 来源映射非法: {run.get('run_key')}")
         operations = int(worker.get("operations", -1))
         if (pressure == 0 and operations != 0) or (pressure > 0 and operations <= 0):
             raise ProfileError(f"calibration operations 非法: {run.get('run_key')}")
@@ -581,6 +660,13 @@ def _load_standalone_benchmarks(
         for items in grouped.values()
     ):
         raise ProfileError(f"calibration 未完整覆盖 4×5×{calibration_repeats}")
+    if pooled_protocol and len(
+        {
+            (int(run.get("source_candidate", 0)), str(run.get("source_run_key")))
+            for run in payload.get("runs", [])
+        }
+    ) != 200:
+        raise ProfileError("pooled calibration 不是 200 个唯一 campaign/run 来源")
 
     result: dict[tuple[str, float], dict[str, Any]] = {}
     unstable: dict[tuple[str, float], dict[str, Any]] = {}
@@ -626,7 +712,61 @@ def _load_standalone_benchmarks(
             unstable[(resource, pressure)] = result[(resource, pressure)]
 
     confirmation_payload: dict[str, Any] | None = None
-    if unstable:
+    if pooled_protocol:
+        stored_cells = {
+            (str(cell.get("resource")), float(cell.get("pressure_requested", -1))): cell
+            for cell in payload.get("quality", {}).get("cells", [])
+        }
+        if set(stored_cells) != set(result):
+            raise ProfileError("pooled calibration quality 未完整覆盖 20 个单元")
+        max_rse = 0.0
+        max_drift = 0.0
+        for key, cell in result.items():
+            items = sorted(grouped[key], key=lambda item: int(item["repeat"]))
+            stored = stored_cells[key]
+            if key[1] == 0:
+                rse = drift = None
+                campaign_means: list[float] = []
+            else:
+                values = cell["throughputs_ops_per_s"]
+                campaign_means = [statistics.fmean(values[:5]), statistics.fmean(values[5:])]
+                rse = float(cell["throughput_cv_pct"]) / math.sqrt(10)
+                drift = abs(campaign_means[1] - campaign_means[0]) / statistics.fmean(campaign_means) * 100
+                max_rse = max(max_rse, rse)
+                max_drift = max(max_drift, drift)
+            if (
+                stored.get("status") != "passed"
+                or stored.get("throughputs_ops_per_s") != cell["throughputs_ops_per_s"]
+                or stored.get("campaign_mean_ops_per_s") != campaign_means
+                or stored.get("throughput_mean_ops_per_s") != cell["throughput_mean_ops_per_s"]
+                or stored.get("throughput_sample_std_ops_per_s") != cell["throughput_sample_std_ops_per_s"]
+                or stored.get("throughput_cv_pct") != cell["throughput_cv_pct"]
+                or stored.get("throughput_standard_error_pct") != rse
+                or stored.get("campaign_mean_drift_pct") != drift
+            ):
+                raise ProfileError(f"pooled calibration quality 重算不一致: {key[0]}/{key[1]}")
+            cell["throughput_standard_error_pct"] = rse
+            cell["campaign_mean_drift_pct"] = drift
+            cell["source_candidates"] = [int(item["source_candidate"]) for item in items]
+        if unstable:
+            first_key = sorted(unstable)[0]
+            raise ProfileError(
+                f"pooled benchmark 吞吐 CV 超限: {first_key[0]}/{first_key[1]}="
+                f"{unstable[first_key]['throughput_cv_pct']:.3f}%"
+            )
+        if max_rse > POOLED_DENOMINATOR_RSE_THRESHOLD_PCT:
+            raise ProfileError(f"pooled benchmark RSE 超限: {max_rse:.3f}%")
+        if max_drift > POOLED_CAMPAIGN_DRIFT_THRESHOLD_PCT:
+            raise ProfileError(f"pooled benchmark campaign drift 超限: {max_drift:.3f}%")
+        quality = payload["quality"]
+        if (
+            quality.get("maximum_throughput_cv_pct")
+            != max(float(item["throughput_cv_pct"]) for item in result.values() if item["throughput_cv_pct"] is not None)
+            or quality.get("maximum_throughput_standard_error_pct") != max_rse
+            or quality.get("maximum_campaign_mean_drift_pct") != max_drift
+        ):
+            raise ProfileError("pooled calibration 汇总最大值重算不一致")
+    elif unstable:
         first_key = sorted(unstable)[0]
         first_cv = unstable[first_key]["throughput_cv_pct"]
         if confirmation_path is None:
@@ -737,6 +877,12 @@ def _load_standalone_benchmarks(
     returned_payload = dict(payload)
     returned_payload["denominator_repeat_count"] = calibration_repeats
     returned_payload["denominator_cv_threshold_pct"] = effective_cv_threshold_pct
+    returned_payload["denominator_standard_error_threshold_pct"] = (
+        POOLED_DENOMINATOR_RSE_THRESHOLD_PCT if pooled_protocol else None
+    )
+    returned_payload["denominator_campaign_drift_threshold_pct"] = (
+        POOLED_CAMPAIGN_DRIFT_THRESHOLD_PCT if pooled_protocol else None
+    )
     returned_payload["denominator_confirmation"] = (
         {
             "sha256": _file_sha256(confirmation_path),
@@ -803,6 +949,16 @@ def audit_profile_inputs(
         for item in standalone.values()
         if item["throughput_cv_pct"] is not None
     ]
+    nonzero_rses = [
+        float(item["throughput_standard_error_pct"])
+        for item in standalone.values()
+        if item.get("throughput_standard_error_pct") is not None
+    ]
+    nonzero_drifts = [
+        float(item["campaign_mean_drift_pct"])
+        for item in standalone.values()
+        if item.get("campaign_mean_drift_pct") is not None
+    ]
     return {
         "schema_version": 1,
         "status": "passed",
@@ -836,6 +992,18 @@ def audit_profile_inputs(
         "standalone_throughput_cv_max_pct": max(nonzero_cvs),
         "standalone_throughput_cv_threshold_pct": calibration.get(
             "denominator_cv_threshold_pct", benchmark_cv_threshold_pct
+        ),
+        "standalone_throughput_standard_error_max_pct": (
+            max(nonzero_rses) if nonzero_rses else None
+        ),
+        "standalone_throughput_standard_error_threshold_pct": calibration.get(
+            "denominator_standard_error_threshold_pct"
+        ),
+        "standalone_campaign_mean_drift_max_pct": (
+            max(nonzero_drifts) if nonzero_drifts else None
+        ),
+        "standalone_campaign_mean_drift_threshold_pct": calibration.get(
+            "denominator_campaign_drift_threshold_pct"
         ),
     }
 
@@ -1162,7 +1330,12 @@ def compute_profiles(
         calibration_payload.get("request", {}).get("benchmark_protocol")
         == STABLE_BENCHMARK_PROTOCOL
     )
+    pooled_protocol = (
+        calibration_payload.get("request", {}).get("benchmark_protocol")
+        == POOLED_CALIBRATION_PROTOCOL
+    )
     calibration_execution = calibration_payload.get("execution", {})
+    pooled_compatibility = calibration_payload.get("compatibility", {})
     plan_manifest = _read_json(plan_file.with_name(f"{plan_file.stem}-manifest.json"))
     checks = {
         "plan_verified": True,
@@ -1173,12 +1346,21 @@ def compute_profiles(
         "three_repeats_per_cell": set(Counter((item["workload_id"], item["resource"], item["pressure_requested"]) for item in records).values()) == {3},
         "single_profile_source_tree": len(source_hashes) == 1,
         "single_profile_root_commit": len(root_commits) == 1,
-        "stable_benchmark_protocol": not stable_protocol
+        "stable_benchmark_protocol": not (stable_protocol or pooled_protocol)
         or all(item["benchmark_native_thread_contract_valid"] for item in records),
-        "calibration_profile_source_match": not stable_protocol
-        or (
-            source_hashes == [str(calibration_execution.get("source_tree_sha256"))]
-            and root_commits == [str(calibration_execution.get("root_commit"))]
+        "calibration_profile_source_match": (
+            (
+                _file_sha256(repo_root / "gaugur_lite" / "benchmarks" / "engine.py")
+                == pooled_compatibility.get("benchmark_engine_sha256")
+                and pooled_compatibility.get("profile_worker_benchmark_protocol")
+                == STABLE_BENCHMARK_PROTOCOL
+            )
+            if pooled_protocol
+            else not stable_protocol
+            or (
+                source_hashes == [str(calibration_execution.get("source_tree_sha256"))]
+                and root_commits == [str(calibration_execution.get("root_commit"))]
+            )
         ),
         "pressure_zero_retention_near_one": max_zero_deviation <= pressure_zero_tolerance,
         "applied_observed_pressure_close": max_observed_error <= observed_pressure_tolerance,
@@ -1189,7 +1371,17 @@ def compute_profiles(
             for item in records
         ),
         "standalone_benchmark_stable": audit["standalone_throughput_cv_max_pct"]
-        <= audit["standalone_throughput_cv_threshold_pct"],
+        <= audit["standalone_throughput_cv_threshold_pct"]
+        and (
+            audit["standalone_throughput_standard_error_threshold_pct"] is None
+            or audit["standalone_throughput_standard_error_max_pct"]
+            <= audit["standalone_throughput_standard_error_threshold_pct"]
+        )
+        and (
+            audit["standalone_campaign_mean_drift_threshold_pct"] is None
+            or audit["standalone_campaign_mean_drift_max_pct"]
+            <= audit["standalone_campaign_mean_drift_threshold_pct"]
+        ),
         "sensitivity_and_intensity_both_present": all(item["sensitivity_mean"] is not None and (item["pressure_requested"] == 0 or item["intensity_slowdown_mean"] is not None) for item in aggregates),
         "nonlinearity_and_correlation_analyzed": analysis["curve_count"] == 32,
     }
@@ -1210,6 +1402,12 @@ def compute_profiles(
             "system_coverage_min": 0.95,
             "workload_overlap_min": 0.95,
             "benchmark_cv_max_pct": audit["standalone_throughput_cv_threshold_pct"],
+            "benchmark_standard_error_max_pct": audit[
+                "standalone_throughput_standard_error_threshold_pct"
+            ],
+            "benchmark_campaign_mean_drift_max_pct": audit[
+                "standalone_campaign_mean_drift_threshold_pct"
+            ],
             "pressure_zero_retention_abs_deviation_max": pressure_zero_tolerance,
             "applied_observed_pressure_abs_error_max": observed_pressure_tolerance,
             "gpu_temperature_max_c": audit["gpu_temperature_max_c"],
@@ -1246,6 +1444,12 @@ def compute_profiles(
         "max_pressure_zero_retention_abs_deviation": max_zero_deviation,
         "max_applied_observed_pressure_abs_error": max_observed_error,
         "standalone_throughput_cv_max_pct": audit["standalone_throughput_cv_max_pct"],
+        "standalone_throughput_standard_error_max_pct": audit[
+            "standalone_throughput_standard_error_max_pct"
+        ],
+        "standalone_campaign_mean_drift_max_pct": audit[
+            "standalone_campaign_mean_drift_max_pct"
+        ],
         "curves": curves,
         "analysis": analysis,
         "checks": checks,

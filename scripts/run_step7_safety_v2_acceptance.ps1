@@ -18,14 +18,10 @@ else {
 $plan = Join-Path $repoRoot 'artifacts\plans\formal-v1-safety-v2-s30.csv'
 $baselinePlan = Join-Path $repoRoot 'artifacts\plans\formal-v1.csv'
 $solo = Join-Path $repoRoot 'data\interim\formal-v1\solo-baselines.json'
-$calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2.json'
-$calibrationAcceptance = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-acceptance.json'
-$calibrationMetrics = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-metrics.jsonl'
-$calibrationStatus = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-status.json'
-$calibrationWorkers = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-workers'
-$calibrationPlot = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\pressure-calibration-stable-v2.png'
-$calibrationVerification = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-stable-v2-verification.json'
+$calibration = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-pooled-v3.json'
+$calibrationAcceptance = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\formal-calibration-pooled-v3-acceptance.json'
 $candidate003Audit = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\rejected-candidate-003-audit.json'
+$candidate004Audit = Join-Path $repoRoot 'artifacts\calibration\step7-safety-v2\rejected-candidate-004-audit.json'
 $artifactRoot = Join-Path $repoRoot 'artifacts\profiles\step7\safety-v2'
 $invocationRoot = Join-Path $artifactRoot 'invocations'
 $plotRoot = Join-Path $artifactRoot 'plots'
@@ -45,33 +41,6 @@ function Get-GpuTemperature {
         throw 'nvidia-smi temperature query failed.'
     }
     return [int]$raw[0].Trim()
-}
-
-function Get-DirectoryTreeSha256 {
-    param([Parameter(Mandatory = $true)][string]$Directory)
-
-    $rootPath = [System.IO.Path]::GetFullPath($Directory).TrimEnd('\')
-    $files = @(Get-ChildItem -LiteralPath $rootPath -Recurse -File | Sort-Object FullName)
-    $lines = foreach ($file in $files) {
-        if (-not $file.FullName.StartsWith("$rootPath\", [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Calibration artifact escaped the expected root: $($file.FullName)"
-        }
-        $relative = $file.FullName.Substring($rootPath.Length + 1).Replace('\', '/')
-        $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        "$relative`t$hash"
-    }
-    $payload = if ($lines.Count -gt 0) { ($lines -join "`n") + "`n" } else { '' }
-    $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    try {
-        $digest = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
-    }
-    finally {
-        $sha256.Dispose()
-    }
-    return [pscustomobject]@{
-        file_count = $files.Count
-        sha256 = ([System.BitConverter]::ToString($digest)).Replace('-', '').ToLowerInvariant()
-    }
 }
 
 function Wait-GpuCool {
@@ -104,17 +73,11 @@ $required = @(
     $solo,
     $calibration,
     $calibrationAcceptance,
-    $calibrationMetrics,
-    $calibrationStatus,
-    $calibrationPlot,
-    $calibrationVerification,
     $candidate003Audit,
+    $candidate004Audit,
     $idleTemperatureAmendment
 )
 $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
-if (-not (Test-Path -LiteralPath $calibrationWorkers -PathType Container)) {
-    $missing += $calibrationWorkers
-}
 if ($missing.Count -gt 0) {
     throw "Missing safety-v2 inputs: $($missing -join ', ')"
 }
@@ -142,27 +105,35 @@ try {
             -or $planHash -ne [string]$temperatureProtocol.formal_plan_sha256) {
         throw 'Safety-v2 idle-temperature amendment hash binding failed.'
     }
+    Write-Host '[Safety-v2] Recomputing the pooled calibration from both complete source campaigns...'
+    python scripts\prepare_step7_pooled_calibration.py --verify-only
+    if ($LASTEXITCODE -ne 0) {
+        throw "Pooled calibration verification failed with exit code $LASTEXITCODE"
+    }
     $candidateAcceptance = Get-Content -LiteralPath $calibrationAcceptance -Raw | ConvertFrom-Json
     $calibrationHash = (Get-FileHash -LiteralPath $calibration -Algorithm SHA256).Hash.ToLowerInvariant()
-    $workerTree = Get-DirectoryTreeSha256 -Directory $calibrationWorkers
     if ($candidateAcceptance.status -ne 'passed' `
-            -or [int]$candidateAcceptance.candidate -ne 4 `
-            -or $candidateAcceptance.benchmark_protocol -ne 'native_threads_1_warmup5_duration15_repeats5_cv10_v2' `
-            -or [int]$candidateAcceptance.cell_count -ne 100 `
-            -or [int]$candidateAcceptance.denominator_repeat_count -ne 5 `
+            -or $candidateAcceptance.candidate -ne 'pooled-v3-post-hoc-amendment' `
+            -or $candidateAcceptance.benchmark_protocol -ne 'pooled_full_campaigns_2x5_cv10_rse5_drift10_v3' `
+            -or [int]$candidateAcceptance.cell_count -ne 200 `
+            -or [int]$candidateAcceptance.denominator_repeat_count -ne 10 `
             -or [double]$candidateAcceptance.denominator_cv_threshold_pct -ne 10 `
             -or [double]$candidateAcceptance.denominator_cv_max_pct -gt 10 `
-            -or $candidateAcceptance.candidate003_reused -ne $false `
+            -or [double]$candidateAcceptance.denominator_standard_error_threshold_pct -ne 5 `
+            -or [double]$candidateAcceptance.denominator_standard_error_max_pct -gt 5 `
+            -or [double]$candidateAcceptance.campaign_mean_drift_threshold_pct -ne 10 `
+            -or [double]$candidateAcceptance.campaign_mean_drift_max_pct -gt 10 `
+            -or $candidateAcceptance.post_hoc_method_amendment -ne $true `
+            -or $candidateAcceptance.user_confirmed -ne $true `
+            -or $candidateAcceptance.new_measurements_created -ne $false `
+            -or $candidateAcceptance.all_200_source_runs_used -ne $true `
+            -or $candidateAcceptance.selective_retry_or_cherry_picking -ne $false `
             -or $candidateAcceptance.candidate003_rejection_audit_sha256 -ne (Get-FileHash -LiteralPath $candidate003Audit -Algorithm SHA256).Hash.ToLowerInvariant() `
+            -or $candidateAcceptance.candidate004_rejection_audit_sha256 -ne (Get-FileHash -LiteralPath $candidate004Audit -Algorithm SHA256).Hash.ToLowerInvariant() `
             -or $candidateAcceptance.calibration_sha256 -ne $calibrationHash `
-            -or $candidateAcceptance.metrics_sha256 -ne (Get-FileHash -LiteralPath $calibrationMetrics -Algorithm SHA256).Hash.ToLowerInvariant() `
-            -or $candidateAcceptance.status_sha256 -ne (Get-FileHash -LiteralPath $calibrationStatus -Algorithm SHA256).Hash.ToLowerInvariant() `
-            -or [int]$candidateAcceptance.worker_file_count -ne 400 `
-            -or [int]$workerTree.file_count -ne 400 `
-            -or $candidateAcceptance.worker_tree_sha256 -ne [string]$workerTree.sha256 `
-            -or $candidateAcceptance.plot_sha256 -ne (Get-FileHash -LiteralPath $calibrationPlot -Algorithm SHA256).Hash.ToLowerInvariant() `
-            -or $candidateAcceptance.verification_sha256 -ne (Get-FileHash -LiteralPath $calibrationVerification -Algorithm SHA256).Hash.ToLowerInvariant()) {
-        throw 'Candidate004 acceptance or artifact hash binding failed.'
+            -or @($candidateAcceptance.source_campaigns).Count -ne 2 `
+            -or @($candidateAcceptance.source_campaigns | Where-Object { $_.standalone_status -ne 'rejected' -or [int]$_.worker_file_count -ne 400 }).Count -ne 0) {
+        throw 'Pooled calibration acceptance or artifact hash binding failed.'
     }
     $batchStartGpuTempMaxC = [int]$temperatureProtocol.revised_batch_start_gpu_temp_max_c
 
@@ -185,10 +156,14 @@ try {
     if ($audit.baseline_contract -ne 'safety_v2_capped_gpu_compute' `
             -or [double]$audit.gpu_temperature_max_c -ne 80 `
             -or [double]$audit.pressure_caps.gpu_compute -ne 0.25 `
-            -or $audit.calibration_benchmark_protocol -ne 'native_threads_1_warmup5_duration15_repeats5_cv10_v2' `
-            -or [int]$audit.standalone_repeat_count -ne 5 `
+            -or $audit.calibration_benchmark_protocol -ne 'pooled_full_campaigns_2x5_cv10_rse5_drift10_v3' `
+            -or [int]$audit.standalone_repeat_count -ne 10 `
             -or [double]$audit.standalone_throughput_cv_threshold_pct -ne 10 `
             -or [double]$audit.standalone_throughput_cv_max_pct -gt 10 `
+            -or [double]$audit.standalone_throughput_standard_error_threshold_pct -ne 5 `
+            -or [double]$audit.standalone_throughput_standard_error_max_pct -gt 5 `
+            -or [double]$audit.standalone_campaign_mean_drift_threshold_pct -ne 10 `
+            -or [double]$audit.standalone_campaign_mean_drift_max_pct -gt 10 `
             -or $null -ne $audit.calibration_confirmation) {
         throw 'Unexpected safety-v2 audit contract.'
     }
@@ -212,6 +187,10 @@ try {
             gpu_compute_cap = 0.25
             benchmark_protocol = $audit.calibration_benchmark_protocol
             standalone_repeat_count = [int]$audit.standalone_repeat_count
+            standalone_cv_max_pct = [double]$audit.standalone_throughput_cv_max_pct
+            standalone_rse_max_pct = [double]$audit.standalone_throughput_standard_error_max_pct
+            campaign_drift_max_pct = [double]$audit.standalone_campaign_mean_drift_max_pct
+            post_hoc_method_amendment = $true
             fail_fast = $true
         } | ConvertTo-Json -Depth 3
         return

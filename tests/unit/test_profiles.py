@@ -3,7 +3,9 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
 import statistics
+from collections import defaultdict
 from pathlib import Path
 
 import pytest
@@ -22,6 +24,7 @@ from gaugur_lite.profiles import (
 )
 from gaugur_lite.benchmarks.protocol import (
     CANDIDATE003_BENCHMARK_PROTOCOL,
+    POOLED_CALIBRATION_PROTOCOL,
     STABLE_BENCHMARK_PROTOCOL,
     apply_stable_benchmark_environment,
     benchmark_environment_snapshot,
@@ -364,6 +367,197 @@ def _stable_calibration_payload() -> dict[str, object]:
         "source_tree_sha256": "b" * 64,
     }
     return payload
+
+
+def _pooled_calibration_payload() -> dict[str, object]:
+    """构造两轮完整 5-repeat campaign 的最小可审计合并样本。"""
+
+    payload = _stable_calibration_payload()
+    request = payload["request"]
+    assert isinstance(request, dict)
+    request.update({"benchmark_protocol": POOLED_CALIBRATION_PROTOCOL, "repeats": 10})
+    original = payload["runs"]
+    assert isinstance(original, list)
+    environment3: dict[str, str] = {}
+    apply_stable_benchmark_environment(
+        environment3, protocol=CANDIDATE003_BENCHMARK_PROTOCOL
+    )
+    snapshot3 = benchmark_environment_snapshot(environment3)
+    pooled_runs = []
+    for source in original:
+        for candidate in (3, 4):
+            run = json.loads(json.dumps(source))
+            source_repeat = int(source["repeat"])
+            repeat = source_repeat if candidate == 3 else source_repeat + 5
+            protocol = (
+                CANDIDATE003_BENCHMARK_PROTOCOL
+                if candidate == 3
+                else STABLE_BENCHMARK_PROTOCOL
+            )
+            run.update(
+                {
+                    "repeat": repeat,
+                    "run_key": f"pooled-{source['resource']}-{source['pressure_requested']}-{repeat}",
+                    "source_candidate": candidate,
+                    "source_repeat": source_repeat,
+                    "source_run_key": source["run_key"],
+                    "source_calibration_sha256": str(candidate) * 64,
+                    "source_benchmark_protocol": protocol,
+                }
+            )
+            if candidate == 3:
+                run["worker"]["benchmark_environment"] = snapshot3
+            pooled_runs.append(run)
+    payload["runs"] = pooled_runs
+    payload["cell_count"] = 200
+    payload["source_campaigns"] = [
+        {
+            "candidate": 3,
+            "status": "rejected_as_standalone",
+            "artifacts": {"calibration_sha256": "3" * 64},
+        },
+        {
+            "candidate": 4,
+            "status": "rejected_as_standalone",
+            "artifacts": {"calibration_sha256": "4" * 64},
+        },
+    ]
+    payload["compatibility"] = {
+        "profile_worker_benchmark_protocol": STABLE_BENCHMARK_PROTOCOL,
+        "benchmark_engine_sha256": "e" * 64,
+    }
+    payload["derivation"] = {
+        "post_hoc_method_amendment": True,
+        "user_confirmed": True,
+        "new_measurements_created": False,
+        "complete_campaigns_only": True,
+        "source_run_count": 200,
+        "selected_source_run_count": 200,
+        "selective_retry_or_cherry_picking": False,
+    }
+    grouped: dict[tuple[str, float], list[dict[str, object]]] = defaultdict(list)
+    for run in pooled_runs:
+        grouped[(str(run["resource"]), float(run["pressure_requested"]))].append(run)
+    cells = []
+    for key in sorted(grouped):
+        runs = sorted(grouped[key], key=lambda item: int(item["repeat"]))
+        values = [] if key[1] == 0 else [
+            int(run["worker"]["operations"]) / float(run["worker"]["elapsed_s"])
+            for run in runs
+        ]
+        mean = statistics.fmean(values) if values else None
+        std = statistics.stdev(values) if values else None
+        cv = std / mean * 100 if values else None
+        campaign_means = (
+            [statistics.fmean(values[:5]), statistics.fmean(values[5:])]
+            if values
+            else []
+        )
+        rse = cv / math.sqrt(10) if cv is not None else None
+        drift = (
+            abs(campaign_means[1] - campaign_means[0])
+            / statistics.fmean(campaign_means)
+            * 100
+            if campaign_means
+            else None
+        )
+        cells.append(
+            {
+                "resource": key[0],
+                "pressure_requested": key[1],
+                "throughputs_ops_per_s": values,
+                "campaign_mean_ops_per_s": campaign_means,
+                "throughput_mean_ops_per_s": mean,
+                "throughput_sample_std_ops_per_s": std,
+                "throughput_cv_pct": cv,
+                "throughput_standard_error_pct": rse,
+                "campaign_mean_drift_pct": drift,
+                "status": "passed",
+            }
+        )
+    nonzero = [cell for cell in cells if cell["throughput_cv_pct"] is not None]
+    payload["quality"] = {
+        "status": "passed",
+        "nonzero_cell_count": 16,
+        "criteria": {
+            "throughput_cv_max_pct": 10.0,
+            "throughput_standard_error_max_pct": 5.0,
+            "campaign_mean_drift_max_pct": 10.0,
+        },
+        "maximum_throughput_cv_pct": max(cell["throughput_cv_pct"] for cell in nonzero),
+        "maximum_throughput_standard_error_pct": max(
+            cell["throughput_standard_error_pct"] for cell in nonzero
+        ),
+        "maximum_campaign_mean_drift_pct": max(
+            cell["campaign_mean_drift_pct"] for cell in nonzero
+        ),
+        "cells": cells,
+    }
+    return payload
+
+
+def test_pooled_calibration_accepts_all_two_hundred_source_runs(tmp_path: Path) -> None:
+    path = tmp_path / "pooled.json"
+    path.write_text(json.dumps(_pooled_calibration_payload()), encoding="utf-8")
+
+    cells, returned = _load_standalone_benchmarks(
+        path=path,
+        cv_threshold_pct=5.0,
+        expected_pressure_caps={
+            "cpu_compute": 1.0,
+            "memory_bandwidth": 1.0,
+            "gpu_compute": 0.25,
+            "gpu_memory": 1.0,
+        },
+    )
+
+    assert returned["denominator_repeat_count"] == 10
+    assert returned["denominator_standard_error_threshold_pct"] == 5.0
+    assert returned["denominator_campaign_drift_threshold_pct"] == 10.0
+    assert len(cells[("gpu_compute", 0.25)]["throughputs_ops_per_s"]) == 10
+    assert cells[("gpu_compute", 0.25)]["source_candidates"] == [3] * 5 + [4] * 5
+
+
+def test_pooled_calibration_rejects_incomplete_campaign_mapping(tmp_path: Path) -> None:
+    payload = _pooled_calibration_payload()
+    runs = payload["runs"]
+    assert isinstance(runs, list)
+    runs[0]["source_candidate"] = 4
+    path = tmp_path / "pooled.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ProfileError, match="来源映射非法"):
+        _load_standalone_benchmarks(
+            path=path,
+            cv_threshold_pct=5.0,
+            expected_pressure_caps={
+                "cpu_compute": 1.0,
+                "memory_bandwidth": 1.0,
+                "gpu_compute": 0.25,
+                "gpu_memory": 1.0,
+            },
+        )
+
+
+def test_pooled_calibration_rejects_tampered_quality_summary(tmp_path: Path) -> None:
+    payload = _pooled_calibration_payload()
+    quality = payload["quality"]
+    assert isinstance(quality, dict)
+    quality["maximum_campaign_mean_drift_pct"] = 9.0
+    path = tmp_path / "pooled.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ProfileError, match="最大值重算不一致"):
+        _load_standalone_benchmarks(
+            path=path,
+            cv_threshold_pct=5.0,
+            expected_pressure_caps={
+                "cpu_compute": 1.0,
+                "memory_bandwidth": 1.0,
+                "gpu_compute": 0.25,
+                "gpu_memory": 1.0,
+            },
+        )
 
 
 def test_candidate004_accepts_exact_five_repeats_and_native_thread_contract(
