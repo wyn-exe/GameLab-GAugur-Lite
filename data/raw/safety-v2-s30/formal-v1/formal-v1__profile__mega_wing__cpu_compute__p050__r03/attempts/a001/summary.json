@@ -1,0 +1,228 @@
+{
+  "artifact_sha256": {
+    "barrier.json": "32d92966d1f025a2561c95a3b4027e0f2d296e7ce074e9cf4ae60b6c2deffb0e",
+    "benchmark/ready.json": "fcf70e00d20d35046186ad2d209f4a3be7e9362cb5126f9e90ab7978cd4ad449",
+    "benchmark/status.json": "13a71d7ba0bd231d1cc2eb59dc583733c76b17e9c9565e6ab20e973e49575286",
+    "benchmark/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "benchmark/stdout.log": "a687ec8c3d73cfe3e42fc57c7fae1f6afd5642f2815c3dcf28780153f88c25fd",
+    "cooldown.jsonl": "5a1b84ba7315b5d29fe8f86d1f556c80bca9736562368e263fadf6df6bd229b5",
+    "layout.json": "1a6bc2ca3e4778a5814636794dda7872c6d737e9f6454ff11db1125375f6955b",
+    "manifest.json": "1b71eccecb3f8969729345247f0a2f59d9f2280058127aa532554cf552fcd7a6",
+    "system_metrics.jsonl": "3bbefaf3f9567004b7e3b591dd8f9cc66a1e7b6f18c8aff0e44eb982894757f0",
+    "window_observations.jsonl": "dc13c35147003af5ce63d060f4cf51db8285756cb37ebba0f02fbc793f22ae36",
+    "workloads/mega_wing/game_metrics.jsonl": "3a13a6458e0c643c3bc67741c857c2407c38c508fb09090571ac42e0527efa2a",
+    "workloads/mega_wing/heartbeat.json": "ae2c0fb5b6855a91f6d3d77d4a889f352e0692ec49021f0f8b2809473853e3de",
+    "workloads/mega_wing/measurement-start.json": "5a8f512d907749a222dc3e57c434f344e77661356d0117c2681a51f9bf398ca1",
+    "workloads/mega_wing/ready.json": "7efe42b9c688da03d068874ff51ea10bd2ed07d0253868e61cb166b125f0dd04",
+    "workloads/mega_wing/status.json": "435d86965e1e4af4c329a0be686a5330be0302107b243fcf93d06a09726d9894",
+    "workloads/mega_wing/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/mega_wing/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/mega_wing/stop.json": "9383e738db6554437239a5bbc5a3c04c85ee127cf4b08112f7e70d2c4ec21356",
+    "workloads/mega_wing/summary.json": "c7843af7347a475bbd4ac4802a186a26f4cc5c2e6c9e2d450eb29027cebee2a6"
+  },
+  "attempt": 1,
+  "benchmark": {
+    "active_fraction": 0.5027298595958009,
+    "active_s": 15.081907300387684,
+    "allocated_bytes": 0,
+    "barrier_used": true,
+    "barrier_wait_s": 0.7395501999999397,
+    "benchmark_environment": {
+      "environment": {
+        "BLIS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": "1"
+      },
+      "native_thread_limit": 1,
+      "protocol": "native_threads_1_warmup5_duration15_repeats5_cv10_v2"
+    },
+    "capacity_bytes": 0,
+    "duty_cycle_s": 0.25,
+    "elapsed_s": 30.00002289999975,
+    "finished_wall_time_ns": 1786939932936894200,
+    "measurement_end_monotonic_ns": 46397644742100,
+    "measurement_start_monotonic_ns": 46367644702200,
+    "operations": 4903665664,
+    "pid": 21688,
+    "planned_measurement_end_monotonic_ns": 46397644234900,
+    "planned_measurement_start_monotonic_ns": 46367644234900,
+    "pressure_requested": 0.5,
+    "resource": "cpu_compute",
+    "schema_version": 1,
+    "sleep_s": 14.845495000045048,
+    "started_wall_time_ns": 1786939892216888900,
+    "status": "completed",
+    "warmup_active_s": 5.022766699970816,
+    "warmup_elapsed_s": 9.974665800000366,
+    "warmup_operations": 1725431808,
+    "warmup_sleep_s": 4.93188840001676
+  },
+  "cleanup": {
+    "actions": [],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 10.02868120000494,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 50.0,
+    "samples": 11,
+    "thermal_target_c": 70.0,
+    "thermal_target_reached": true
+  },
+  "external_occlusion_checked": false,
+  "gpu_temp_c_max": 52.0,
+  "gpu_temp_limit_c": 80.0,
+  "gpu_thermal_slowdown_seen": false,
+  "measurement_end_monotonic_ns": 46397644234900,
+  "measurement_start_monotonic_ns": 46367644234900,
+  "mode": "pressure_profile",
+  "pressure_applied": 0.5,
+  "pressure_requested": 0.5,
+  "resource": "cpu_compute",
+  "run_id": "formal-v1__profile__mega_wing__cpu_compute__p050__r03",
+  "schema_version": 1,
+  "split": "not_applicable",
+  "stage": "profile",
+  "status": "completed",
+  "system_coverage_ratio": 0.9994999999999999,
+  "system_coverage_s": 29.985,
+  "system_sample_count": 31,
+  "valid": true,
+  "window_sample_count": 31,
+  "windows_pairwise_nonoverlap": true,
+  "workload_ids": [
+    "mega_wing"
+  ],
+  "workload_overlap_ratio": 1.0,
+  "workload_overlap_s": 30.0003108,
+  "workloads": [
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.09048790000088047,
+      "controller": "mega_wing_patrol_v1",
+      "controller_trace_sha256": "8bb4d91eb57f88ae5163483edfbd96678c422ab113ec83e28390d8f9fa1b2e0d",
+      "display_scale": 2,
+      "draw_count": 1202,
+      "draw_interval_ms": {
+        "count": 900,
+        "max": 40.2807,
+        "mean": 33.322685,
+        "min": 25.8248,
+        "p95": 35.3232
+      },
+      "draw_time_ms": {
+        "count": 901,
+        "max": 0.671,
+        "mean": 0.05244605993340733,
+        "min": 0.0184,
+        "p95": 0.1449
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.1457501,
+      "entrypoint": "games/pyxel/apps-src/mega_wing/mega_wing.py",
+      "game_fps": {
+        "count": 29,
+        "max": 30.969940575677246,
+        "mean": 30.032707261495457,
+        "min": 29.939205449414416,
+        "p05": 29.955146516419383,
+        "p95": 30.06251840117054,
+        "windows_used": 29
+      },
+      "headless": false,
+      "logical_height": 160,
+      "logical_width": 120,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 30.035139400000013,
+      "measurement_finished_monotonic_ns": 46397670824500,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 46367670513700,
+      "metric_rows": 40,
+      "missed_deadline_count": 0,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 46397644234900,
+      "planned_measurement_start_monotonic_ns": 46367644234900,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 1202,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 1202,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 30,
+            "name": "target_fps_matches_registry",
+            "passed": true,
+            "threshold": 30
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "run_id": "formal-v1__profile__mega_wing__cpu_compute__p050__r03",
+      "schema_version": 1,
+      "seed": 1007,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 30,
+      "title": "Mega Wing",
+      "update_count": 1202,
+      "update_time_ms": {
+        "count": 901,
+        "max": 3.2681,
+        "mean": 0.12688856825749167,
+        "min": 0.0435,
+        "p95": 0.3101
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "mega_wing"
+    }
+  ]
+}

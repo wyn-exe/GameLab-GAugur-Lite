@@ -1,0 +1,125 @@
+{
+  "audio_mode": "muted",
+  "barrier_used": true,
+  "barrier_wait_s": 1.0122795999996015,
+  "controller": "mega_wing_patrol_v1",
+  "controller_trace_sha256": "8bb4d91eb57f88ae5163483edfbd96678c422ab113ec83e28390d8f9fa1b2e0d",
+  "display_scale": 2,
+  "draw_count": 1202,
+  "draw_interval_ms": {
+    "count": 900,
+    "max": 38.7789,
+    "mean": 33.31986722222222,
+    "min": 16.923,
+    "p95": 35.1283
+  },
+  "draw_time_ms": {
+    "count": 901,
+    "max": 2.9437,
+    "mean": 0.13380899001109878,
+    "min": 0.0178,
+    "p95": 0.2681
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 41.0571042,
+  "entrypoint": "games/pyxel/apps-src/mega_wing/mega_wing.py",
+  "game_fps": {
+    "count": 29,
+    "max": 30.977792020900218,
+    "mean": 30.033194238774506,
+    "min": 29.937517407418976,
+    "p05": 29.962139840098054,
+    "p95": 30.062139411910856,
+    "windows_used": 29
+  },
+  "headless": false,
+  "logical_height": 160,
+  "logical_width": 120,
+  "max_frames": 0,
+  "measurement_coverage_ratio": 1.0,
+  "measurement_coverage_s": 30.033150199999998,
+  "measurement_finished_monotonic_ns": 60876594664700,
+  "measurement_metric_rows": 30,
+  "measurement_started_monotonic_ns": 60846590710300,
+  "metric_rows": 40,
+  "missed_deadline_count": 0,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "planned_measurement_end_monotonic_ns": 60876561264500,
+  "planned_measurement_start_monotonic_ns": 60846561264500,
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "duration_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 1202,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 40,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 1202,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": null
+      },
+      {
+        "actual": 30,
+        "name": "target_fps_matches_registry",
+        "passed": true,
+        "threshold": 30
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      },
+      {
+        "actual": 1.0,
+        "name": "measurement_coverage",
+        "passed": true,
+        "skipped": false,
+        "threshold": 0.95
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "run_id": "formal-v1__profile__mega_wing__gpu_compute__p025__r03",
+  "schema_version": 1,
+  "seed": 1007,
+  "status": "completed",
+  "stop_reason": "duration_reached",
+  "target_fps": 30,
+  "title": "Mega Wing",
+  "update_count": 1202,
+  "update_time_ms": {
+    "count": 901,
+    "max": 3.4991,
+    "mean": 0.27852519422863486,
+    "min": 0.0413,
+    "p95": 0.5959
+  },
+  "warmup_requested_s": 10.0,
+  "window_observations": 30,
+  "workload_id": "mega_wing"
+}

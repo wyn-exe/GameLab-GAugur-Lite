@@ -1,0 +1,1250 @@
+{
+  "aggregate_cell_count": 160,
+  "analysis": {
+    "curve_count": 32,
+    "curves_above_nonlinear_threshold": 0,
+    "interpretation": "相关系数仅描述 32 个 workload-resource 点的实测关系，不预设不相关结论。",
+    "max_abs_nonlinear_deviation": 0.00157315291015514,
+    "nonlinear_deviation_threshold": 0.02,
+    "pearson_sensitivity_drop_vs_intensity": 0.15667378905226628,
+    "spearman_sensitivity_drop_vs_intensity": 0.16458944281524923
+  },
+  "artifacts": {
+    "intensity_heatmap": "artifacts/profiles/step7/safety-v2/plots/intensity-heatmap.png",
+    "intensity_heatmap_sha256": "ef56ea37b81a7232ab71e02f5050a9d7d7754755783892946579bd719ddc967a",
+    "profile_runs": "data/interim/formal-v1/safety-v2/profile-runs.jsonl",
+    "profile_runs_sha256": "ef0d8e5b2eb60b19dc4669f3b9f752eff01e093ac3eb7b8b2d0ffb737be03418",
+    "profiles_parquet": "data/interim/formal-v1/safety-v2/profiles.parquet",
+    "profiles_parquet_sha256": "1aa784f2f89dbc2e9a273a6c64f5cef21dce363a1392a6dbaf698c4c02f7b330",
+    "sensitivity_curves": "artifacts/profiles/step7/safety-v2/plots/sensitivity-curves.png",
+    "sensitivity_curves_sha256": "9efd437417b0f678b2b27ea00a864e63730d2a54a5b765dedb8228bc6c64f233",
+    "sensitivity_intensity": "artifacts/profiles/step7/safety-v2/plots/sensitivity-intensity.png",
+    "sensitivity_intensity_sha256": "3ef019599f696a14f2bc57581958e956270f0cb3a3038a8d65548ec0ce98b2c5"
+  },
+  "checks": {
+    "aggregate_cell_count_160": true,
+    "applied_observed_pressure_close": true,
+    "calibration_profile_source_match": true,
+    "coverage": true,
+    "curve_count_32": true,
+    "nonlinearity_and_correlation_analyzed": true,
+    "plan_generated_from_clean_commit": true,
+    "plan_verified": true,
+    "pressure_zero_retention_near_one": true,
+    "profile_run_count_480": true,
+    "sensitivity_and_intensity_both_present": true,
+    "single_profile_root_commit": true,
+    "single_profile_source_tree": true,
+    "stable_benchmark_protocol": true,
+    "standalone_benchmark_stable": true,
+    "temperature": true,
+    "three_repeats_per_cell": true
+  },
+  "curve_count": 32,
+  "curves": [
+    {
+      "intensity_slowdown": 0.9694299331536799,
+      "max_abs_nonlinear_deviation": 0.0013971048330609914,
+      "pressure_observed_means": [
+        0.0,
+        0.2527312720647514,
+        0.5025226872442922,
+        0.7523089921660691,
+        0.9994191327170387
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "cpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.002329045160794685,
+      "sensitivity_means": [
+        1.0023306231590732,
+        1.0012510115257187,
+        1.000932729326873,
+        1.0022887152896882,
+        1.0023290451607947
+      ],
+      "sensitivity_sample_stds": [
+        7.03861261404814e-05,
+        0.001992164693892919,
+        0.0025848032490942995,
+        0.00017782038354137284,
+        0.00018767216366857387
+      ],
+      "workload_id": "daylight"
+    },
+    {
+      "intensity_slowdown": 2.3129268074709444,
+      "max_abs_nonlinear_deviation": 0.0007588926547321684,
+      "pressure_observed_means": [
+        0.0,
+        0.07249052921642662,
+        0.13571355404338226,
+        0.1946993743943232,
+        0.257919878397358
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0010789605374554867,
+      "sensitivity_means": [
+        1.002250833311236,
+        1.0011989724630588,
+        1.0022516103184482,
+        1.0020819654766597,
+        1.0010789605374555
+      ],
+      "sensitivity_sample_stds": [
+        0.00016957629063138273,
+        0.001778321104518839,
+        0.00014022540194444431,
+        1.961935401582794e-05,
+        0.0022791271679099942
+      ],
+      "workload_id": "daylight"
+    },
+    {
+      "intensity_slowdown": 1.052044726679842,
+      "max_abs_nonlinear_deviation": 0.00157315291015514,
+      "pressure_observed_means": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_memory",
+      "sensitivity_drop_at_max_pressure": -0.0011051840070788188,
+      "sensitivity_means": [
+        1.002393222845624,
+        1.0011206888921564,
+        1.0022213571263026,
+        0.99985404080656,
+        1.0011051840070788
+      ],
+      "sensitivity_sample_stds": [
+        4.329757849361415e-05,
+        0.0019454198791290487,
+        0.00014316940911749038,
+        0.0019649886152384253,
+        0.001988089913389502
+      ],
+      "workload_id": "daylight"
+    },
+    {
+      "intensity_slowdown": 1.0122651905300997,
+      "max_abs_nonlinear_deviation": 0.0015042280830062094,
+      "pressure_observed_means": [
+        0.0,
+        0.2644290067926438,
+        0.5171855536602167,
+        0.7758726573940327,
+        0.9999124104788054
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "memory_bandwidth",
+      "sensitivity_drop_at_max_pressure": -0.0023397910323470494,
+      "sensitivity_means": [
+        1.0022478250019902,
+        1.0022185197118463,
+        1.0007895799341624,
+        1.0024436815559594,
+        1.002339791032347
+      ],
+      "sensitivity_sample_stds": [
+        0.0001744294040242993,
+        0.00017191365958538083,
+        0.0024887924381053993,
+        4.9144636195588814e-05,
+        0.00016464390927264466
+      ],
+      "workload_id": "daylight"
+    },
+    {
+      "intensity_slowdown": 0.9558652743554055,
+      "max_abs_nonlinear_deviation": 4.2643286887189547e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.25305341103309775,
+        0.5025557556553203,
+        0.7524873575937533,
+        0.9994109401734423
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "cpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.001105064731874661,
+      "sensitivity_means": [
+        1.0011293993931012,
+        1.0011130985391226,
+        1.001140903552028,
+        1.0011537916840685,
+        1.0011050647318747
+      ],
+      "sensitivity_sample_stds": [
+        3.4148128757746556e-05,
+        1.9109432774708752e-05,
+        3.684548337229593e-05,
+        2.7890285301731552e-05,
+        8.906043932042133e-06
+      ],
+      "workload_id": "mega_wing"
+    },
+    {
+      "intensity_slowdown": 2.7446288584435425,
+      "max_abs_nonlinear_deviation": 0.00013264819094804814,
+      "pressure_observed_means": [
+        0.0,
+        0.07898164832771225,
+        0.14255728990294358,
+        0.20313911710178012,
+        0.26139763802439436
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0012607868835450287,
+      "sensitivity_means": [
+        1.0011346751406363,
+        1.0011297899784888,
+        1.0011505000412633,
+        1.0010966107568697,
+        1.001260786883545
+      ],
+      "sensitivity_sample_stds": [
+        4.523161930208922e-05,
+        9.106969400156074e-06,
+        3.924574567528964e-05,
+        2.7013592702240915e-05,
+        0.00013128346851671365
+      ],
+      "workload_id": "mega_wing"
+    },
+    {
+      "intensity_slowdown": 1.0806490511812947,
+      "max_abs_nonlinear_deviation": 5.3437471663420055e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_memory",
+      "sensitivity_drop_at_max_pressure": -0.0011201859697143046,
+      "sensitivity_means": [
+        1.001138471541007,
+        1.0011315915813548,
+        1.001182766227024,
+        1.0011058112605855,
+        1.0011201859697143
+      ],
+      "sensitivity_sample_stds": [
+        4.647250280508966e-05,
+        9.569079734927454e-05,
+        0.00010940555931597319,
+        3.612938442992951e-05,
+        1.4071547289496042e-05
+      ],
+      "workload_id": "mega_wing"
+    },
+    {
+      "intensity_slowdown": 1.0214448243801513,
+      "max_abs_nonlinear_deviation": 0.00011993169974844342,
+      "pressure_observed_means": [
+        0.0,
+        0.2621557683079426,
+        0.517716565025799,
+        0.7730708975079428,
+        0.9999108795154553
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "memory_bandwidth",
+      "sensitivity_drop_at_max_pressure": -0.0011491688540650191,
+      "sensitivity_means": [
+        1.0011052607280773,
+        1.0010862115499977,
+        1.0010072830913226,
+        1.0011605028874084,
+        1.001149168854065
+      ],
+      "sensitivity_sample_stds": [
+        4.3607407951859574e-05,
+        0.00010502566411392232,
+        0.00018540430271307248,
+        4.640553585135059e-05,
+        2.2120198910878588e-05
+      ],
+      "workload_id": "mega_wing"
+    },
+    {
+      "intensity_slowdown": 0.9446519623458765,
+      "max_abs_nonlinear_deviation": 3.055571632826215e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.25273142192191994,
+        0.5024672145096013,
+        0.7523107809753821,
+        0.9994027167761903
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "cpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0007840548428010852,
+      "sensitivity_means": [
+        1.000729486997313,
+        1.0007719437588751,
+        1.0007692171778668,
+        1.0008009685977572,
+        1.000784054842801
+      ],
+      "sensitivity_sample_stds": [
+        4.213612379032089e-05,
+        3.4578040453790166e-05,
+        1.3925227879155407e-05,
+        2.1777804427525522e-05,
+        2.723222031170529e-05
+      ],
+      "workload_id": "pyxel_bubbles"
+    },
+    {
+      "intensity_slowdown": 2.856220955806686,
+      "max_abs_nonlinear_deviation": 6.405005303222744e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.07835846326030711,
+        0.14451437363908806,
+        0.20357634652745973,
+        0.2634189634750495
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0007175872300362318,
+      "sensitivity_means": [
+        1.0007775504705543,
+        1.0007694834330618,
+        1.0007622476625606,
+        1.000796628093198,
+        1.0007175872300362
+      ],
+      "sensitivity_sample_stds": [
+        9.08398451304534e-05,
+        1.6584098263209553e-05,
+        2.8705923661271434e-05,
+        1.1366299779268115e-05,
+        1.9890259767742233e-05
+      ],
+      "workload_id": "pyxel_bubbles"
+    },
+    {
+      "intensity_slowdown": 1.091699966271879,
+      "max_abs_nonlinear_deviation": 3.42855448061119e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_memory",
+      "sensitivity_drop_at_max_pressure": -0.0007872221212978925,
+      "sensitivity_means": [
+        1.0007454112731424,
+        1.0007532721857915,
+        1.0008006022420262,
+        1.000766173536229,
+        1.000787222121298
+      ],
+      "sensitivity_sample_stds": [
+        5.3816948992370615e-05,
+        1.7164129857731217e-05,
+        4.962598304284351e-05,
+        5.107915478496849e-05,
+        3.5357744318460493e-06
+      ],
+      "workload_id": "pyxel_bubbles"
+    },
+    {
+      "intensity_slowdown": 1.0266929748861053,
+      "max_abs_nonlinear_deviation": 4.643357953515448e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.2621812420017858,
+        0.5192238245041524,
+        0.7729511862310442,
+        0.9999097154371922
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "memory_bandwidth",
+      "sensitivity_drop_at_max_pressure": -0.0007857812157576749,
+      "sensitivity_means": [
+        1.0007489637688023,
+        1.0007589722122543,
+        1.00077167787303,
+        1.000823010433554,
+        1.0007857812157577
+      ],
+      "sensitivity_sample_stds": [
+        1.8984705865221396e-05,
+        5.271027973817442e-05,
+        1.3338789367402718e-05,
+        2.6144827678093237e-05,
+        2.6172127046724337e-05
+      ],
+      "workload_id": "pyxel_bubbles"
+    },
+    {
+      "intensity_slowdown": 0.9564490662135425,
+      "max_abs_nonlinear_deviation": 0.0003487737637446475,
+      "pressure_observed_means": [
+        0.0,
+        0.2526663305553489,
+        0.5025226591325925,
+        0.7521307351104003,
+        0.9994007971615204
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "cpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0009369422492657709,
+      "sensitivity_means": [
+        1.0009376469579963,
+        1.0009922615307463,
+        1.0009370741704646,
+        1.0005883446627037,
+        1.0009369422492658
+      ],
+      "sensitivity_sample_stds": [
+        2.7276047468046842e-05,
+        0.00018868226221439364,
+        5.643499574604007e-05,
+        0.0006327261285249604,
+        1.794494257177515e-05
+      ],
+      "workload_id": "pyxel_jump"
+    },
+    {
+      "intensity_slowdown": 2.768730019340629,
+      "max_abs_nonlinear_deviation": 8.789988981083852e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.07958091012786433,
+        0.14260522376147225,
+        0.20233062782996555,
+        0.2614679003404578
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0009739959640417961,
+      "sensitivity_means": [
+        1.0009687316261295,
+        1.000934363909399,
+        1.0008834639052748,
+        1.0009561797360493,
+        1.0009739959640418
+      ],
+      "sensitivity_sample_stds": [
+        2.2324558589514506e-05,
+        1.605343848287519e-05,
+        2.1830556148185114e-05,
+        0.00013561403648665855,
+        2.291073195096429e-05
+      ],
+      "workload_id": "pyxel_jump"
+    },
+    {
+      "intensity_slowdown": 1.0811708079834148,
+      "max_abs_nonlinear_deviation": 0.00023610191564693572,
+      "pressure_observed_means": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_memory",
+      "sensitivity_drop_at_max_pressure": -0.0009318444239032608,
+      "sensitivity_means": [
+        1.0005826586513973,
+        1.0009060570101707,
+        1.0009684406871284,
+        1.0009833530583245,
+        1.0009318444239033
+      ],
+      "sensitivity_sample_stds": [
+        0.000673617317368843,
+        5.7570189937545116e-05,
+        5.270584016724839e-05,
+        1.7597400806139445e-05,
+        2.7713547788145926e-05
+      ],
+      "workload_id": "pyxel_jump"
+    },
+    {
+      "intensity_slowdown": 1.0243362879906466,
+      "max_abs_nonlinear_deviation": 5.66011844396197e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.2619311753745101,
+        0.5160705032033531,
+        0.770404357349335,
+        0.9999087769999853
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "memory_bandwidth",
+      "sensitivity_drop_at_max_pressure": -0.0009741987294313859,
+      "sensitivity_means": [
+        1.0009085949393215,
+        1.0009815970712885,
+        1.0009530724969016,
+        1.0009626718159539,
+        1.0009741987294314
+      ],
+      "sensitivity_sample_stds": [
+        2.0769299701572333e-05,
+        1.708125860112169e-05,
+        2.2789459828172502e-05,
+        6.616084321055074e-05,
+        1.4527496380592107e-05
+      ],
+      "workload_id": "pyxel_jump"
+    },
+    {
+      "intensity_slowdown": 0.9452371474776949,
+      "max_abs_nonlinear_deviation": 3.6794213491786465e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.252912116445283,
+        0.5025223483889403,
+        0.7522106885879493,
+        0.9994224414739055
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "cpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0007386022276112403,
+      "sensitivity_means": [
+        1.0007219915642311,
+        1.0007572816111836,
+        1.0007197032184412,
+        1.000771243775258,
+        1.0007386022276112
+      ],
+      "sensitivity_sample_stds": [
+        6.266212263264502e-05,
+        1.2553713466568612e-05,
+        4.171711176061202e-05,
+        1.4016673907471593e-05,
+        3.109132857559386e-05
+      ],
+      "workload_id": "pyxel_platformer"
+    },
+    {
+      "intensity_slowdown": 2.7483374720580924,
+      "max_abs_nonlinear_deviation": 4.2459834694419385e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.07947347639170614,
+        0.14237392867372414,
+        0.2026691242197484,
+        0.26198845379559726
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0006981905004888045,
+      "sensitivity_means": [
+        1.000699564984651,
+        1.0007266739406824,
+        1.0007413375772645,
+        1.000740743002745,
+        1.0006981905004888
+      ],
+      "sensitivity_sample_stds": [
+        8.529616348570955e-05,
+        2.8888075107153473e-05,
+        2.8595500620162834e-05,
+        4.265607361979801e-05,
+        8.958570052608338e-05
+      ],
+      "workload_id": "pyxel_platformer"
+    },
+    {
+      "intensity_slowdown": 1.0819678683933287,
+      "max_abs_nonlinear_deviation": 6.440851097044842e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_memory",
+      "sensitivity_drop_at_max_pressure": -0.0007856130616394896,
+      "sensitivity_means": [
+        1.0007292975834015,
+        1.000726059129226,
+        1.00069304681155,
+        1.0007741340735228,
+        1.0007856130616395
+      ],
+      "sensitivity_sample_stds": [
+        5.720994629596995e-05,
+        7.519109983128296e-05,
+        1.0096348267728571e-05,
+        3.822458747516663e-05,
+        5.766671999650931e-05
+      ],
+      "workload_id": "pyxel_platformer"
+    },
+    {
+      "intensity_slowdown": 1.0240700173229322,
+      "max_abs_nonlinear_deviation": 7.657172866726292e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.26090741008929264,
+        0.5161130291608528,
+        0.7714267514064045,
+        0.9999109480159358
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "memory_bandwidth",
+      "sensitivity_drop_at_max_pressure": -0.0007490931199132245,
+      "sensitivity_means": [
+        1.0006775292606174,
+        1.0007719919541087,
+        1.0007053325655806,
+        1.000768990716846,
+        1.0007490931199132
+      ],
+      "sensitivity_sample_stds": [
+        4.8725154046172437e-05,
+        1.8982272345610306e-05,
+        6.213003386751898e-05,
+        0.00010734461675514042,
+        3.682912608118037e-05
+      ],
+      "workload_id": "pyxel_platformer"
+    },
+    {
+      "intensity_slowdown": 0.9548171338972185,
+      "max_abs_nonlinear_deviation": 2.4766947582799403e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.2528082183878005,
+        0.5024335818933673,
+        0.7521396343010552,
+        0.9994317951460001
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "cpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0011889856985820568,
+      "sensitivity_means": [
+        1.0011862202758455,
+        1.0012116785791123,
+        1.0011974875723624,
+        1.0012081538474515,
+        1.001188985698582
+      ],
+      "sensitivity_sample_stds": [
+        3.322082930296017e-05,
+        0.00015023106667423614,
+        5.52317907350282e-05,
+        5.1533158821875035e-06,
+        1.945931191552189e-05
+      ],
+      "workload_id": "pyxel_shooter"
+    },
+    {
+      "intensity_slowdown": 2.7163547830407166,
+      "max_abs_nonlinear_deviation": 4.426168684124043e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.07925156946570372,
+        0.1412650444692021,
+        0.20196872752885642,
+        0.2613744382463304
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0011152839224850553,
+      "sensitivity_means": [
+        1.0011749846176452,
+        1.0011687105416671,
+        1.001170661942801,
+        1.0011744707831163,
+        1.001115283922485
+      ],
+      "sensitivity_sample_stds": [
+        2.171273464588264e-05,
+        5.770304703444295e-05,
+        2.2937501508444142e-05,
+        2.9692824153053985e-05,
+        6.272122500782347e-05
+      ],
+      "workload_id": "pyxel_shooter"
+    },
+    {
+      "intensity_slowdown": 1.0831067741021152,
+      "max_abs_nonlinear_deviation": 2.1726748612227453e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_memory",
+      "sensitivity_drop_at_max_pressure": -0.001188001295109986,
+      "sensitivity_means": [
+        1.0011439685984982,
+        1.0011767035212633,
+        1.0011539256933504,
+        1.0011717837742735,
+        1.00118800129511
+      ],
+      "sensitivity_sample_stds": [
+        5.6216068393122056e-05,
+        7.36950597674045e-05,
+        4.309982228134323e-05,
+        5.329068712234035e-05,
+        6.199424240285007e-05
+      ],
+      "workload_id": "pyxel_shooter"
+    },
+    {
+      "intensity_slowdown": 1.022788745296421,
+      "max_abs_nonlinear_deviation": 8.707283664799448e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.26223210485015996,
+        0.5172620553826015,
+        0.7716235497207755,
+        0.9999134068259271
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "memory_bandwidth",
+      "sensitivity_drop_at_max_pressure": -0.00121727133898486,
+      "sensitivity_means": [
+        1.0011609273648732,
+        1.001189147517619,
+        1.001135405797357,
+        1.001116112508809,
+        1.0012172713389849
+      ],
+      "sensitivity_sample_stds": [
+        3.887189365191474e-05,
+        0.0001633378210247126,
+        4.5927183498788805e-05,
+        9.090846767212718e-05,
+        7.415247904199482e-05
+      ],
+      "workload_id": "pyxel_shooter"
+    },
+    {
+      "intensity_slowdown": 0.9585295986451899,
+      "max_abs_nonlinear_deviation": 3.5300926066961225e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.2529499302569492,
+        0.5025081946084247,
+        0.7521101345252131,
+        0.999448983266327
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "cpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0010913009154418507,
+      "sensitivity_means": [
+        1.0011084040887173,
+        1.0011228781109072,
+        1.0010645515760126,
+        1.0010921452805819,
+        1.0010913009154419
+      ],
+      "sensitivity_sample_stds": [
+        5.258345041398871e-05,
+        3.545665597327562e-05,
+        6.568986901850565e-05,
+        1.0621579294047148e-05,
+        3.058649152947267e-05
+      ],
+      "workload_id": "pyxel_snake"
+    },
+    {
+      "intensity_slowdown": 2.5426154931661857,
+      "max_abs_nonlinear_deviation": 0.00015533099611486634,
+      "pressure_observed_means": [
+        0.0,
+        0.07645503087060536,
+        0.14071735483202538,
+        0.19823902777385324,
+        0.2588713340749514
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0010563536716865496,
+      "sensitivity_means": [
+        1.001081633471636,
+        1.0010856415037914,
+        1.0011157467982341,
+        1.0012180046177888,
+        1.0010563536716865
+      ],
+      "sensitivity_sample_stds": [
+        7.411547604596304e-05,
+        4.166343723269294e-05,
+        6.154663459857368e-05,
+        0.00011088568400315378,
+        7.521363953468506e-05
+      ],
+      "workload_id": "pyxel_snake"
+    },
+    {
+      "intensity_slowdown": 1.0637744835315646,
+      "max_abs_nonlinear_deviation": 3.311695701624373e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_memory",
+      "sensitivity_drop_at_max_pressure": -0.0011239469662174262,
+      "sensitivity_means": [
+        1.0011090115463308,
+        1.0011169750218631,
+        1.0010833622992579,
+        1.001125205923241,
+        1.0011239469662174
+      ],
+      "sensitivity_sample_stds": [
+        0.00017556195024218376,
+        7.25552059377173e-05,
+        2.7708193074334444e-05,
+        1.8879557565024875e-05,
+        1.9297577664538686e-05
+      ],
+      "workload_id": "pyxel_snake"
+    },
+    {
+      "intensity_slowdown": 1.0198763515217617,
+      "max_abs_nonlinear_deviation": 5.3073333519115806e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.2617371398740032,
+        0.5181646561932738,
+        0.7729740868277615,
+        0.9999118153868499
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "memory_bandwidth",
+      "sensitivity_drop_at_max_pressure": -0.0011096044445408904,
+      "sensitivity_means": [
+        1.0011106886159409,
+        1.0011260158568416,
+        1.0010570731967219,
+        1.0011037150649555,
+        1.001109604444541
+      ],
+      "sensitivity_sample_stds": [
+        6.099124988188042e-05,
+        6.303663663504785e-05,
+        6.408517462207553e-05,
+        3.353978947070005e-05,
+        3.005242045824496e-05
+      ],
+      "workload_id": "pyxel_snake"
+    },
+    {
+      "intensity_slowdown": 0.952044291859258,
+      "max_abs_nonlinear_deviation": 2.2483466151301812e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.25292071186169424,
+        0.5026125734546003,
+        0.7522811161802054,
+        0.9994354081285973
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "cpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0011520666824063053,
+      "sensitivity_means": [
+        1.0011165939245308,
+        1.0011407257014937,
+        1.0011308287868075,
+        1.0011207150267862,
+        1.0011520666824063
+      ],
+      "sensitivity_sample_stds": [
+        3.701554017404896e-05,
+        4.843581804283021e-05,
+        2.682428291487752e-06,
+        2.9879945338840323e-05,
+        6.292915516649445e-06
+      ],
+      "workload_id": "space_rescue"
+    },
+    {
+      "intensity_slowdown": 2.730358567848751,
+      "max_abs_nonlinear_deviation": 2.5910334405798707e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.07948675822696226,
+        0.14065374719932436,
+        0.20203229603391235,
+        0.26112032866594526
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_compute",
+      "sensitivity_drop_at_max_pressure": -0.0011409390191523539,
+      "sensitivity_means": [
+        1.001110498673942,
+        1.0011257274998135,
+        1.0011168454789694,
+        1.0011074185984439,
+        1.0011409390191524
+      ],
+      "sensitivity_sample_stds": [
+        1.9574988469209302e-05,
+        3.450365136120053e-05,
+        9.148629532186626e-05,
+        3.5414716955757434e-05,
+        2.7170611641983754e-05
+      ],
+      "workload_id": "space_rescue"
+    },
+    {
+      "intensity_slowdown": 1.081913050123677,
+      "max_abs_nonlinear_deviation": 0.00011934865541052275,
+      "pressure_observed_means": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "gpu_memory",
+      "sensitivity_drop_at_max_pressure": -0.0011429469882455745,
+      "sensitivity_means": [
+        1.001110351791925,
+        1.0012378492464158,
+        1.0011196709842893,
+        1.0011399773576182,
+        1.0011429469882456
+      ],
+      "sensitivity_sample_stds": [
+        2.2391938601059694e-05,
+        0.00010538178959160555,
+        3.4302607535701995e-05,
+        2.4216233783275033e-05,
+        3.204556032074829e-05
+      ],
+      "workload_id": "space_rescue"
+    },
+    {
+      "intensity_slowdown": 1.0236021303491336,
+      "max_abs_nonlinear_deviation": 6.660388413726182e-05,
+      "pressure_observed_means": [
+        0.0,
+        0.2621570567866784,
+        0.5158456166439619,
+        0.771120147421671,
+        0.9999111875714899
+      ],
+      "pressures": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "resource": "memory_bandwidth",
+      "sensitivity_drop_at_max_pressure": -0.0010960298054465412,
+      "sensitivity_means": [
+        1.0010770858690972,
+        1.0011484257373218,
+        1.0011365331867095,
+        1.001037959418588,
+        1.0010960298054465
+      ],
+      "sensitivity_sample_stds": [
+        4.5653979880080916e-05,
+        5.911990193535253e-05,
+        3.823687733779577e-05,
+        8.16957323283418e-05,
+        2.3524806724387152e-05
+      ],
+      "workload_id": "space_rescue"
+    }
+  ],
+  "definition": {
+    "benchmark_throughput": "worker operations / worker formal-window elapsed seconds",
+    "benchmark_throughput_retention": "colocated throughput / standalone throughput",
+    "intensity_slowdown": "standalone throughput / colocated throughput; equal to fixed-work completion-time slowdown",
+    "sensitivity": "profile mean FPS / solo baseline mean FPS",
+    "workload_resource_intensity": "arithmetic mean of intensity slowdown over four nonzero pressure levels after three-repeat aggregation"
+  },
+  "execution": {
+    "profile_dirty_values": [
+      "False"
+    ],
+    "profile_root_commits": [
+      "9a5f8fa34693420aa170d4c5da454613647a18c8"
+    ],
+    "profile_source_tree_sha256s": [
+      "1eb1af03fc925ce16d030cf9c9452c2528f7964fb6f226df1701f8ca92cb8dfe"
+    ]
+  },
+  "experiment_id": "formal-v1",
+  "inputs": {
+    "baseline_contract": "safety_v2_capped_gpu_compute",
+    "baseline_plan": "artifacts/plans/formal-v1.csv",
+    "baseline_plan_sha256": "94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a",
+    "calibration": "artifacts/calibration/step7-safety-v2/formal-calibration-pooled-v3.json",
+    "calibration_benchmark_protocol": "pooled_full_campaigns_2x5_cv10_rse5_drift10_v3",
+    "calibration_confirmation": null,
+    "calibration_environment_sha256": "a55ae66e188cd05f54a43f0f0d46e8bfa16a4b251481673c572d378cd43ae7fa",
+    "calibration_execution": {},
+    "calibration_sha256": "dfddd7f5c805a984b32176652000559413c29a090b5fd7d828e29cfbf6646781",
+    "plan": "artifacts/plans/formal-v1-safety-v2-s30.csv",
+    "plan_sha256": "c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2",
+    "profile_amendment": {
+      "baseline_plan": "artifacts/plans/formal-v1.csv",
+      "baseline_plan_sha256": "94ea3272b224f121074041d3489142870bd18c4df231757b16641d521853369a",
+      "baseline_protocol": {
+        "cooldown_s": 20.0,
+        "duration_s": 60.0,
+        "max_gpu_temp_c": 82.0,
+        "warmup_s": 20.0
+      },
+      "mode": "safety_v2_capped_gpu_compute",
+      "normalized_experiment_cells_equal": true,
+      "pressure_caps": {
+        "cpu_compute": 1.0,
+        "gpu_compute": 0.25,
+        "gpu_memory": 1.0,
+        "memory_bandwidth": 1.0
+      },
+      "profile_plan_sha256": "c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2",
+      "profile_protocol": {
+        "cooldown_s": 10.0,
+        "duration_s": 30.0,
+        "max_gpu_temp_c": 80.0,
+        "warmup_s": 10.0
+      },
+      "profile_row_count": 480,
+      "raw_directories_disjoint": true
+    },
+    "solo_baselines": "data/interim/formal-v1/solo-baselines.json",
+    "solo_baselines_sha256": "965d4e5a68df4293442f0272422b1f38a67b8595f2bcc7c02c939196aaf096e6",
+    "solo_execution_source_tree_sha256s": [
+      "5446cf24d8334e3d6f85e1c1142690ef21325c0f0988efb6861da53ea7f5a6a3"
+    ]
+  },
+  "max_applied_observed_pressure_abs_error": 0.0342993250229896,
+  "max_pressure_zero_retention_abs_deviation": 0.0023932228456240434,
+  "quality_thresholds": {
+    "applied_observed_pressure_abs_error_max": 0.05,
+    "benchmark_campaign_mean_drift_max_pct": 10.0,
+    "benchmark_cv_max_pct": 10.0,
+    "benchmark_standard_error_max_pct": 5.0,
+    "gpu_temperature_max_c": 80.0,
+    "measurement_coverage_min": 0.95,
+    "minimum_repeats": 3,
+    "pressure_zero_retention_abs_deviation_max": 0.05,
+    "system_coverage_min": 0.95,
+    "workload_overlap_min": 0.95
+  },
+  "run_count": 480,
+  "schema_version": 1,
+  "standalone_campaign_mean_drift_max_pct": 8.515804151528767,
+  "standalone_throughput_cv_max_pct": 7.464105945126814,
+  "standalone_throughput_standard_error_max_pct": 2.360357548340451,
+  "status": "passed"
+}

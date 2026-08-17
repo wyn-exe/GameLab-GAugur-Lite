@@ -17,9 +17,9 @@
 | Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
-| Step 7 敏感度/强度 profile | pooled 分母已通过，profile 待运行 | Candidate001–004 的单独候选均已封存为 rejected；Candidate003+004 的两轮完整 5-repeat 数据按已确认的事后修订合并为 10-repeat 分母，正式 profile 仍为 `0/480` |
-| Python 实现              | 分阶段实现中 | Step 0–6 已完成；Step 7 pooled 数据审计、线程合同与全阶段自动验收已实现，98 项单测与 720-row 不可变计划校验通过 |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与唯一 retention 基线已生成；短时序 profile、60 个主组合、额外测试、模型与报告待生成 |
+| Step 7 敏感度/强度 profile | 已完成 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
+| Python 实现              | 分阶段实现中 | Step 0–7 已完成；pooled 数据审计、线程合同与自动验收已落实，98 项单测和 Safety-v2 全部质量门通过 |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与 480 个正式 profile run 已生成；60 个主组合、额外测试、模型与报告待生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -2073,6 +2073,59 @@ unit tests:
 
 最终入口 [`run_step7_final.ps1`](scripts/run_step7_final.ps1) 不再调用 Candidate004 或任何新 calibration；它先以 `--verify-only` 只读复核 pooled-v3，再转入 [`run_step7_safety_v2_acceptance.ps1`](scripts/run_step7_safety_v2_acceptance.ps1)。正式 profile 仍使用已冻结的 720-row Safety-v2 计划，只执行其中 480 个 profile 行；workload、requested/applied pressure、三重复、10/30/10 秒时序、GPU Compute 0.25 上限、80°C 硬门和独立 raw 根均不改变。
 
+#### Step 7 正式 profile：真实完成与独立验收
+
+提交 `9a5f8fa34693420aa170d4c5da454613647a18c8` 的干净源码树上，最终入口在一次 invocation 中自动顺序执行 20 批，每批 24 行。20 份 batch report 重算结果为 `completed=480`、`failed_or_invalid=0`，累计 Runner elapsed 为 25,033.42 秒（约 6 小时 57 分）。批前 GPU 温度 20 次采样为 45–55°C；480 个正式 attempt 的测量期最高 GPU 温度为 67°C，未触发 80°C 硬门。
+
+```text
+[Step 7 final] Verifying pooled Candidate003+004 denominators (no new benchmark)...
+PASS pooled calibration: runs=200, repeats=10, max CV=7.4641%, max RSE=2.3604%, max drift=8.5158%
+
+[Safety-v2/invocation-001] Running unit tests once before all remaining batches...
+........................................................................ [ 73%]
+..........................                                               [100%]
+98 passed in 5.71s
+
+PASS progress: completed=480/480, remaining=0
+[Safety-v2] Building 480 run records, 160 profiles, 32 curves and plots...
+[Safety-v2] Independently recomputing profiles and hashes...
+PASS Step 7 safety-v2 acceptance: artifacts/profiles/step7/safety-v2
+[Step 7 final] PASS: pooled calibration and all formal profile artifacts verified.
+```
+
+独立验收不是只检查文件存在，而是从 480 个 raw attempt 重新计算 JSONL、Parquet、汇总和三张 PNG。真实质量结果如下：
+
+| 检查项 | 真实结果 | 门槛 | 结论 |
+| --- | ---: | ---: | --- |
+| 正式 run / 聚合 profile / 曲线 | 480 / 160 / 32 | 480 / 160 / 32 | PASS |
+| 每格重复数 | 3 | 3 | PASS |
+| 最低 measurement coverage | 99.9949% | `>=95%` | PASS |
+| 最低 system coverage | 99.8933% | `>=95%` | PASS |
+| 最低 workload overlap | 99.8908% | `>=95%` | PASS |
+| 最大 applied-observed pressure 误差 | 0.03430 | `<=0.05` | PASS |
+| pressure=0 最大 retention 偏差 | 0.002393 | `<=0.05` | PASS |
+| 正式测量最高 GPU 温度 | 67°C | `<=80°C` | PASS |
+| pooled 分母最大 CV / RSE / 跨轮漂移 | 7.4641% / 2.3604% / 8.5158% | 10% / 5% / 10% | PASS |
+| 独立 verification | 12/12 | 全部通过 | PASS |
+
+关键产物及 SHA-256：
+
+| 产物 | SHA-256 |
+| --- | --- |
+| [`profile-summary.json`](data/interim/formal-v1/safety-v2/profile-summary.json) | `6c672baeebe7693bfd84c838ba88ab185eb863ca15a89909983fa50df3d4fd8e` |
+| [`profile-runs.jsonl`](data/interim/formal-v1/safety-v2/profile-runs.jsonl) | `ef0d8e5b2eb60b19dc4669f3b9f752eff01e093ac3eb7b8b2d0ffb737be03418` |
+| [`profiles.parquet`](data/interim/formal-v1/safety-v2/profiles.parquet) | `1aa784f2f89dbc2e9a273a6c64f5cef21dce363a1392a6dbaf698c4c02f7b330` |
+| [`sensitivity-curves.png`](artifacts/profiles/step7/safety-v2/plots/sensitivity-curves.png) | `9efd437417b0f678b2b27ea00a864e63730d2a54a5b765dedb8228bc6c64f233` |
+| [`intensity-heatmap.png`](artifacts/profiles/step7/safety-v2/plots/intensity-heatmap.png) | `ef56ea37b81a7232ab71e02f5050a9d7d7754755783892946579bd719ddc967a` |
+| [`sensitivity-intensity.png`](artifacts/profiles/step7/safety-v2/plots/sensitivity-intensity.png) | `3ef019599f696a14f2bc57581958e956270f0cb3a3038a8d65548ec0ce98b2c5` |
+| [`formal-profile-verification.json`](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) | `df5f96e6f3d9d9cddb86052d9cdabd779b646e88d2a41779800cd7be0bb73864` |
+
+![八个 workload 的敏感度曲线](artifacts/profiles/step7/safety-v2/plots/sensitivity-curves.png)
+
+![四类资源的干扰强度热力图](artifacts/profiles/step7/safety-v2/plots/intensity-heatmap.png)
+
+本机结果也揭示了 Lite 复现的边界：GPU Compute worker 自身的平均 slowdown 为 2.6775（各 workload 为 2.3129–2.8562），说明该干扰源确实施加了明显运算竞争；但八个 Pyxel workload 在全部 32 条曲线上 `S(1)` 都为 1.00070–1.00234，没有测得 FPS 下降，32 条曲线也均未超过 0.02 的非线性阈值。敏感度下降与强度的 Pearson/Spearman 相关仅为 0.1567/0.1646。该现象必须作为真实结果保留：在本机、安全 GPU 上限和这些轻量小游戏下，帧率主要受固定节拍/帧率上限约束，资源压力未形成论文大型游戏那样的 QoS 退化。因此后续模型结果应表述为“Windows 轻量工作负载域内的复现”，不能外推为大型云游戏性能结论，也不能为了制造显著性而提高温度或重跑挑样本。
+
 ### Step 8：采集真实共置组合
 
 #### 8.1 生成主数据集的 60 个独立组合
@@ -2471,13 +2524,13 @@ extra quads = 12 combinations × K            = 36
 total                                           720
 ```
 
-其中主共置数据为 180 run，额外测试为 36 run。24 个 solo 已按 20/60/20 秒长窗口完成；旧 profile 试运行全部作为安全证据排除，因此正式剩余量仍是 480 个 profile 加 216 个共置/额外 run。Safety-v2 继续使用 10/30/10 秒窗口，名义串行时间仍为 9.67 小时，但每批强制从不高于修订后的 55°C 开始，实际总时间取决于批间自然冷却，不能再承诺旧方案的 11–13 小时范围。自动脚本会完成等待，不会为了赶时间跳过温控。11 档压力消融不计入这 720 个正式主实验 run。
+其中主共置数据为 180 run，额外测试为 36 run。24 个 solo 和 480 个 Safety-v2 profile 已完成；旧 profile 试运行全部作为安全证据排除，因此当前正式剩余量为 216 个共置/额外 run。若 Step 8 继续使用 10/30/10 秒窗口，其名义串行时间为 3 小时，实际还需计入多窗口启动、验收与批间冷却。自动脚本不得为了赶时间跳过温控。11 档压力消融不计入这 720 个正式主实验 run。
 
 `smoke.yaml` 只用于在正式采集前验证游戏资源、自动输入、进程生命周期、CUDA benchmark 同步和数据 schema，不生成模型样本，也不构成缩小版实验。正式结果只接受 `formal-v1` 的完整组合 manifest。
 
 ## 14. 最终流程（当前实现至 Step 7）
 
-当前已完整实现 Safety-v2 Step 7。先提交并上传本阶段源码、Candidate004 拒绝审计、pooled-v3 派生文件和 README；确认整个工作树干净后，只使用新的最终入口：
+Safety-v2 Step 7 已真实完成并通过 12/12 独立复核。当前应提交并上传 `data/raw/safety-v2-s30/`、`data/interim/formal-v1/safety-v2/`、`artifacts/profiles/step7/safety-v2/` 和本 README，然后停在本阶段；下一次继续实现 Step 8 的 60 个主组合与 12 个额外测试组合。以下命令保留为 Step 7 的只读预检/断点恢复入口，当前 `480/480` 状态无需再次运行长负载：
 
 ```powershell
 conda activate gaugur-lite

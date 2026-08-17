@@ -1,0 +1,228 @@
+{
+  "artifact_sha256": {
+    "barrier.json": "6c08afb80e2491870ec9e6202331f9d4f780120d44dbbd63aca892679e104d05",
+    "benchmark/ready.json": "67fa10e2732d179fc37a202fd1a5eb17fb2d312c03e04e0e4ece6b45f0871394",
+    "benchmark/status.json": "3de5e6118400f873c6ce2fed6506897d95ef7975307fbeb2de66f5ea1d56852c",
+    "benchmark/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "benchmark/stdout.log": "8684aad0874cc2130eb5bfc3f867099e91a439bd2b3c48384062558b223c52c9",
+    "cooldown.jsonl": "b03e7409341b04fad4c3e0b05c069f18c518121b0ea0f91f611450be8ad74109",
+    "layout.json": "aaa96ce6a0155cfbb695508ea7cd812e63c7a029e2232089a7dfcfcb1a11e2b3",
+    "manifest.json": "23202e18cc4c18a4199367220ce8d72e14f7b85e03e25b77401efc765799af77",
+    "system_metrics.jsonl": "1a2ccc3ac7049fa5edc05fd1c48ef33694761b3235fb41cf0734082831cc3954",
+    "window_observations.jsonl": "ab3a74c35c87b8bf5fc56f80a28f770b93d05440f17fffaa92f6e230fde15043",
+    "workloads/pyxel_jump/game_metrics.jsonl": "6b0aacc245f9ba431188e583f75dcc6f17530b72575a41cbb812602623457e0e",
+    "workloads/pyxel_jump/heartbeat.json": "7568847e68845845aacbaf908d14fe1ce5e233ef216719990b867bc9a2c7a2fc",
+    "workloads/pyxel_jump/measurement-start.json": "bc24019103bed683a9ec136ddde598be3ea086e453fcfcd4bdaa8f87b4f9d469",
+    "workloads/pyxel_jump/ready.json": "371ac00522df7c741d17ee736bce9ed55abc16f4bbc054bc3d9dd3c338b8c357",
+    "workloads/pyxel_jump/status.json": "ee2106514bd15c1d6158c87cfba3c3f177733d459ebf608beb4380c426f1b317",
+    "workloads/pyxel_jump/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_jump/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_jump/stop.json": "0d94d775085914e3a479c80f8c8b5f4a001d54f02fbe1b98d2c128e3e79a39ae",
+    "workloads/pyxel_jump/summary.json": "3c708f8028da6aa4a3b15dd354fadff5355212dd5cc95ec110f9faaa25f2a306"
+  },
+  "attempt": 1,
+  "benchmark": {
+    "active_fraction": 0.5137632061423714,
+    "active_s": 15.412928499979898,
+    "allocated_bytes": 536870912,
+    "barrier_used": true,
+    "barrier_wait_s": 0.649465100002999,
+    "benchmark_environment": {
+      "environment": {
+        "BLIS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": "1"
+      },
+      "native_thread_limit": 1,
+      "protocol": "native_threads_1_warmup5_duration15_repeats5_cv10_v2"
+    },
+    "capacity_bytes": 0,
+    "duty_cycle_s": 0.25,
+    "elapsed_s": 30.000062900006014,
+    "finished_wall_time_ns": 1786953665507867300,
+    "measurement_end_monotonic_ns": 60130215787300,
+    "measurement_start_monotonic_ns": 60100215698500,
+    "operations": 1032939634688,
+    "pid": 6376,
+    "planned_measurement_end_monotonic_ns": 60130215358300,
+    "planned_measurement_start_monotonic_ns": 60100215358300,
+    "pressure_requested": 0.5,
+    "resource": "memory_bandwidth",
+    "schema_version": 1,
+    "sleep_s": 14.527041800000006,
+    "started_wall_time_ns": 1786953624802018900,
+    "status": "completed",
+    "warmup_active_s": 5.213317700021435,
+    "warmup_elapsed_s": 9.969283200000064,
+    "warmup_operations": 346818609152,
+    "warmup_sleep_s": 4.738081899980898
+  },
+  "cleanup": {
+    "actions": [],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 10.029034699997283,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 53.0,
+    "samples": 11,
+    "thermal_target_c": 70.0,
+    "thermal_target_reached": true
+  },
+  "external_occlusion_checked": false,
+  "gpu_temp_c_max": 55.0,
+  "gpu_temp_limit_c": 80.0,
+  "gpu_thermal_slowdown_seen": false,
+  "measurement_end_monotonic_ns": 60130215358300,
+  "measurement_start_monotonic_ns": 60100215358300,
+  "mode": "pressure_profile",
+  "pressure_applied": 0.5,
+  "pressure_requested": 0.5,
+  "resource": "memory_bandwidth",
+  "run_id": "formal-v1__profile__pyxel_jump__memory_bandwidth__p050__r02",
+  "schema_version": 1,
+  "split": "not_applicable",
+  "stage": "profile",
+  "status": "completed",
+  "system_coverage_ratio": 0.9994666666666667,
+  "system_coverage_s": 29.984,
+  "system_sample_count": 31,
+  "valid": true,
+  "window_sample_count": 31,
+  "windows_pairwise_nonoverlap": true,
+  "workload_ids": [
+    "pyxel_jump"
+  ],
+  "workload_overlap_ratio": 0.9999871566666666,
+  "workload_overlap_s": 29.9996147,
+  "workloads": [
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.0729118000017479,
+      "controller": "jump_v1",
+      "controller_trace_sha256": "34a1466108a67b498f912c6840f48053731ff57de0cdc4200ba7f82b7249400e",
+      "display_scale": 2,
+      "draw_count": 1202,
+      "draw_interval_ms": {
+        "count": 900,
+        "max": 42.4517,
+        "mean": 33.31498633333334,
+        "min": 17.2726,
+        "p95": 36.081
+      },
+      "draw_time_ms": {
+        "count": 901,
+        "max": 0.2818,
+        "mean": 0.0754392896781354,
+        "min": 0.0202,
+        "p95": 0.1296
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.1258871,
+      "entrypoint": "games/pyxel/02_jump_game.py",
+      "game_fps": {
+        "count": 29,
+        "max": 30.975350880546948,
+        "mean": 30.033809414466646,
+        "min": 29.901176611299658,
+        "p05": 29.94663509625847,
+        "p95": 30.090143274702527,
+        "windows_used": 29
+      },
+      "headless": false,
+      "logical_height": 120,
+      "logical_width": 160,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 30.03243380000001,
+      "measurement_finished_monotonic_ns": 60130247752400,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 60100248137700,
+      "metric_rows": 40,
+      "missed_deadline_count": 0,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 60130215358300,
+      "planned_measurement_start_monotonic_ns": 60100215358300,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 1202,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 1202,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 30,
+            "name": "target_fps_matches_registry",
+            "passed": true,
+            "threshold": 30
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "run_id": "formal-v1__profile__pyxel_jump__memory_bandwidth__p050__r02",
+      "schema_version": 1,
+      "seed": 1001,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 30,
+      "title": "Pyxel Jump",
+      "update_count": 1202,
+      "update_time_ms": {
+        "count": 901,
+        "max": 0.7265,
+        "mean": 0.044930854605993345,
+        "min": 0.0088,
+        "p95": 0.0673
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "pyxel_jump"
+    }
+  ]
+}
