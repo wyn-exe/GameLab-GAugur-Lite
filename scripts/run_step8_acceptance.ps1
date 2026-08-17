@@ -233,7 +233,9 @@ try {
     }
     $finalFiles = @($runs, $truth, $summary, $plot)
     $existingFinal = @($finalFiles | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
-    if ($existingFinal.Count -ne 0 -and $existingFinal.Count -ne $finalFiles.Count) {
+    # 仅允许“JSONL 已落盘、后续 truth 尚未写入”的可审计恢复，不覆盖其他最终产物。
+    $recoverRunsOnly = $existingFinal.Count -eq 1 -and $existingFinal[0] -eq $runs
+    if ($existingFinal.Count -ne 0 -and $existingFinal.Count -ne $finalFiles.Count -and -not $recoverRunsOnly) {
         throw "Partial Step 8 final outputs exist; stop for audit instead of overwriting: $($existingFinal -join ', ')"
     }
 
@@ -270,7 +272,7 @@ try {
         throw 'Step 8 runner did not finish all formal rows.'
     }
 
-    if ($existingFinal.Count -eq 0) {
+    if ($existingFinal.Count -eq 0 -or $recoverRunsOnly) {
         Write-Host '[Step 8] Building 216 physical records, 600 target truths and measured retention plot...'
         python -m gaugur_lite features build-colocation `
             --plan $plan `

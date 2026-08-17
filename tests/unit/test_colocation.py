@@ -248,6 +248,7 @@ def test_build_and_verify_colocation_artifacts(
             "combination_size": 2,
             "target_id": "game_0",
             "neighbor_ids": ["game_1"],
+            "run_seed": 2**63 + 17,
             "retention_ratio": 0.9,
         },
         {
@@ -255,6 +256,7 @@ def test_build_and_verify_colocation_artifacts(
             "combination_size": 2,
             "target_id": "game_1",
             "neighbor_ids": ["game_0"],
+            "run_seed": 2**63 + 17,
             "retention_ratio": 1.1,
         },
     ]
@@ -291,3 +293,47 @@ def test_build_and_verify_colocation_artifacts(
     assert built["artifacts"]["colocation_truth_sha256"]
     assert verified["status"] == "passed"
     assert verified["passed_count"] == verified["check_count"] == 8
+
+
+def test_build_recovers_exact_runs_jsonl_after_later_artifact_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = tmp_path / "formal.csv"
+    baseline = tmp_path / "solo.json"
+    plan.write_text("placeholder\n", encoding="utf-8")
+    baseline.write_text("{}\n", encoding="utf-8")
+    physical = [{"run_id": "run-1", "stage": "colocation-main"}]
+    targets = [
+        {
+            "stage": "colocation-main",
+            "combination_size": 2,
+            "target_id": "game_0",
+            "neighbor_ids": ["game_1"],
+            "run_seed": 2**63 + 99,
+            "retention_ratio": 0.9,
+        }
+    ]
+    summary = {"schema_version": 1, "status": "passed", "inputs": {"plan_sha256": "d" * 64}, "checks": {"ok": True}}
+    monkeypatch.setattr(
+        colocation,
+        "compute_colocation_truth",
+        lambda **_: (summary.copy(), physical, targets),
+    )
+    runs = tmp_path / "out" / "runs.jsonl"
+    truth = tmp_path / "out" / "truth.parquet"
+    summary_file = tmp_path / "out" / "summary.json"
+    plot = tmp_path / "out" / "retention.png"
+    colocation._write_jsonl_exclusive(runs, physical)
+
+    built = build_colocation_truth(
+        repo_root=tmp_path,
+        plan_file=plan,
+        solo_baselines_file=baseline,
+        runs_output_file=runs,
+        truth_output_file=truth,
+        summary_file=summary_file,
+        plot_file=plot,
+    )
+
+    assert built["artifacts"]["colocation_runs"] == "out/runs.jsonl"
+    assert truth.is_file()

@@ -557,11 +557,27 @@ def _write_json_exclusive(path: Path, value: dict[str, Any]) -> None:
         stream.write(stable_json_dumps(value, indent=2) + "\n")
 
 
+def _jsonl_payload(rows: list[dict[str, Any]]) -> str:
+    """以唯一的稳定序列化格式构造 JSONL，供恢复时逐字节核对。"""
+
+    return "".join(stable_json_dumps(row) + "\n" for row in rows)
+
+
 def _write_jsonl_exclusive(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("x", encoding="utf-8", newline="\n") as stream:
-        for row in rows:
-            stream.write(stable_json_dumps(row) + "\n")
+        stream.write(_jsonl_payload(rows))
+
+
+def _validate_recoverable_runs_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    """只允许复用与本次重算结果逐字节相同的中间 JSONL。"""
+
+    try:
+        actual = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ColocationError(f"无法读取待恢复的共置 JSONL: {path}") from exc
+    if actual != _jsonl_payload(rows):
+        raise ColocationError(f"已有共置 JSONL 与 raw attempt 重算结果不一致: {path}")
 
 
 def _write_parquet_exclusive(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -573,7 +589,28 @@ def _write_parquet_exclusive(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         raise FileExistsError(f"拒绝覆盖 parquet: {path}")
-    pq.write_table(pa.Table.from_pylist(rows), path, compression="zstd")
+    if not rows:
+        raise ValueError("colocation parquet 不允许写入空 truth table")
+    column_names = list(rows[0])
+    if any(list(row) != column_names for row in rows):
+        raise ValueError("colocation truth 的字段集合或顺序不一致")
+    arrays = []
+    for name in column_names:
+        values = [row[name] for row in rows]
+        if name == "run_seed":
+            # 冻结计划使用完整 uint64 种子；不能让 PyArrow 误推断为 int64。
+            if any(
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or value < 0
+                or value >= 2**64
+                for value in values
+            ):
+                raise ValueError("run_seed 必须是 uint64 范围内的整数")
+            arrays.append(pa.array(values, type=pa.uint64()))
+        else:
+            arrays.append(pa.array(values))
+    pq.write_table(pa.Table.from_arrays(arrays, names=column_names), path, compression="zstd")
 
 
 def _write_plot_exclusive(path: Path, targets: list[dict[str, Any]]) -> None:
@@ -645,14 +682,22 @@ def build_colocation_truth(
         _inside_repo(root, summary_file),
         _inside_repo(root, plot_file),
     ]
-    existing = [path for path in outputs if path.exists()]
-    if existing:
-        raise FileExistsError("共置产物已存在，拒绝覆盖: " + ", ".join(map(str, existing)))
     result, physical_records, targets = compute_colocation_truth(
         repo_root=root, plan_file=plan_file, solo_baselines_file=solo_baselines_file
     )
     runs_output, truth_output, summary_output, plot_output = outputs
-    _write_jsonl_exclusive(runs_output, physical_records)
+    existing_nonrecoverable = [
+        path for path in (truth_output, summary_output, plot_output) if path.exists()
+    ]
+    if existing_nonrecoverable:
+        raise FileExistsError(
+            "共置最终产物已存在，拒绝覆盖: " + ", ".join(map(str, existing_nonrecoverable))
+        )
+    if runs_output.exists():
+        # Parquet 写入前异常时可保留 JSONL；仅在内容完全一致时断点恢复。
+        _validate_recoverable_runs_jsonl(runs_output, physical_records)
+    else:
+        _write_jsonl_exclusive(runs_output, physical_records)
     _write_parquet_exclusive(truth_output, targets)
     _write_plot_exclusive(plot_output, targets)
     result["artifacts"] = {

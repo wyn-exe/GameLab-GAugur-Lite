@@ -1,0 +1,321 @@
+{
+  "artifact_sha256": {
+    "barrier.json": "e4dbc807e3e554bb42711fb5cc9ace754bf8bf2cca38051b83f7c07d6963e9dc",
+    "cooldown.jsonl": "126a96f9a1e3f17c3aaaacb1efee5c652d0741bacc2bae4f3b826a610c696249",
+    "layout.json": "0ebfa9f293866e9e67e83ccc7af52af1638787219d5bf8a313fa4803cfa891d3",
+    "manifest.json": "22990392c4b3b0b4e04dec9ccc840a3cbdec8d9b5cee451bf1f27de8b6230e8c",
+    "system_metrics.jsonl": "10c6f88db5f8da4f880f93c72c8794abe22ed4596f61717b1f1229e0d357f781",
+    "window_observations.jsonl": "88955aa8a2425f4dc0f86ab18bc9a99fbb0830acafadd9d4f8917de190b55543",
+    "workloads/pyxel_bubbles/game_metrics.jsonl": "5d0b6c3b3e5c564f0e0e0d2de6d6aa2e4922dfbc56d8a2bdf91bffcb4255e17f",
+    "workloads/pyxel_bubbles/heartbeat.json": "dc8dcd8e391fc1b534bed89c6591dd7781bad2aa621d1d088445fb749a1d349b",
+    "workloads/pyxel_bubbles/measurement-start.json": "10c1b926753621be1e640bfe0276a171fa0a23e959469b42775157e14d91d916",
+    "workloads/pyxel_bubbles/ready.json": "2a57091033242ccd829a8add64399b7549f611c15e663d2cdb5297db148224ba",
+    "workloads/pyxel_bubbles/status.json": "9d94cf5248c0d487214bf4caf603d0b2df1674a0655aedc5f1244b51a31c3825",
+    "workloads/pyxel_bubbles/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_bubbles/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_bubbles/stop.json": "6c3bb11a628392d586b3ba1d37249064787ba84410caf3011f2e873dd67a382a",
+    "workloads/pyxel_bubbles/summary.json": "3dd9a695d1dc50d78abd2484f46d728d35be970891c691f8d2946e860f587198",
+    "workloads/pyxel_shooter/game_metrics.jsonl": "496be31d2c8070236714167f5fe3d7c90f651f857775726fa892725338b2bdb0",
+    "workloads/pyxel_shooter/heartbeat.json": "524296d00b479e0588b1bfde9e497cb5983fbb274560dfa533cb80c673d9da0a",
+    "workloads/pyxel_shooter/measurement-start.json": "1029051bc3e59e9f86a81223c5518d1020e1ffbc8990ed0427c9bde52229db73",
+    "workloads/pyxel_shooter/ready.json": "836d9c327e9468aa0e8e0b4f5c87b3ad0b48db3f5227f6b73aed8cf1800f292e",
+    "workloads/pyxel_shooter/status.json": "06ebfb87fbdf322debb901072113c8ca563b978d5f349cd3e62ebd7a75be28a2",
+    "workloads/pyxel_shooter/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_shooter/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_shooter/stop.json": "d29c628116573c48e8dffd580eca40b0e42f52ba3300d7fff368c2020e402a8b",
+    "workloads/pyxel_shooter/summary.json": "2855de8a0c00cffbd0afd8ac4a710d12b7bfb90bcdf080963368ba1f315e0754"
+  },
+  "attempt": 1,
+  "benchmark": null,
+  "cleanup": {
+    "actions": [],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 10.02370640001027,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 48.0,
+    "samples": 11,
+    "thermal_target_c": 70.0,
+    "thermal_target_reached": true
+  },
+  "external_occlusion_checked": false,
+  "gpu_temp_c_max": 48.0,
+  "gpu_temp_limit_c": 80.0,
+  "gpu_thermal_slowdown_seen": false,
+  "measurement_end_monotonic_ns": 82807202243300,
+  "measurement_start_monotonic_ns": 82777202243300,
+  "mode": "colocation",
+  "pressure_applied": null,
+  "pressure_requested": null,
+  "resource": null,
+  "run_id": "formal-v1__colocation__pyxel_bubbles+pyxel_shooter__r02",
+  "schema_version": 1,
+  "split": "train",
+  "stage": "colocation-main",
+  "status": "completed",
+  "system_coverage_ratio": 1.0,
+  "system_coverage_s": 30.0,
+  "system_sample_count": 31,
+  "valid": true,
+  "window_sample_count": 31,
+  "windows_pairwise_nonoverlap": true,
+  "workload_ids": [
+    "pyxel_bubbles",
+    "pyxel_shooter"
+  ],
+  "workload_overlap_ratio": 1.0,
+  "workload_overlap_s": 30.0001924,
+  "workloads": [
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.08665019999898504,
+      "controller": "bubbles_v1",
+      "controller_trace_sha256": "4d332776bc0801974c48b1aa8b7cea4db4d65c6d4db28c0cc3359399726cf014",
+      "display_scale": 2,
+      "draw_count": 1202,
+      "draw_interval_ms": {
+        "count": 900,
+        "max": 36.4039,
+        "mean": 33.31918666666667,
+        "min": 22.7132,
+        "p95": 35.0894
+      },
+      "draw_time_ms": {
+        "count": 901,
+        "max": 0.2697,
+        "mean": 0.03928046614872364,
+        "min": 0.0138,
+        "p95": 0.0652
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.1410624,
+      "entrypoint": "games/pyxel/06_click_game.py",
+      "game_fps": {
+        "count": 29,
+        "max": 30.97834923172195,
+        "mean": 30.03378403409438,
+        "min": 29.931684309946263,
+        "p05": 29.95484008309073,
+        "p95": 30.05806733802168,
+        "windows_used": 29
+      },
+      "headless": false,
+      "logical_height": 256,
+      "logical_width": 256,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 30.034387799999994,
+      "measurement_finished_monotonic_ns": 82807228103300,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 82777227850200,
+      "metric_rows": 40,
+      "missed_deadline_count": 0,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 82807202243300,
+      "planned_measurement_start_monotonic_ns": 82777202243300,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 1202,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 1202,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 30,
+            "name": "target_fps_matches_registry",
+            "passed": true,
+            "threshold": 30
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "run_id": "formal-v1__colocation__pyxel_bubbles+pyxel_shooter__r02",
+      "schema_version": 1,
+      "seed": 1002,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 30,
+      "title": "Pyxel Bubbles",
+      "update_count": 1202,
+      "update_time_ms": {
+        "count": 901,
+        "max": 1.1261,
+        "mean": 0.20334617092119867,
+        "min": 0.0505,
+        "p95": 0.3573
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "pyxel_bubbles"
+    },
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.05320909999136347,
+      "controller": "shooter_patrol_v1",
+      "controller_trace_sha256": "ac33462042938d73e28f3e99c7b1ca20f7f2870ebb3e8e48b57a728a217606a0",
+      "display_scale": 2,
+      "draw_count": 1202,
+      "draw_interval_ms": {
+        "count": 900,
+        "max": 37.842,
+        "mean": 33.31967211111111,
+        "min": 21.1897,
+        "p95": 35.0563
+      },
+      "draw_time_ms": {
+        "count": 901,
+        "max": 0.8592,
+        "mean": 0.06310943396226415,
+        "min": 0.0196,
+        "p95": 0.0989
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.097847,
+      "entrypoint": "games/pyxel/09_shooter.py",
+      "game_fps": {
+        "count": 29,
+        "max": 30.98085692850388,
+        "mean": 30.032844416491084,
+        "min": 29.92776595791924,
+        "p05": 29.95339252123696,
+        "p95": 30.052044324244886,
+        "windows_used": 29
+      },
+      "headless": false,
+      "logical_height": 160,
+      "logical_width": 120,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 30.034470199999998,
+      "measurement_finished_monotonic_ns": 82807228044000,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 82777227851600,
+      "metric_rows": 40,
+      "missed_deadline_count": 0,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 82807202243300,
+      "planned_measurement_start_monotonic_ns": 82777202243300,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 1202,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 1202,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 30,
+            "name": "target_fps_matches_registry",
+            "passed": true,
+            "threshold": 30
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "run_id": "formal-v1__colocation__pyxel_bubbles+pyxel_shooter__r02",
+      "schema_version": 1,
+      "seed": 1004,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 30,
+      "title": "Pyxel Shooter",
+      "update_count": 1202,
+      "update_time_ms": {
+        "count": 901,
+        "max": 3.1669,
+        "mean": 0.19252985571587125,
+        "min": 0.0586,
+        "p95": 0.3572
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "pyxel_shooter"
+    }
+  ]
+}

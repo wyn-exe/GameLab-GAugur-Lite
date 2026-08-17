@@ -1,0 +1,321 @@
+{
+  "artifact_sha256": {
+    "barrier.json": "d87be2bcac674d15770d2b87cd98dca6cb7521cf9dd0aceb527fdb1afe3b7e35",
+    "cooldown.jsonl": "8672aa312a28676f8f1aaf279d2015334a04547d76a53f8fa6af4b7fdd72caff",
+    "layout.json": "6f9e609d374221090ff4c7f5ceaee317b8927c8620ccbb55d0e3e2b89b5d203b",
+    "manifest.json": "9b868e1e81b494e21782c08c50f899750ec2abc03fbba5843d6b9ebd5aa6e002",
+    "system_metrics.jsonl": "d062eec4d93f484f183f56ac71f09777bd63796462dda49f9e17bf5456826a03",
+    "window_observations.jsonl": "9172bd62c3f5f6b4828f08f28f8da929e2fce972a6cbbad84a74d9ea9bba0ca8",
+    "workloads/pyxel_snake/game_metrics.jsonl": "528d4419d69d789a2ff3ea21559c447efe62e5516b71ba8bbe16c1b5ad149b9e",
+    "workloads/pyxel_snake/heartbeat.json": "e23dec6ac0616cfc43fb4c06099898ac0d1bbbc69fa2444d1f806408c180b5b5",
+    "workloads/pyxel_snake/measurement-start.json": "a406771d55a11079845da685fb509d28b3d7ba14b42e1091141679af9df14e5d",
+    "workloads/pyxel_snake/ready.json": "01a069b25a784733c1a0b1163ed5396eb5c9924547bf7835e5e8770858255ba1",
+    "workloads/pyxel_snake/status.json": "d35c0c30dc632436226683186a79a8d51eb82147feab7c17a366a41389d4d893",
+    "workloads/pyxel_snake/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_snake/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_snake/stop.json": "739a681c29cf68fa242fa7193f2ddefa34f75fc82e90322fb568794fc22c5550",
+    "workloads/pyxel_snake/summary.json": "9dc13c72ea448262c5ece53e6fa8d037cfd7bb7378bd34df486bb757767c504a",
+    "workloads/space_rescue/game_metrics.jsonl": "290ab777c1536e6812b24840ad7bcd90bb22745c5bc4534d2cfbd5464b87ae5a",
+    "workloads/space_rescue/heartbeat.json": "95e476f332e86f9456b6d1cdec112f4cb854a09b993561f00d519a493aafcd0d",
+    "workloads/space_rescue/measurement-start.json": "0e383d55284ffb8d7a03c4eceee13020f05e2e78e6a6f8127d708a4649bb65f4",
+    "workloads/space_rescue/ready.json": "50a67fadd45f6156e9da6eaad5db4e978f86623cd872631de598fcec3659ecb2",
+    "workloads/space_rescue/status.json": "302d25c0c54debc69d0cc537abd9014c769fb0d106225a15a194695c2cd74db6",
+    "workloads/space_rescue/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/space_rescue/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/space_rescue/stop.json": "58a39fed248ab2ff3055d8aba7a0a8b68851f5cae5e58d4d0982d225c8edd48a",
+    "workloads/space_rescue/summary.json": "9f9bc37ec7682aafd6137f8e723947f481e079c593e0da06dddce300c37ec38d"
+  },
+  "attempt": 1,
+  "benchmark": null,
+  "cleanup": {
+    "actions": [],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 10.02543889998924,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 48.0,
+    "samples": 11,
+    "thermal_target_c": 70.0,
+    "thermal_target_reached": true
+  },
+  "external_occlusion_checked": false,
+  "gpu_temp_c_max": 49.0,
+  "gpu_temp_limit_c": 80.0,
+  "gpu_thermal_slowdown_seen": false,
+  "measurement_end_monotonic_ns": 88434672598200,
+  "measurement_start_monotonic_ns": 88404672598200,
+  "mode": "colocation",
+  "pressure_applied": null,
+  "pressure_requested": null,
+  "resource": null,
+  "run_id": "formal-v1__colocation__pyxel_snake+space_rescue__r01",
+  "schema_version": 1,
+  "split": "train",
+  "stage": "colocation-main",
+  "status": "completed",
+  "system_coverage_ratio": 0.9994666666666667,
+  "system_coverage_s": 29.984,
+  "system_sample_count": 31,
+  "valid": true,
+  "window_sample_count": 31,
+  "windows_pairwise_nonoverlap": true,
+  "workload_ids": [
+    "pyxel_snake",
+    "space_rescue"
+  ],
+  "workload_overlap_ratio": 0.9988843533333333,
+  "workload_overlap_s": 29.9665306,
+  "workloads": [
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.1185923000011826,
+      "controller": "snake_cycle_v1",
+      "controller_trace_sha256": "4be4ec8e0029a24c7c8afa56daf6876c82311d56cdd30e80c7758bc58ff892d7",
+      "display_scale": 2,
+      "draw_count": 802,
+      "draw_interval_ms": {
+        "count": 600,
+        "max": 52.6126,
+        "mean": 49.98324483333333,
+        "min": 39.9413,
+        "p95": 51.7341
+      },
+      "draw_time_ms": {
+        "count": 601,
+        "max": 0.4737,
+        "mean": 0.02935474209650582,
+        "min": 0.0083,
+        "p95": 0.0412
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.1801395,
+      "entrypoint": "games/pyxel/07_snake.py",
+      "game_fps": {
+        "count": 29,
+        "max": 20.973041252773683,
+        "mean": 20.0344826439139,
+        "min": 19.965934123198995,
+        "p05": 19.968443868155152,
+        "p95": 20.03407509973392,
+        "windows_used": 29
+      },
+      "headless": false,
+      "logical_height": 50,
+      "logical_width": 40,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 0.9999860899999999,
+      "measurement_coverage_s": 29.999582699999998,
+      "measurement_finished_monotonic_ns": 88434711209000,
+      "measurement_metric_rows": 29,
+      "measurement_started_monotonic_ns": 88404711626300,
+      "metric_rows": 39,
+      "missed_deadline_count": 0,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 88434672598200,
+      "planned_measurement_start_monotonic_ns": 88404672598200,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 802,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 39,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 802,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 20,
+            "name": "target_fps_matches_registry",
+            "passed": true,
+            "threshold": 20
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 0.9999860899999999,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "run_id": "formal-v1__colocation__pyxel_snake+space_rescue__r01",
+      "schema_version": 1,
+      "seed": 1003,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 20,
+      "title": "Snake!",
+      "update_count": 802,
+      "update_time_ms": {
+        "count": 601,
+        "max": 0.8628,
+        "mean": 0.027415141430948423,
+        "min": 0.0065,
+        "p95": 0.0378
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 29,
+      "workload_id": "pyxel_snake"
+    },
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.06470059999264777,
+      "controller": "space_rescue_pulse_v1",
+      "controller_trace_sha256": "3ac9500797a9b0653c197eb31bec65f0e4c45acc0125c5ccf9d1fec6c297ea42",
+      "display_scale": 2,
+      "draw_count": 1201,
+      "draw_interval_ms": {
+        "count": 900,
+        "max": 36.7655,
+        "mean": 33.31313277777778,
+        "min": 15.4139,
+        "p95": 35.0302
+      },
+      "draw_time_ms": {
+        "count": 901,
+        "max": 0.8296,
+        "mean": 0.06601287458379579,
+        "min": 0.0163,
+        "p95": 0.093
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.0738503,
+      "entrypoint": "games/pyxel/apps-src/space_rescue/space_rescue.py",
+      "game_fps": {
+        "count": 29,
+        "max": 30.984555554630326,
+        "mean": 30.033499258021102,
+        "min": 29.944423150632424,
+        "p05": 29.94982206810709,
+        "p95": 30.08693960891249,
+        "windows_used": 29
+      },
+      "headless": false,
+      "logical_height": 120,
+      "logical_width": 160,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 30.0329341,
+      "measurement_finished_monotonic_ns": 88434678156900,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 88404678224300,
+      "metric_rows": 40,
+      "missed_deadline_count": 0,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 88434672598200,
+      "planned_measurement_start_monotonic_ns": 88404672598200,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 1201,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 1201,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 30,
+            "name": "target_fps_matches_registry",
+            "passed": true,
+            "threshold": 30
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "run_id": "formal-v1__colocation__pyxel_snake+space_rescue__r01",
+      "schema_version": 1,
+      "seed": 1008,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 30,
+      "title": "Space Rescue",
+      "update_count": 1201,
+      "update_time_ms": {
+        "count": 901,
+        "max": 0.56,
+        "mean": 0.04380510543840178,
+        "min": 0.0104,
+        "p95": 0.0653
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "space_rescue"
+    }
+  ]
+}
