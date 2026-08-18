@@ -21,8 +21,9 @@
 | Step 8 真实共置组合      | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json) |
 | Step 9 模型数据集        | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1) |
 | Step 10 CM/RM/基线实现   | 已完成并独立验收 | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json) |
-| Python 实现              | 分阶段实现中 | Step 0–10 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估与自动验收已落实；全量 110 项单测通过 |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集及 Step 10 模型/评估图表已生成 |
+| Step 11 消融实验实现     | 已实现并完成预检 | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融配置](configs/experiments/ablations.yaml)、[验收入口](scripts/run_step11_final.ps1)；正式消融待用户运行 |
+| Python 实现              | 分阶段实现中 | Step 0–11 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融与自动验收已落实；全量 115 项单测通过 |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集及 Step 10 模型/评估图表已生成；Step 11 待生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -2633,6 +2634,43 @@ python -m gaugur_lite ablate `
   --spec configs\experiments\ablations.yaml `
   --out artifacts\reports\formal-v1\ablations
 ```
+
+#### Step 11 实现与真实预检（2026-08-18）
+
+新增 [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[`configs/experiments/ablations.yaml`](configs/experiments/ablations.yaml)、[`scripts/run_step11_acceptance.ps1`](scripts/run_step11_acceptance.ps1) 和 [`scripts/run_step11_final.ps1`](scripts/run_step11_final.ps1)。实现内容包括：
+
+- 去掉敏感度、去掉强度、强度求和替换均值/方差、只保留最大压力点；
+- 去掉当前数据中可用的普通资源利用率代理；
+- mean FPS 与 p05 FPS 标签对比；
+- pair train → triple test 外推，并额外保留四元测试报告；
+- 组合级 bootstrap、RM retention MAE 图表和逐变体 JSON 结果。
+
+所有变体均重新拟合固定的 Step 10 候选（CM `decision_tree`、RM `gradient_boosting`），标准变体先用 train 选择 CM 阈值，再以 train+validation 重拟合；test 与 extra_test 只用于最终报告。
+
+当前 Step 9 的 `feature_manifest` 只有 `p000/p025/p050/p075/p100` 五档敏感度列，不包含 11 档实测 profile。因此 `pressure_11_curve` 会明确写为 `skipped` 并标记 `fabricated_interpolation=false`；不会用插值伪造“11 档实验”。另外，Step 9 没有独立 raw utilization 列，`no_resource_utilization` 保守移除现有 intensity mean/variance 代理，并在结果中说明与 `no_intensity` 特征集合相同。
+
+代码预检真实输出：
+
+```text
+........................................................................ [ 63%]
+..........................................                               [100%]
+115 passed, 1 warning in 7.81s
+Python py_compile: PASS
+PowerShell parser: PASS
+git diff --check: PASS
+```
+
+警告仍来自 `scipy.optimize.curve_fit` 的小样本协方差估计。正式消融会由以下入口执行；脚本要求 Step 9/Step 10 验收已通过，并拒绝未提交的源码、配置或脚本改动：
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+pwsh.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step11_final.ps1
+```
+
+正式运行前，本节不声称消融指标已经通过；真实的 `ablation-summary.json`、`ablation-rm-mae.png` 和 `formal-ablation-acceptance.json` 将在用户运行后补入下一段验收记录。
 
 ### Step 12：实现 QoS 安全装箱 replay
 

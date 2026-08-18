@@ -21,6 +21,7 @@ from .benchmarks.calibration import (
     verify_calibration,
 )
 from .benchmarks.engine import BENCHMARK_RESOURCES, BenchmarkWorkerConfig, run_benchmark_worker, worker_result_text
+from .ablations import AblationError, run_ablations
 from .config import (
     ConfigError,
     discover_repo_root,
@@ -803,6 +804,34 @@ def model_evaluate(
         )
     except (ModelError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         typer.echo(f"MODEL_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@app.command("ablate")
+def ablate_models(
+    dataset_directory: Path = typer.Option(..., "--dataset-dir", exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True),
+    spec_file: Path = typer.Option(..., "--spec", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    output_directory: Path = typer.Option(..., "--out", help="独占创建的消融报告目录。"),
+    seed: int | None = typer.Option(None, "--seed", min=0),
+    bootstrap_repeats: int | None = typer.Option(None, "--bootstrap-repeats", min=20, max=5000),
+) -> None:
+    """运行 Step 11 特征/标签/外推消融并生成报告。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = run_ablations(
+            repo_root=repo_root,
+            dataset_dir=dataset_directory,
+            spec_path=spec_file,
+            output_dir=output_directory,
+            seed=seed,
+            bootstrap_repeats=bootstrap_repeats,
+        )
+    except (AblationError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"ABLATION_ERROR: {type(exc).__name__}: {exc}", err=True)
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] != "passed":
