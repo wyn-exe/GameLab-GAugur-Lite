@@ -11,6 +11,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+from .benchmarks.protocol import STABLE_BENCHMARK_PROTOCOL, stable_benchmark_environment_valid
 from .config import config_sha256, stable_json_dumps
 from .runner.plan import load_plan_rows, verify_plan
 from .runner.runner import ParsedPlanRow, inspect_resume
@@ -27,6 +28,7 @@ _EXPECTED_MAIN_RUNS = 180
 _EXPECTED_EXTRA_RUNS = 36
 _EXPECTED_MAIN_TARGETS = 456
 _EXPECTED_EXTRA_TARGETS = 144
+_MIN_STRESS_ACTIVE_FRACTION = 0.90
 
 
 def _file_sha256(path: Path) -> str:
@@ -59,8 +61,10 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _colocation_rows(plan_file: Path) -> tuple[list[ParsedPlanRow], list[ParsedPlanRow]]:
-    """读取并验证 Stage 8 固定的 180+36 个物理 run。"""
+def _colocation_rows(
+    plan_file: Path, *, allow_pressure: bool = False
+) -> tuple[list[ParsedPlanRow], list[ParsedPlanRow]]:
+    """读取并验证固定的 180+36 个物理 run；压力修复实验可显式允许 benchmark。"""
 
     rows = [ParsedPlanRow.from_csv(raw) for raw in load_plan_rows(plan_file)]
     main_rows = [row for row in rows if row.stage == _MAIN_STAGE]
@@ -76,14 +80,21 @@ def _colocation_rows(plan_file: Path) -> tuple[list[ParsedPlanRow], list[ParsedP
         expected_mode = "colocation" if row.stage == _MAIN_STAGE else "extra_test"
         expected_size = 4 if row.stage == _EXTRA_STAGE else None
         combination_key = make_combination_key(row.workload_ids)
+        pressure_contract_ok = (
+            row.resource is not None
+            and row.pressure_requested is not None
+            and row.pressure_applied is not None
+            if allow_pressure
+            else row.resource is None
+            and row.pressure_requested is None
+            and row.pressure_applied is None
+        )
         if (
             row.mode != expected_mode
             or row.raw.get("combination_key") != combination_key
             or row.raw.get("colocation_id")
             != make_colocation_id(combination_key, row.repeat)
-            or row.resource is not None
-            or row.pressure_requested is not None
-            or row.pressure_applied is not None
+            or not pressure_contract_ok
             or (expected_size is not None and len(row.workload_ids) != expected_size)
             or (row.stage == _MAIN_STAGE and len(row.workload_ids) not in {2, 3})
         ):
@@ -196,7 +207,7 @@ def _load_baselines(
 
 
 def audit_colocation_inputs(
-    *, repo_root: Path, plan_file: Path, solo_baselines_file: Path
+    *, repo_root: Path, plan_file: Path, solo_baselines_file: Path, allow_pressure: bool = False
 ) -> dict[str, Any]:
     """只读预检 frozen plan 和 Step 6 baseline；不要求 216 个 attempt 已存在。"""
 
@@ -206,7 +217,7 @@ def audit_colocation_inputs(
     verification = verify_plan(repo_root=root, plan_file=plan)
     if verification["status"] != "passed":
         raise ColocationError("共置计划未通过 verify")
-    main_rows, extra_rows = _colocation_rows(plan)
+    main_rows, extra_rows = _colocation_rows(plan, allow_pressure=allow_pressure)
     shape = _validate_plan_shape(main_rows, extra_rows)
     expected_workload_ids = {
         workload_id for row in (*main_rows, *extra_rows) for workload_id in row.workload_ids
@@ -216,12 +227,17 @@ def audit_colocation_inputs(
     )
     plan_manifest = _read_json(plan.with_name(f"{plan.stem}-manifest.json"))
     config_hashes = {row.config_sha256 for row in (*main_rows, *extra_rows)}
+    pressure_cells = {
+        (row.resource, row.pressure_requested, row.pressure_applied)
+        for row in (*main_rows, *extra_rows)
+    }
     checks = {
         "plan_verified": True,
         "plan_generated_from_clean_commit": plan_manifest.get("root_dirty_at_generation") is False,
         "single_colocation_config_sha256": len(config_hashes) == 1,
         "baseline_status_passed": baseline_payload.get("status") == "passed",
         "baseline_workloads_match_plan": set(baselines) == expected_workload_ids,
+        "single_pressure_cell": len(pressure_cells) == 1,
         **shape["checks"],
     }
     if not all(checks.values()):
@@ -240,6 +256,15 @@ def audit_colocation_inputs(
         "expected_main_target_count": _EXPECTED_MAIN_TARGETS,
         "expected_extra_target_count": _EXPECTED_EXTRA_TARGETS,
         "config_sha256": next(iter(config_hashes)),
+        "allow_pressure": allow_pressure,
+        "pressure_cells": [
+            {
+                "resource": resource,
+                "pressure_requested": requested,
+                "pressure_applied": applied,
+            }
+            for resource, requested, applied in sorted(pressure_cells, key=str)
+        ],
         "main_split_counts": shape["main_split_counts"],
         "triple_workload_occurrences": shape["triple_workload_occurrences"],
         "extra_workload_occurrences": shape["extra_workload_occurrences"],
@@ -254,6 +279,8 @@ def _collect_run_record(
     row: ParsedPlanRow,
     plan_sha256: str,
     baselines: dict[str, dict[str, Any]],
+    allow_pressure: bool = False,
+    expected_benchmark_cpu_workers: int | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """从一个哈希验证过的有效 attempt 提取物理 run 和每目标 truth。"""
 
@@ -272,12 +299,16 @@ def _collect_run_record(
         or summary.get("stage") != row.stage
         or summary.get("split") != row.split
         or tuple(summary.get("workload_ids", ())) != row.workload_ids
-        or summary.get("benchmark") is not None
+        or (not allow_pressure and summary.get("benchmark") is not None)
         or float(summary.get("system_coverage_ratio", 0.0)) < 0.95
         or float(summary.get("workload_overlap_ratio", 0.0)) < 0.95
         or summary.get("windows_pairwise_nonoverlap") is not True
         or summary.get("gpu_thermal_slowdown_seen") is True
         or summary.get("cleanup", {}).get("global_kill_used") is not False
+        or (
+            allow_pressure
+            and manifest.get("execution_provenance", {}).get("root_dirty_at_execution") is not False
+        )
     ):
         raise ColocationError(f"共置 attempt 质量门未通过: {row.run_id}")
     provenance = manifest.get("execution_provenance")
@@ -291,6 +322,28 @@ def _collect_run_record(
     }
     if set(by_workload) != set(row.workload_ids) or len(by_workload) != len(row.workload_ids):
         raise ColocationError(f"共置 attempt workload 集合不一致: {row.run_id}")
+    benchmark = summary.get("benchmark")
+    if allow_pressure:
+        if row.resource is None or row.pressure_applied is None or not isinstance(benchmark, dict):
+            raise ColocationError(f"压力共置 attempt 缺少 benchmark: {row.run_id}")
+        if (
+            benchmark.get("resource") != row.resource
+            or abs(float(benchmark.get("pressure_requested", -1.0)) - row.pressure_applied) > 1e-9
+            or benchmark.get("status") != "completed"
+            or benchmark.get("barrier_used") is not True
+            or float(benchmark.get("active_fraction", 0.0)) < _MIN_STRESS_ACTIVE_FRACTION
+            or int(benchmark.get("operations", 0)) <= 0
+            or not stable_benchmark_environment_valid(
+                benchmark.get("benchmark_environment"),
+                expected_protocol=STABLE_BENCHMARK_PROTOCOL,
+            )
+        ):
+            raise ColocationError(f"压力 benchmark 质量门未通过: {row.run_id}")
+        if expected_benchmark_cpu_workers is not None and int(benchmark.get("cpu_workers", 0)) != expected_benchmark_cpu_workers:
+            raise ColocationError(
+                f"benchmark cpu_workers 不符: {row.run_id}; "
+                f"actual={benchmark.get('cpu_workers')} expected={expected_benchmark_cpu_workers}"
+            )
 
     combination_key = make_combination_key(row.workload_ids)
     common = {
@@ -308,6 +361,17 @@ def _collect_run_record(
         "run_seed": int(row.raw["seed"]),
         "row_sha256": row.row_sha256,
         "config_sha256": row.config_sha256,
+        "resource": row.resource,
+        "pressure_requested": row.pressure_requested,
+        "pressure_applied": row.pressure_applied,
+        "benchmark_cpu_workers": benchmark.get("cpu_workers") if isinstance(benchmark, dict) else None,
+        "benchmark_active_fraction": benchmark.get("active_fraction") if isinstance(benchmark, dict) else None,
+        "benchmark_operations": benchmark.get("operations") if isinstance(benchmark, dict) else None,
+        "benchmark_protocol": (
+            benchmark.get("benchmark_environment", {}).get("protocol")
+            if isinstance(benchmark, dict)
+            else None
+        ),
         "attempt": int(summary["attempt"]),
         "attempt_directory": _relative(repo_root, attempt_dir),
         "summary_sha256": _file_sha256(attempt_dir / "summary.json"),
@@ -412,16 +476,24 @@ def _aggregate_targets(targets: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def compute_colocation_truth(
-    *, repo_root: Path, plan_file: Path, solo_baselines_file: Path
+    *,
+    repo_root: Path,
+    plan_file: Path,
+    solo_baselines_file: Path,
+    allow_pressure: bool = False,
+    expected_benchmark_cpu_workers: int | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
     """从所有正式共置 attempts 精确重算物理 run 与 target-level truth。"""
 
     root = repo_root.resolve()
     audit = audit_colocation_inputs(
-        repo_root=root, plan_file=plan_file, solo_baselines_file=solo_baselines_file
+        repo_root=root,
+        plan_file=plan_file,
+        solo_baselines_file=solo_baselines_file,
+        allow_pressure=allow_pressure,
     )
     plan = _inside_repo(root, plan_file)
-    main_rows, extra_rows = _colocation_rows(plan)
+    main_rows, extra_rows = _colocation_rows(plan, allow_pressure=allow_pressure)
     expected_workload_ids = {
         workload_id for row in (*main_rows, *extra_rows) for workload_id in row.workload_ids
     }
@@ -437,6 +509,8 @@ def compute_colocation_truth(
             row=row,
             plan_sha256=str(audit["plan_sha256"]),
             baselines=baselines,
+            allow_pressure=allow_pressure,
+            expected_benchmark_cpu_workers=expected_benchmark_cpu_workers,
         )
         physical_records.append(physical)
         targets.extend(target_records)
@@ -547,6 +621,8 @@ def compute_colocation_truth(
         "extra_target_truth_count": len(extra_targets),
         "aggregate": aggregate,
         "checks": checks,
+        "allow_pressure": allow_pressure,
+        "expected_benchmark_cpu_workers": expected_benchmark_cpu_workers,
     }
     return result, physical_records, targets
 
@@ -672,6 +748,8 @@ def build_colocation_truth(
     truth_output_file: Path,
     summary_file: Path,
     plot_file: Path,
+    allow_pressure: bool = False,
+    expected_benchmark_cpu_workers: int | None = None,
 ) -> dict[str, Any]:
     """独占写出 216-row 物理记录、600-row truth、summary 和实测图。"""
 
@@ -683,7 +761,11 @@ def build_colocation_truth(
         _inside_repo(root, plot_file),
     ]
     result, physical_records, targets = compute_colocation_truth(
-        repo_root=root, plan_file=plan_file, solo_baselines_file=solo_baselines_file
+        repo_root=root,
+        plan_file=plan_file,
+        solo_baselines_file=solo_baselines_file,
+        allow_pressure=allow_pressure,
+        expected_benchmark_cpu_workers=expected_benchmark_cpu_workers,
     )
     runs_output, truth_output, summary_output, plot_output = outputs
     existing_nonrecoverable = [
@@ -721,6 +803,8 @@ def verify_colocation_truth(
     truth_file: Path,
     summary_file: Path,
     plot_file: Path,
+    allow_pressure: bool = False,
+    expected_benchmark_cpu_workers: int | None = None,
 ) -> dict[str, Any]:
     """从 raw attempts 独立重算并核对 Step 8 全部派生产物。"""
 
@@ -731,7 +815,11 @@ def verify_colocation_truth(
     root = repo_root.resolve()
     stored = _read_json(_inside_repo(root, summary_file))
     recomputed, physical_records, targets = compute_colocation_truth(
-        repo_root=root, plan_file=plan_file, solo_baselines_file=solo_baselines_file
+        repo_root=root,
+        plan_file=plan_file,
+        solo_baselines_file=solo_baselines_file,
+        allow_pressure=allow_pressure,
+        expected_benchmark_cpu_workers=expected_benchmark_cpu_workers,
     )
     artifacts = stored.get("artifacts", {})
     stored_core = dict(stored)

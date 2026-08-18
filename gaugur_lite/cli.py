@@ -37,6 +37,11 @@ from .colocation import (
 )
 from .doctor import build_doctor_report
 from .features.dataset import DatasetError, audit_dataset, build_dataset
+from .effectiveness import (
+    EffectivenessError,
+    audit_stress_pilot,
+    build_stress_plan,
+)
 from .metrics.telemetry import format_result, run_overhead, run_probe
 from .metrics.writer import write_json_atomic
 from .models.common import ModelError
@@ -92,6 +97,12 @@ features_app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+effectiveness_app = typer.Typer(
+    name="effectiveness",
+    help="为方法有效性验证准备并审计真实共置压力实验。",
+    no_args_is_help=True,
+    add_completion=False,
+)
 replay_app = typer.Typer(
     name="replay",
     help="离线模型 replay 与实测 truth 对照。",
@@ -102,6 +113,7 @@ app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(workload_app, name="workload")
 app.add_typer(benchmark_app, name="benchmark")
 app.add_typer(features_app, name="features")
+app.add_typer(effectiveness_app, name="effectiveness")
 app.add_typer(replay_app, name="replay")
 
 
@@ -609,6 +621,8 @@ def features_build_colocation(
     truth_output: Path = typer.Option(..., "--truth-out", help="独占创建的 600-row target truth Parquet。"),
     summary: Path = typer.Option(..., "--summary", help="独占创建的共置质量门 JSON。"),
     plot: Path = typer.Option(..., "--plot", help="独占创建的实测 retention PNG。"),
+    allow_pressure: bool = typer.Option(False, "--allow-pressure", help="允许共置 run 携带并行 benchmark；默认保持 Step 8 无压力契约。"),
+    benchmark_cpu_workers: int | None = typer.Option(None, "--benchmark-cpu-workers", min=1, max=64, help="压力共置时要求 benchmark 使用的 CPU worker 数。"),
     dry_run: bool = typer.Option(False, "--dry-run", help="只预检计划和 frozen solo baseline，不读取 attempt。"),
 ) -> None:
     """构建 Step 8 的物理 run 记录和按目标展开的实测 truth table。"""
@@ -620,6 +634,7 @@ def features_build_colocation(
                 repo_root=repo_root,
                 plan_file=plan,
                 solo_baselines_file=solo_baselines,
+                allow_pressure=allow_pressure,
             )
             result["dry_run"] = True
             result["mutations_planned"] = [
@@ -637,6 +652,8 @@ def features_build_colocation(
                 truth_output_file=truth_output,
                 summary_file=summary,
                 plot_file=plot,
+                allow_pressure=allow_pressure,
+                expected_benchmark_cpu_workers=benchmark_cpu_workers,
             )
     except (
         ColocationError,
@@ -660,6 +677,8 @@ def features_verify_colocation(
     summary: Path = typer.Option(..., "--summary", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
     plot: Path = typer.Option(..., "--plot", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
     output: Path | None = typer.Option(None, "--output", help="可选的独占验证 JSON。"),
+    allow_pressure: bool = typer.Option(False, "--allow-pressure", help="允许共置 run 携带并行 benchmark。"),
+    benchmark_cpu_workers: int | None = typer.Option(None, "--benchmark-cpu-workers", min=1, max=64, help="压力共置时要求 benchmark 使用的 CPU worker 数。"),
 ) -> None:
     """从 216 个 raw attempts 独立重算并核对 Step 8 全部派生产物。"""
 
@@ -675,6 +694,8 @@ def features_verify_colocation(
             truth_file=truth,
             summary_file=summary,
             plot_file=plot,
+            allow_pressure=allow_pressure,
+            expected_benchmark_cpu_workers=benchmark_cpu_workers,
         )
         if output is not None:
             write_json_atomic(output, result)
@@ -870,6 +891,72 @@ def replay_pack(
         )
     except (ReplayError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         typer.echo(f"REPLAY_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@effectiveness_app.command("plan-stress")
+def effectiveness_plan_stress(
+    base_plan: Path = typer.Option(..., "--base-plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    local_config: Path = typer.Option(..., "--local-config", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    output_plan: Path = typer.Option(..., "--out", help="独占创建的压力共置计划 CSV。"),
+    experiment_id: str = typer.Option("formal-effectiveness-v1", "--experiment-id"),
+    resource: str = typer.Option("cpu_compute", "--resource"),
+    pressure: float = typer.Option(1.0, "--pressure", min=0.001, max=1.0),
+    cpu_workers: int = typer.Option(64, "--cpu-workers", min=32, max=64),
+    raw_root: str = typer.Option("data/raw/formal-effectiveness-v1", "--raw-root"),
+) -> None:
+    """从原 216 个组合生成真正携带并行资源压力的独占计划。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = build_stress_plan(
+            repo_root=repo_root,
+            base_plan=base_plan,
+            local_config=local_config,
+            output_plan=output_plan,
+            experiment_id=experiment_id,
+            resource=resource,
+            pressure=pressure,
+            cpu_workers=cpu_workers,
+            raw_root=raw_root,
+        )
+    except (EffectivenessError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"EFFECTIVENESS_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+
+
+@effectiveness_app.command("audit-pilot")
+def effectiveness_audit_pilot(
+    plan: Path = typer.Option(..., "--plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    solo_baselines: Path = typer.Option(..., "--solo-baselines", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    qos_ratio: float = typer.Option(0.80, "--qos-ratio", min=0.001, max=1.0),
+    min_completed_runs: int = typer.Option(12, "--min-completed-runs", min=1),
+    min_positive_targets: int = typer.Option(4, "--min-positive-targets", min=1),
+    min_negative_targets: int = typer.Option(4, "--min-negative-targets", min=1),
+    benchmark_cpu_workers: int = typer.Option(64, "--benchmark-cpu-workers", min=32, max=64),
+    output: Path | None = typer.Option(None, "--output", help="独占写出的 pilot 审计 JSON。"),
+) -> None:
+    """检查压力 pilot 是否已经产生可学习的 QoS 正负标签。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = audit_stress_pilot(
+            repo_root=repo_root,
+            plan_file=plan,
+            solo_baselines_file=solo_baselines,
+            qos_ratio=qos_ratio,
+            min_completed_runs=min_completed_runs,
+            min_positive_targets=min_positive_targets,
+            min_negative_targets=min_negative_targets,
+            expected_benchmark_cpu_workers=benchmark_cpu_workers,
+            output=output,
+        )
+    except (EffectivenessError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"EFFECTIVENESS_ERROR: {type(exc).__name__}: {exc}", err=True)
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] != "passed":

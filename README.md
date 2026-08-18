@@ -17,14 +17,16 @@
 | Step 4 压力 benchmark 与校准     | 已完成           | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json)             |
 | Step 5 实验计划与 Windows Runner | 已完成           | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json)                                      |
 | Step 6 正式独占基线              | 已完成           | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json)                                  |
-| Step 7 敏感度/强度 profile       | 已完成           | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
-| Step 8 真实共置组合              | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json)       |
+| Step 7 历史敏感度/强度 profile   | 工程验收完成     | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json)；压力修复后需重新 profile |
+| Step 8 历史共置控制组            | 工程验收完成     | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json)；不作为有效性证据 |
 | Step 9 模型数据集                | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1)                                                                        |
 | Step 10 CM/RM/基线实现           | 已完成并独立验收 | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json)                                       |
 | Step 11 消融实验实现             | 已完成并独立验收 | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融验收](artifacts/reports/formal-v1/ablations/formal-ablation-acceptance.json)、[RM 消融图](artifacts/reports/formal-v1/ablations/ablation-rm-mae.png)                  |
 | Step 12 QoS 安全装箱 replay      | 已完成并独立验收 | [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[装箱验收](artifacts/reports/formal-v1/packing/formal-packing-acceptance.json)、[槽位/QoS 图](artifacts/reports/formal-v1/packing/packing-slots.png) |
-| Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12 全量 119 项单测通过                                                                                   |
-| 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成             |
+| Step 12R 有效性压力修复          | 已实现，待 pilot | [`gaugur_lite/effectiveness.py`](gaugur_lite/effectiveness.py)、[`scripts/run_effectiveness_pilot.ps1`](scripts/run_effectiveness_pilot.ps1)、真实压力与非退化标签门禁 |
+| 方法有效性结论                   | 尚未验证         | 既有 600-row truth 几乎无干扰，不能作为“CM 优于基线”的证据；必须先通过 Step 12R 的真实压力 pilot |
+| Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12R 已加入压力修复和标签门禁                                                                                   |
+| 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成；有效性数据待重采             |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行；已实现阶段会在对应小节记录真实入口和验收产物。
 
@@ -2804,7 +2806,34 @@ pwsh.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_step12_final.ps1
 ```
 
+### Step 12R：有效性压力修复（已实现，待 pilot 实测）
+
+Step 12 的 `PASS` 是真实的**软件和数据契约验收**，但不是“GAugur 方法有效”的结论。对该阶段输入的 600 个 target truth 独立汇总后，`retention_ratio` 最小值为 `0.997939`、均值为 `1.001112`，低于 `0.99` 的样本为 `0/600`；因此在 `qos_ratio=0.80` 下标签全为正类。根因是旧 Step 8 的共置计划没有 `resource/pressure` 字段，Runner 当时不会启动 benchmark，测到的只是轻量 Pyxel 游戏彼此共置的近空载对照。
+
+旧数据、模型和 Step 12 报告会保留为可复核的工程控制组，但不得再用于声称“CM 优于基线”或“论文方法有效”。本修复不覆盖任何旧 attempt，而是生成独立的 `formal-effectiveness-v1` 计划，沿用冻结的 180 个主组合和 36 个四元外推组合形状，并给每个 run 分配新的 ID、目录、计划哈希和 manifest。
+
+修复后的压力 pilot 固定为 `cpu_compute`、`p=1.0`、64 个 CPU compute worker：
+
+- Runner 对所有携带 `resource` 的行（包括共置行）启动 benchmark，并让 benchmark 与游戏共同经过 ready barrier；
+- benchmark 的资源、执行压力、稳定协议、worker 数、活跃比例和操作数写入 `status.json`，共置 truth 审计会逐项复核；
+- 首轮只运行 12 个主共置物理 run，不运行 216 个完整采集；
+- 在 `Q=0.80` 下，pilot 必须至少得到 4 个正标签和 4 个负标签，且压力 benchmark 活跃比例至少 `0.90`、操作数大于 0。任一条件不满足即明确失败并停止，绝不通过改高 QoS 阈值或伪造标签“凑出”成功。
+
+正式验收命令（约十余分钟，运行前关闭高负载程序；脚本会先跑全量单元测试，再启动 12 次真实可见窗口共置）：
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+pwsh.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_effectiveness_pilot.ps1
+```
+
+验收结果待实际运行后填写在此处。输出为 `artifacts/effectiveness/pilot/stress-pilot-acceptance.json`；若为 `failed`，保留 run 与日志并上传结果后再调整压力设计。若为 `passed`，它只证明该测量条件已产生可学习的 QoS 正负样本；下一阶段才会以相同压力重新 profile、完成其余 204 个 run，并从新 truth 重新构建数据集、训练模型及比较基线。
+
 ### Step 13：实现固定槽位最大化 FPS replay
+
+> 暂不对旧 `formal-v1` 模型运行本阶段。它只能作为工程 replay 控制结果；应等待 Step 12R pilot 通过且新的压力数据、模型和实测 truth 全部生成后再执行。
 
 逐请求：
 
@@ -2873,6 +2902,8 @@ python -m gaugur_lite verify `
 
 ## 13. 正式实验规模与时间
 
+原 `formal-v1` 的 720-run 规格仍完整保留，方便审计历史工程链路；但其中 216 个旧共置 run 没有实际 benchmark 压力，不能作为方法有效性的正式数据。Step 12R 新增的是独立的压力修复实验，不覆盖上述产物，也不把 pilot 计入旧实验规模。只有 pilot 产生非退化 QoS 标签后，才冻结其完整重采规模与后续模型训练计划。
+
 正式规格固定为：真实游戏 $W=8$、资源代理 $R=4$、压力档位 $P=5$、重复 $K=3$、固定原生画布/窗口策略、60 个主组合与 12 个额外四元组合。
 
 正式数据采集的物理 run 数如下；benchmark 校准和软件 smoke 不计入：
@@ -2890,9 +2921,9 @@ total                                           720
 
 `smoke.yaml` 只用于在正式采集前验证游戏资源、自动输入、进程生命周期、CUDA benchmark 同步和数据 schema，不生成模型样本，也不构成缩小版实验。正式结果只接受 `formal-v1` 的完整组合 manifest。
 
-## 14. 最终流程（当前实现至 Step 8 的真实验收）
+## 14. 最终流程（历史控制数据与压力修复）
 
-Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；Step 8 已完成 216 个真实共置 run、600 行 target truth、图表生成和 8/8 独立复核。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载；Step 9 从已验收的 Step 8 truth 开始构建模型数据集：
+Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；旧 Step 8 已完成 216 个共置 run、600 行 target truth、图表生成和 8/8 独立复核，但因未携带 benchmark 压力，它只保留为控制数据，不能支持方法有效性结论。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载；Step 12R 的正式入口是上节 `run_effectiveness_pilot.ps1`，在它通过前不得继续用旧 truth 扩展模型或 replay 结论：
 
 ```powershell
 conda activate gaugur-lite

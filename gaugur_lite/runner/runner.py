@@ -684,15 +684,22 @@ def run_one(
                     output_directory=child_dir,
                 )
             )
-        if row.mode == "pressure_profile":
+        # 压力修复计划的共置行也携带 resource，因此不能只在 profile 模式启动 benchmark。
+        if row.resource is not None:
             if (
-                row.resource is None
-                or row.pressure_requested is None
+                row.pressure_requested is None
                 or row.pressure_applied is None
             ):
-                raise ValueError("pressure_profile 计划缺少 resource/pressure")
+                raise ValueError("资源压力计划缺少 pressure_requested/pressure_applied")
             benchmark_dir = attempt_dir / "benchmark"
             benchmark_dir.mkdir()
+            worker_count = os.environ.get("GAUGUR_BENCHMARK_CPU_WORKERS", "8")
+            try:
+                worker_count_int = int(worker_count)
+            except ValueError as exc:
+                raise ValueError("GAUGUR_BENCHMARK_CPU_WORKERS 必须是整数") from exc
+            if not 1 <= worker_count_int <= 64:
+                raise ValueError("GAUGUR_BENCHMARK_CPU_WORKERS 必须位于 [1, 64]")
             command = [
                 sys.executable,
                 "-m",
@@ -714,7 +721,7 @@ def run_one(
                 "--gpu-index",
                 str(row.gpu_index),
                 "--cpu-workers",
-                "8",
+                str(worker_count_int),
                 "--memory-buffer-mib",
                 "64",
                 "--gpu-matrix-size",
@@ -900,7 +907,7 @@ def run_one(
             float(event.gpu_temp_c) for event in system_rows if event.gpu_temp_c is not None
         ]
         benchmark_summary = None
-        if row.mode == "pressure_profile":
+        if row.resource is not None:
             benchmark_summary = json.loads(
                 (attempt_dir / "benchmark" / "status.json").read_text(encoding="utf-8")
             )
@@ -919,7 +926,7 @@ def run_one(
         artifact_sha256 = _artifact_hashes(
             attempt_dir,
             row.workload_ids,
-            profile=row.mode == "pressure_profile",
+            profile=row.resource is not None,
         )
         summary = {
             "schema_version": 1,
