@@ -20,7 +20,8 @@
 | Step 7 敏感度/强度 profile | 已完成 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
 | Step 8 真实共置组合      | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json) |
 | Step 9 模型数据集        | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1) |
-| Python 实现              | 分阶段实现中 | Step 0–9 的 plan、runner、profile、共置 truth、模型数据集构建与自动验收已落实；全量 106 项单测通过 |
+| Step 10 CM/RM/基线实现   | 已实现并完成预检 | [`gaugur_lite/models/`](gaugur_lite/models)、[Step 10 验收入口](scripts/run_step10_final.ps1)；正式训练/评估待用户运行 |
+| Python 实现              | 分阶段实现中 | Step 0–10 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估与自动验收已落实；全量 110 项单测通过 |
 | 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run 和 Step 9 模型数据集已生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
@@ -2529,6 +2530,48 @@ python -m gaugur_lite evaluate `
 - 主测试与四元外推测试分别报告 CM/RM 指标及样本数；
 - 指标带 bootstrap 置信区间；
 - 结果不及基线时仍保留并解释。
+
+#### Step 10 实现与真实预检（2026-08-18）
+
+本阶段已实现模型训练、评估和可复核产物链路：
+
+- [`gaugur_lite/models/common.py`](gaugur_lite/models/common.py)：读取 Step 9 表、校验组合级 split 合约、固定特征列并计算产物哈希；
+- [`gaugur_lite/models/classification.py`](gaugur_lite/models/classification.py)：四类 CM 候选、QoS 阈值选择和单类标签安全指标；
+- [`gaugur_lite/models/regression.py`](gaugur_lite/models/regression.py)：四类 RM 候选及 retention/FPS/MAPE$_\delta$/R² 指标；
+- [`gaugur_lite/models/baselines.py`](gaugur_lite/models/baselines.py)：`sigmoid_count`、`vbp_like`、`linear_additive`、`solo_only` 和 `no_profile_tree`；
+- [`gaugur_lite/models/training.py`](gaugur_lite/models/training.py)：严格 train → validation 选择，再以 train+validation 重拟合，并保存 joblib、候选指标和训练 manifest；
+- [`gaugur_lite/models/evaluate.py`](gaugur_lite/models/evaluate.py)：test/extra_test 分开评估、按 combination bootstrap 置信区间、误差 CDF 与混淆矩阵图；
+- [`gaugur_lite/cli.py`](gaugur_lite/cli.py) 新增 `train` / `evaluate`，[`scripts/run_step10_final.ps1`](scripts/run_step10_final.ps1) 负责全量单测、输入复核、训练、评估和验收 JSON。
+
+Step 9 的真实数据中三种 QoS ratio 的标签均由实际 retention 计算得到；当前数据的高 retention 使 CM 可能出现单类（全通过）标签。实现保留该真实分布，不人为合成负例；候选失败会写入 `candidate-metrics.json`，不会静默改标签。
+
+代码预检的真实输出：
+
+```text
+........................................................................ [ 65%]
+......................................                                   [100%]
+110 passed, 1 warning in 7.37s
+```
+
+警告来自 `scipy.optimize.curve_fit` 在小型基线单测中的协方差估计，不影响测试结果。正式模型与图表尚未在本阶段预生成，必须在提交干净后运行以下完整入口；脚本会拒绝未提交的源码改动，并把真实命令输出和哈希写入 `artifacts/models/formal-v1/`、`artifacts/reports/formal-v1/evaluation/`：
+
+附加静态检查输出：
+
+```text
+Python py_compile: PASS
+PowerShell parser: PASS
+git diff --check: PASS
+```
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+pwsh.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step10_final.ps1
+```
+
+运行完成后，将 `formal-model-acceptance.json`、`evaluation-summary.json`、`rm-error-cdf.png` 和 `cm-confusion-matrices.png` 的实际内容补入本节，作为 Step 10 真实验收；在此之前不得声称正式模型指标已通过。
 
 ### Step 11：实现消融实验
 

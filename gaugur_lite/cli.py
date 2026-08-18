@@ -38,6 +38,9 @@ from .doctor import build_doctor_report
 from .features.dataset import DatasetError, audit_dataset, build_dataset
 from .metrics.telemetry import format_result, run_overhead, run_probe
 from .metrics.writer import write_json_atomic
+from .models.common import ModelError
+from .models.evaluate import evaluate_models
+from .models.training import train_models
 from .profiles import (
     ProfileError,
     audit_profile_inputs,
@@ -743,6 +746,63 @@ def features_audit_dataset(
         json.JSONDecodeError,
     ) as exc:
         typer.echo(f"DATASET_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@app.command("train")
+def model_train(
+    dataset_directory: Path = typer.Option(..., "--dataset-dir", exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True),
+    task: str = typer.Option("both", "--task", help="训练 cm、rm 或 both。"),
+    split_manifest: Path | None = typer.Option(None, "--split-manifest", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    seed: int = typer.Option(20260811, "--seed", min=0),
+    output_directory: Path = typer.Option(..., "--out", help="独占创建的模型目录。"),
+) -> None:
+    """按固定 combination split 训练 CM/RM 候选并保存最终模型。"""
+
+    del split_manifest  # split contract is loaded and rechecked from the dataset tables.
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = train_models(
+            repo_root=repo_root,
+            dataset_dir=dataset_directory,
+            output_dir=output_directory,
+            task=task,
+            seed=seed,
+        )
+    except (ModelError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"MODEL_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+
+
+@app.command("evaluate")
+def model_evaluate(
+    model_directory: Path = typer.Option(..., "--model-dir", exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True),
+    dataset_directory: Path = typer.Option(..., "--dataset-dir", exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True),
+    splits: str = typer.Option("test,extra_test", "--splits", help="保留 CLI 兼容性；Step 10 固定同时评估 test 与 extra_test。"),
+    output_directory: Path = typer.Option(..., "--out", help="独占创建的评估目录。"),
+    seed: int = typer.Option(20260811, "--seed", min=0),
+    bootstrap_repeats: int = typer.Option(200, "--bootstrap-repeats", min=20, max=5000),
+) -> None:
+    """加载 CM/RM 与基线，分别评估主 test 和四元 extra_test。"""
+
+    if {item.strip() for item in splits.split(",") if item.strip()} != {"test", "extra_test"}:
+        raise typer.BadParameter("Step 10 必须同时包含 test,extra_test", param_hint="--splits")
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = evaluate_models(
+            repo_root=repo_root,
+            model_dir=model_directory,
+            dataset_dir=dataset_directory,
+            output_dir=output_directory,
+            seed=seed,
+            bootstrap_repeats=bootstrap_repeats,
+        )
+    except (ModelError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"MODEL_ERROR: {type(exc).__name__}: {exc}", err=True)
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] != "passed":
