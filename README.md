@@ -19,9 +19,9 @@
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
 | Step 7 敏感度/强度 profile | 已完成 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
 | Step 8 真实共置组合      | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json) |
-| Step 9 模型数据集        | 实现与预检完成 | [`features build-dataset`](gaugur_lite/features/dataset.py)、[Step 9 验收入口](scripts/run_step9_final.ps1)；正式表构建等待干净提交后执行 |
-| Python 实现              | 分阶段实现中 | Step 0–9 的 plan、runner、profile、共置 truth、模型数据集构建与自动验收已落实；Step 8 全量 103 项单测及 Step 9 定向单测通过 |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置和 36 个四元外推 run 已生成 |
+| Step 9 模型数据集        | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1) |
+| Python 实现              | 分阶段实现中 | Step 0–9 的 plan、runner、profile、共置 truth、模型数据集构建与自动验收已落实；全量 106 项单测通过 |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run 和 Step 9 模型数据集已生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -2400,7 +2400,32 @@ pwsh.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_step9_final.ps1
 ```
 
-正式验收输出将写入 `artifacts/dataset/step9/`，完成后把脚本末尾输出发回，再把真实行数、哈希和审计结果补入本节。
+#### Step 9 真实验收（2026-08-18）
+
+用户在干净提交上运行正式入口，完整单测与独立审计均通过：
+
+```text
+106 passed in 13.29s
+PASS Step 9 formal dataset acceptance: D:\github\GameLab-RLCG\artifacts\dataset\step9
+[Step 9 final] PASS: all model dataset tables and manifests verified.
+```
+
+真实行数与质量门：
+
+| 项目 | 实际结果 |
+| --- | ---: |
+| base samples | 600 |
+| 主 RM / CM | 456 / 1368 |
+| 四元额外 RM / CM | 144 / 432 |
+| 独立审计 | 24/24 passed |
+| retention > 1 | 588/600 |
+| `target_id` 进入模型特征 | 否 |
+
+实际主 split 的 RM/CM 行数为 train `279/837`、validation `96/288`、test `81/243`，额外测试为 `144/432`；组合 split 保持稳定且 72 个 combination 全部通过三重复质量门。
+
+验收文件：[formal-dataset-acceptance.json](artifacts/dataset/step9/formal-dataset-acceptance.json)；独立审计：[formal-dataset-verification.json](artifacts/dataset/step9/formal-dataset-verification.json)。输入 profile SHA-256 为 `1aa784f2f89dbc2e9a273a6c64f5cef21dce363a1392a6dbaf698c4c02f7b330`，输入 truth SHA-256 为 `dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265`。
+
+最终数据集文件：[`base_samples.parquet`](data/processed/formal-v1/base_samples.parquet)、[`rm_samples.parquet`](data/processed/formal-v1/rm_samples.parquet)、[`cm_samples.parquet`](data/processed/formal-v1/cm_samples.parquet)、[`extra_rm_samples.parquet`](data/processed/formal-v1/extra_rm_samples.parquet)、[`extra_cm_samples.parquet`](data/processed/formal-v1/extra_cm_samples.parquet)、[`combination_manifest.json`](data/processed/formal-v1/combination_manifest.json)、[`split_manifest.json`](data/processed/formal-v1/split_manifest.json)、[`feature_manifest.json`](data/processed/formal-v1/feature_manifest.json) 和 [`dataset-summary.json`](data/processed/formal-v1/dataset-summary.json)。
 
 ### Step 10：训练 CM、RM 与基线
 

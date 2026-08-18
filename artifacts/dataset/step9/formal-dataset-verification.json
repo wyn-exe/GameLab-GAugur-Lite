@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "base_samples": {
+      "path": "data/processed/formal-v1/base_samples.parquet",
+      "sha256": "a642090c99a81cf7e7a1ee33bdf619681f05a782f36f6ae8fe50ef281b11886f"
+    },
+    "cm_samples": {
+      "path": "data/processed/formal-v1/cm_samples.parquet",
+      "sha256": "d19b565fcccf6a692e7eb80d8f76b9e1ca932bf3cd89b92884576ecfbf2a02ef"
+    },
+    "combination_manifest": {
+      "path": "data/processed/formal-v1/combination_manifest.json",
+      "sha256": "b206638feb661fb3b7f23ce226895b3754f27683270fb6a5d19aa0a56f3d8943"
+    },
+    "dataset_summary": {
+      "path": "data/processed/formal-v1/dataset-summary.json",
+      "sha256": "b6358237d6afdcfea829366aaaf47ff87cd90b170f1e2c33cd503b6e397ded3b"
+    },
+    "extra_cm_samples": {
+      "path": "data/processed/formal-v1/extra_cm_samples.parquet",
+      "sha256": "92e2a9c7edc100384853b89bbe4cfba502ef5ac46e5eca45913d72b01ad4bd7a"
+    },
+    "extra_rm_samples": {
+      "path": "data/processed/formal-v1/extra_rm_samples.parquet",
+      "sha256": "8ba901a380074db5cab82bbed2a1ac262bbd76bfcced2ce80441b6e444a9633c"
+    },
+    "feature_manifest": {
+      "path": "data/processed/formal-v1/feature_manifest.json",
+      "sha256": "9d6ab19c1ebed097c51839725bd7b636b6055496131ecb59a45a860c76895e9b"
+    },
+    "rm_samples": {
+      "path": "data/processed/formal-v1/rm_samples.parquet",
+      "sha256": "8cbf96555ccc73c04c461300743209f63b17b862f113b99e7407832e00e8ad23"
+    },
+    "split_manifest": {
+      "path": "data/processed/formal-v1/split_manifest.json",
+      "sha256": "d8e2017b91ca337d6e90c5b9423fb4b908ee6ffd99743b682366a483634bf204"
+    }
+  },
+  "check_count": 24,
+  "checks": {
+    "all_quality_checks": true,
+    "base_samples_recomputed_exactly": true,
+    "base_samples_sha256_present": true,
+    "cm_samples_recomputed_exactly": true,
+    "cm_samples_sha256_present": true,
+    "combination_manifest_checks_passed": true,
+    "combination_manifest_count_72": true,
+    "combination_manifest_status_passed": true,
+    "extra_cm_samples_recomputed_exactly": true,
+    "extra_cm_samples_sha256_present": true,
+    "extra_rm_samples_recomputed_exactly": true,
+    "extra_rm_samples_sha256_present": true,
+    "feature_columns_match_contract": true,
+    "profile_source_sha256": true,
+    "retention_above_one_preserved": true,
+    "rm_samples_recomputed_exactly": true,
+    "rm_samples_sha256_present": true,
+    "row_counts_match_contract": true,
+    "split_manifest_checks_passed": true,
+    "split_manifest_row_counts_match": true,
+    "split_manifest_status_passed": true,
+    "summary_status_passed": true,
+    "target_id_not_in_feature_columns": true,
+    "truth_source_sha256": true
+  },
+  "passed_count": 24,
+  "retention_above_one_count": 588,
+  "row_counts": {
+    "base": 600,
+    "cm": 1368,
+    "extra_cm": 432,
+    "extra_rm": 144,
+    "rm": 456
+  },
+  "schema_version": 1,
+  "status": "passed"
+}

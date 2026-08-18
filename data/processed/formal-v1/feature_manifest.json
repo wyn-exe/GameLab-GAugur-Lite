@@ -1,0 +1,107 @@
+{
+  "artifacts": {
+    "base_samples": "data/processed/formal-v1/base_samples.parquet",
+    "cm_samples": "data/processed/formal-v1/cm_samples.parquet",
+    "combination_manifest": "data/processed/formal-v1/combination_manifest.json",
+    "dataset_summary": "data/processed/formal-v1/dataset-summary.json",
+    "extra_cm_samples": "data/processed/formal-v1/extra_cm_samples.parquet",
+    "extra_rm_samples": "data/processed/formal-v1/extra_rm_samples.parquet",
+    "feature_manifest": "data/processed/formal-v1/feature_manifest.json",
+    "rm_samples": "data/processed/formal-v1/rm_samples.parquet",
+    "split_manifest": "data/processed/formal-v1/split_manifest.json"
+  },
+  "experiment_id": "formal-v1",
+  "feature_columns": [
+    "solo_fps",
+    "neighbor_count",
+    "sensitivity_cpu_compute_p000",
+    "sensitivity_cpu_compute_p025",
+    "sensitivity_cpu_compute_p050",
+    "sensitivity_cpu_compute_p075",
+    "sensitivity_cpu_compute_p100",
+    "sensitivity_gpu_compute_p000",
+    "sensitivity_gpu_compute_p025",
+    "sensitivity_gpu_compute_p050",
+    "sensitivity_gpu_compute_p075",
+    "sensitivity_gpu_compute_p100",
+    "sensitivity_gpu_memory_p000",
+    "sensitivity_gpu_memory_p025",
+    "sensitivity_gpu_memory_p050",
+    "sensitivity_gpu_memory_p075",
+    "sensitivity_gpu_memory_p100",
+    "sensitivity_memory_bandwidth_p000",
+    "sensitivity_memory_bandwidth_p025",
+    "sensitivity_memory_bandwidth_p050",
+    "sensitivity_memory_bandwidth_p075",
+    "sensitivity_memory_bandwidth_p100",
+    "intensity_mean_cpu_compute",
+    "intensity_var_cpu_compute",
+    "intensity_mean_gpu_compute",
+    "intensity_var_gpu_compute",
+    "intensity_mean_gpu_memory",
+    "intensity_var_gpu_memory",
+    "intensity_mean_memory_bandwidth",
+    "intensity_var_memory_bandwidth"
+  ],
+  "intensity_definition": "neighbor intensity is intensity_slowdown_mean at the highest requested pressure p=1.0; mean/variance use population variance across neighbors",
+  "label_columns": [
+    "mean_fps",
+    "p05_fps",
+    "min_fps",
+    "retention_ratio",
+    "loss_ratio",
+    "p05_retention_ratio"
+  ],
+  "metadata_columns": [
+    "experiment_id",
+    "stage",
+    "split",
+    "combination_key",
+    "colocation_id",
+    "run_id",
+    "repeat",
+    "target_id",
+    "neighbor_ids",
+    "combination_size"
+  ],
+  "pressures": [
+    0.0,
+    0.25,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "qos_ratios": [
+    0.7,
+    0.8,
+    0.9
+  ],
+  "resources": [
+    "cpu_compute",
+    "gpu_compute",
+    "gpu_memory",
+    "memory_bandwidth"
+  ],
+  "row_counts": {
+    "base": 600,
+    "cm": 1368,
+    "extra_cm": 432,
+    "extra_rm": 144,
+    "rm": 456
+  },
+  "schema_version": 1,
+  "sources": {
+    "profiles": {
+      "path": "data/interim/formal-v1/safety-v2/profiles.parquet",
+      "rows": 160,
+      "sha256": "1aa784f2f89dbc2e9a273a6c64f5cef21dce363a1392a6dbaf698c4c02f7b330"
+    },
+    "truth": {
+      "path": "data/interim/formal-v1/safety-v2/colocation-truth.parquet",
+      "rows": 600,
+      "sha256": "dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265"
+    }
+  },
+  "status": "passed",
+  "target_id_in_model_features": false
+}

@@ -1,0 +1,71 @@
+{
+  "artifacts": {
+    "base_samples": {
+      "path": "data/processed/formal-v1/base_samples.parquet",
+      "sha256": "a642090c99a81cf7e7a1ee33bdf619681f05a782f36f6ae8fe50ef281b11886f"
+    },
+    "cm_samples": {
+      "path": "data/processed/formal-v1/cm_samples.parquet",
+      "sha256": "d19b565fcccf6a692e7eb80d8f76b9e1ca932bf3cd89b92884576ecfbf2a02ef"
+    },
+    "combination_manifest": {
+      "path": "data/processed/formal-v1/combination_manifest.json",
+      "sha256": "b206638feb661fb3b7f23ce226895b3754f27683270fb6a5d19aa0a56f3d8943"
+    },
+    "extra_cm_samples": {
+      "path": "data/processed/formal-v1/extra_cm_samples.parquet",
+      "sha256": "92e2a9c7edc100384853b89bbe4cfba502ef5ac46e5eca45913d72b01ad4bd7a"
+    },
+    "extra_rm_samples": {
+      "path": "data/processed/formal-v1/extra_rm_samples.parquet",
+      "sha256": "8ba901a380074db5cab82bbed2a1ac262bbd76bfcced2ce80441b6e444a9633c"
+    },
+    "feature_manifest": {
+      "path": "data/processed/formal-v1/feature_manifest.json",
+      "sha256": "9d6ab19c1ebed097c51839725bd7b636b6055496131ecb59a45a860c76895e9b"
+    },
+    "rm_samples": {
+      "path": "data/processed/formal-v1/rm_samples.parquet",
+      "sha256": "8cbf96555ccc73c04c461300743209f63b17b862f113b99e7407832e00e8ad23"
+    },
+    "split_manifest": {
+      "path": "data/processed/formal-v1/split_manifest.json",
+      "sha256": "d8e2017b91ca337d6e90c5b9423fb4b908ee6ffd99743b682366a483634bf204"
+    }
+  },
+  "checks": {
+    "all_feature_values_finite": true,
+    "cm_row_counts_837_288_243_432": true,
+    "combination_split_is_stable": true,
+    "extra_combination_count_12": true,
+    "extra_key_count_12": true,
+    "main_combination_count_60": true,
+    "main_key_split_counts_36_12_12": true,
+    "rm_row_counts_279_96_81_144": true,
+    "target_id_not_in_feature_columns": true,
+    "three_repeats_per_combination": true
+  },
+  "experiment_id": "formal-v1",
+  "retention_above_one_count": 588,
+  "row_counts": {
+    "base": 600,
+    "cm": 1368,
+    "extra_cm": 432,
+    "extra_rm": 144,
+    "rm": 456
+  },
+  "schema_version": 1,
+  "sources": {
+    "profiles": {
+      "path": "data/interim/formal-v1/safety-v2/profiles.parquet",
+      "rows": 160,
+      "sha256": "1aa784f2f89dbc2e9a273a6c64f5cef21dce363a1392a6dbaf698c4c02f7b330"
+    },
+    "truth": {
+      "path": "data/interim/formal-v1/safety-v2/colocation-truth.parquet",
+      "rows": 600,
+      "sha256": "dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265"
+    }
+  },
+  "status": "passed"
+}
