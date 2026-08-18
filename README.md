@@ -20,9 +20,9 @@
 | Step 7 敏感度/强度 profile | 已完成 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
 | Step 8 真实共置组合      | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json) |
 | Step 9 模型数据集        | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1) |
-| Step 10 CM/RM/基线实现   | 已实现并完成预检 | [`gaugur_lite/models/`](gaugur_lite/models)、[Step 10 验收入口](scripts/run_step10_final.ps1)；正式训练/评估待用户运行 |
+| Step 10 CM/RM/基线实现   | 已完成并独立验收 | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json) |
 | Python 实现              | 分阶段实现中 | Step 0–10 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估与自动验收已落实；全量 110 项单测通过 |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run 和 Step 9 模型数据集已生成 |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集及 Step 10 模型/评估图表已生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -2553,7 +2553,7 @@ Step 9 的真实数据中三种 QoS ratio 的标签均由实际 retention 计算
 110 passed, 1 warning in 7.37s
 ```
 
-警告来自 `scipy.optimize.curve_fit` 在小型基线单测中的协方差估计，不影响测试结果。正式模型与图表尚未在本阶段预生成，必须在提交干净后运行以下完整入口；脚本会拒绝未提交的源码改动，并把真实命令输出和哈希写入 `artifacts/models/formal-v1/`、`artifacts/reports/formal-v1/evaluation/`：
+警告来自 `scipy.optimize.curve_fit` 在小型基线单测中的协方差估计，不影响测试结果。正式入口会拒绝未提交的源码改动，并把真实命令输出和哈希写入 `artifacts/models/formal-v1/`、`artifacts/reports/formal-v1/evaluation/`。
 
 附加静态检查输出：
 
@@ -2571,7 +2571,46 @@ pwsh.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_step10_final.ps1
 ```
 
-运行完成后，将 `formal-model-acceptance.json`、`evaluation-summary.json`、`rm-error-cdf.png` 和 `cm-confusion-matrices.png` 的实际内容补入本节，作为 Step 10 真实验收；在此之前不得声称正式模型指标已通过。
+#### Step 10 真实验收（2026-08-18）
+
+用户在已提交源码上运行正式入口，训练、模型加载复核、组合级 bootstrap 和图表生成均通过：
+
+```text
+110 passed, 1 warning in 7.23s
+selected CM candidate: decision_tree
+selected RM candidate: gradient_boosting
+evaluation checks: 7/7 passed
+PASS Step 10 formal model acceptance: artifacts\\models\\formal-v1
+[Step 10 final] PASS: CM/RM models, baselines and held-out evaluations verified.
+```
+
+CM 的真实标签在 train/validation/test/extra_test 均为正类，因此结果是“全通过”单类分布，不能解释为已经验证了正负类别区分能力。Gradient Boosting 和 SVC 因训练集只有一类而失败；失败原因保存在 [`candidate-metrics.json`](artifacts/models/formal-v1/candidate-metrics.json)，未伪造负例。
+
+最终选择与 RM 指标：
+
+| split | CM accuracy / F1 / FPR | RM retention MAE（95% CI） | FPS MAE | $R^2$ | MAPE$_\delta$ |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| test（243 CM / 81 RM） | 1.000 / 1.000 / 0.000 | 0.00017136（0.00005925–0.00032108） | 0.00236657 | 0.24369 | 0.12785 |
+| extra_test（432 CM / 144 RM） | 1.000 / 1.000 / 0.000 | 0.00009184（0.00005772–0.00012289） | 0.00211351 | 0.75222 | 0.07982 |
+
+选定模型在 test 的 retention MAE 为 `0.00017136`，略优于最好的 `no_profile_tree` 基线 `0.00017991`；在 extra_test 上为 `0.00009184`，也优于该基线的 `0.00009660`。这只是当前数据范围内的误差比较，不将单类 CM 的 1.0 指标宣称为有区分度的分类结果。
+
+真实图表：
+
+![Step 10 RM absolute retention error CDF](artifacts/reports/formal-v1/evaluation/rm-error-cdf.png)
+
+![Step 10 CM confusion matrices](artifacts/reports/formal-v1/evaluation/cm-confusion-matrices.png)
+
+验收与模型产物：[`formal-model-acceptance.json`](artifacts/models/formal-v1/formal-model-acceptance.json)、[`model-manifest.json`](artifacts/models/formal-v1/model-manifest.json)、[`evaluation-summary.json`](artifacts/reports/formal-v1/evaluation/evaluation-summary.json)。关键 SHA-256：
+
+```text
+cm.joblib                 38fb42c0556807fbe2efe515c786480a1b26deb94edcd5cc74776540b2330b13
+rm.joblib                 bc535eb4ea5c5d4aade03bc740df211c899e7400cb2d6690850b8509d4a84f86
+baselines.joblib          8443630e04d8967d92533bd2896b0676a4e784a725eeee52c37af96c403037c3
+evaluation-summary.json   c33ac1695f235df3b084379a316c72f8ead350fbad2575f785b18840d37b20ef
+rm-error-cdf.png          10660f56f378d3d313fffadc8d1332434b7d84a3dcad83d358b2aade49226fc2
+cm-confusion-matrices.png b0804bdab83ecd9631e1e981363b2e3e16164be2402c88f62a8e5987c813a442
+```
 
 ### Step 11：实现消融实验
 

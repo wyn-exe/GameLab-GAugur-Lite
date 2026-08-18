@@ -1,0 +1,114 @@
+{
+  "candidates": {
+    "cm": {
+      "decision_tree": {
+        "decision_threshold": 0.1,
+        "status": "passed",
+        "validation": {
+          "accuracy": 1.0,
+          "confusion_matrix": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              288
+            ]
+          ],
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "positive_count": 288,
+          "precision": 1.0,
+          "predicted_positive_count": 288,
+          "recall": 1.0,
+          "sample_count": 288
+        }
+      },
+      "gradient_boosting": {
+        "error": "ValueError: y contains 1 class after sample_weight trimmed classes with zero weights, while a minimum of 2 classes are required.",
+        "status": "failed"
+      },
+      "random_forest": {
+        "decision_threshold": 0.1,
+        "status": "passed",
+        "validation": {
+          "accuracy": 1.0,
+          "confusion_matrix": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              288
+            ]
+          ],
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "positive_count": 288,
+          "precision": 1.0,
+          "predicted_positive_count": 288,
+          "recall": 1.0,
+          "sample_count": 288
+        }
+      },
+      "svc": {
+        "error": "ValueError: The number of classes has to be greater than one; got 1 class",
+        "status": "failed"
+      }
+    },
+    "rm": {
+      "decision_tree": {
+        "status": "passed",
+        "validation": {
+          "fps_mae": 0.0023129790153972873,
+          "mape_delta": 0.087507907141813,
+          "r2": 0.3405512095195872,
+          "retention_mae": 0.00012524374746514244,
+          "retention_max": 1.0024438736483572,
+          "retention_min": 0.997938646389641,
+          "sample_count": 96
+        }
+      },
+      "gradient_boosting": {
+        "status": "passed",
+        "validation": {
+          "fps_mae": 0.0020856362699595565,
+          "mape_delta": 0.07979607311677463,
+          "r2": 0.3483010707414309,
+          "retention_mae": 0.00011711228693751102,
+          "retention_max": 1.0024438736483572,
+          "retention_min": 0.997938646389641,
+          "sample_count": 96
+        }
+      },
+      "random_forest": {
+        "status": "passed",
+        "validation": {
+          "fps_mae": 0.002917291872810072,
+          "mape_delta": 0.10652990343898378,
+          "r2": 0.33441455571385426,
+          "retention_mae": 0.00014405010435352092,
+          "retention_max": 1.0024438736483572,
+          "retention_min": 0.997938646389641,
+          "sample_count": 96
+        }
+      },
+      "svr": {
+        "status": "passed",
+        "validation": {
+          "fps_mae": 0.006859568559996014,
+          "mape_delta": 0.25002309885508894,
+          "r2": -0.07652713009591317,
+          "retention_mae": 0.00038054917839224167,
+          "retention_max": 1.0024438736483572,
+          "retention_min": 0.997938646389641,
+          "sample_count": 96
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "status": "passed"
+}

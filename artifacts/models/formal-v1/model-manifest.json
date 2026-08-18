@@ -1,0 +1,61 @@
+{
+  "baselines_sha256": "8443630e04d8967d92533bd2896b0676a4e784a725eeee52c37af96c403037c3",
+  "dataset_feature_manifest_sha256": "9d6ab19c1ebed097c51839725bd7b636b6055496131ecb59a45a860c76895e9b",
+  "dataset_tables": {
+    "cm": "d19b565fcccf6a692e7eb80d8f76b9e1ca932bf3cd89b92884576ecfbf2a02ef",
+    "extra_cm": "92e2a9c7edc100384853b89bbe4cfba502ef5ac46e5eca45913d72b01ad4bd7a",
+    "extra_rm": "8ba901a380074db5cab82bbed2a1ac262bbd76bfcced2ce80441b6e444a9633c",
+    "rm": "8cbf96555ccc73c04c461300743209f63b17b862f113b99e7407832e00e8ad23"
+  },
+  "feature_columns": [
+    "solo_fps",
+    "neighbor_count",
+    "sensitivity_cpu_compute_p000",
+    "sensitivity_cpu_compute_p025",
+    "sensitivity_cpu_compute_p050",
+    "sensitivity_cpu_compute_p075",
+    "sensitivity_cpu_compute_p100",
+    "sensitivity_gpu_compute_p000",
+    "sensitivity_gpu_compute_p025",
+    "sensitivity_gpu_compute_p050",
+    "sensitivity_gpu_compute_p075",
+    "sensitivity_gpu_compute_p100",
+    "sensitivity_gpu_memory_p000",
+    "sensitivity_gpu_memory_p025",
+    "sensitivity_gpu_memory_p050",
+    "sensitivity_gpu_memory_p075",
+    "sensitivity_gpu_memory_p100",
+    "sensitivity_memory_bandwidth_p000",
+    "sensitivity_memory_bandwidth_p025",
+    "sensitivity_memory_bandwidth_p050",
+    "sensitivity_memory_bandwidth_p075",
+    "sensitivity_memory_bandwidth_p100",
+    "intensity_mean_cpu_compute",
+    "intensity_var_cpu_compute",
+    "intensity_mean_gpu_compute",
+    "intensity_var_gpu_compute",
+    "intensity_mean_gpu_memory",
+    "intensity_var_gpu_memory",
+    "intensity_mean_memory_bandwidth",
+    "intensity_var_memory_bandwidth"
+  ],
+  "models": {
+    "cm": {
+      "path": "cm.joblib",
+      "selected_candidate": "decision_tree",
+      "sha256": "38fb42c0556807fbe2efe515c786480a1b26deb94edcd5cc74776540b2330b13",
+      "validation_prediction_sha256": "c3be2af8b2e98345a8cea9cf6862d443bd323fe273f4103d667529c6842a1cb8"
+    },
+    "rm": {
+      "path": "rm.joblib",
+      "selected_candidate": "gradient_boosting",
+      "sha256": "bc535eb4ea5c5d4aade03bc740df211c899e7400cb2d6690850b8509d4a84f86",
+      "validation_prediction_sha256": "d61982b4a70ace346d6f4a98c08a7dd3c84fd600b6c300338a6a6e5925d68a26"
+    }
+  },
+  "schema_version": 1,
+  "seed": 20260811,
+  "status": "passed",
+  "target_id_in_model_features": false,
+  "task": "both"
+}
