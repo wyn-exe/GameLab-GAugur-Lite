@@ -4,35 +4,34 @@
 
 ## 项目状态
 
-| 模块                             | 状态             | 产物                                                                                                                                                                                                                              |
-| -------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 原论文归档                       | 已完成           | [GAugur_HPDC_2019.pdf](docs/papers/GAugur_HPDC_2019.pdf)                                                                                                                                                                           |
-| 论文中文解读                     | 已完成           | [GAugur 中文解读](docs/papers/GAugur_中文解读.md)                                                                                                                                                                                  |
-| 八个真实小游戏                   | 已下载           | [游戏清单与试玩方法](games/README.md)                                                                                                                                                                                              |
-| Windows-only 实现方案            | 已完成           | 本 README                                                                                                                                                                                                                         |
-| Step 0 环境基线                  | 已完成           | [真实验收记录](artifacts/environment/step0/idle-summary.json)                                                                                                                                                                      |
-| Step 1 schema/config/CLI         | 已完成           | [`gaugur_lite/`](gaugur_lite)、[`configs/`](configs)、[`tests/unit/`](tests/unit)                                                                                                                                              |
-| Step 2 指标与系统采样            | 已完成           | [60 秒探针](artifacts/telemetry/step2/formal-probe/summary.json)、[120 秒开销实验](artifacts/telemetry/step2/formal-overhead.json)                                                                                                  |
-| Step 3 真实 Pyxel workload       | 已完成           | [24 run 验收汇总](artifacts/workloads/step3/acceptance.json)、[上游校验](artifacts/workloads/step3/upstream-verification.json)                                                                                                      |
-| Step 4 压力 benchmark 与校准     | 已完成           | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json)             |
-| Step 5 实验计划与 Windows Runner | 已完成           | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json)                                      |
-| Step 6 正式独占基线              | 已完成           | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json)                                  |
-| Step 7 历史敏感度/强度 profile   | 工程验收完成     | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json)；压力修复后需重新 profile |
-| Step 8 历史共置控制组            | 工程验收完成     | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json)；不作为有效性证据 |
-| Step 9 模型数据集                | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1)                                                                        |
-| Step 10 CM/RM/基线实现           | 已完成并独立验收 | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json)                                       |
-| Step 11 消融实验实现             | 已完成并独立验收 | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融验收](artifacts/reports/formal-v1/ablations/formal-ablation-acceptance.json)、[RM 消融图](artifacts/reports/formal-v1/ablations/ablation-rm-mae.png)                  |
-| Step 12 QoS 安全装箱 replay      | 已完成并独立验收 | [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[装箱验收](artifacts/reports/formal-v1/packing/formal-packing-acceptance.json)、[槽位/QoS 图](artifacts/reports/formal-v1/packing/packing-slots.png) |
-| Step 12R-1 外部 benchmark pilot  | 已失败（保留现场） | [`artifacts/effectiveness/pilot/stress-pilot-acceptance.json`](artifacts/effectiveness/pilot/stress-pilot-acceptance.json)；benchmark 确实运行但未产生负标签 |
-| Step 12R-2 高帧率 workload pilot  | 已失败（保留现场） | [`artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json`](artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json)；实际 FPS 已提高但仍无负标签 |
-| Step 12R-3 同核 affinity workload pilot | 已失败（保留现场） | [`affinity pilot 验收`](artifacts/effectiveness/affinity-pilot/highfps-pilot-acceptance.json)；CPU `[0]` 已真实生效，但仍无负标签 |
-| Step 12R-4 QoS threshold sensitivity | 已完成（探索性） | [`阈值敏感性 JSON`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.json)、[`阈值敏感性图`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.png)；只重算既有 truth，不重跑游戏 |
-| Step 12R-5 合成非线性交互验收 | 已完成（算法验证） | [`合成验收 JSON`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation.json)、[`合成指标图`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation-metrics.png)；验证 CM/RM 能学习预设关系 |
-| 方法有效性结论                   | 当前 workload 集合下无法验证 | Step 12R-1/2/3 均未产生负 QoS 标签，不能作为“CM 优于基线”的证据 |
-| Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12R-1/2/3 均保留严格失败门禁                                                                                   |
-| 正式实验数据、模型与报告         | 历史控制链路已生成 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成；均不得作为方法有效性证据，等待用户授权新的 workload 方案 |
-
-本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行；已实现阶段会在对应小节记录真实入口和验收产物。
+| 模块                                    | 状态                         | 产物                                                                                                                                                                                                                                                         |
+| --------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 原论文归档                              | 已完成                       | [GAugur_HPDC_2019.pdf](docs/papers/GAugur_HPDC_2019.pdf)                                                                                                                                                                                                      |
+| 论文中文解读                            | 已完成                       | [GAugur 中文解读](docs/papers/GAugur_中文解读.md)                                                                                                                                                                                                             |
+| 八个真实小游戏                          | 已下载                       | [游戏清单与试玩方法](games/README.md)                                                                                                                                                                                                                         |
+| Windows-only 实现方案                   | 已完成                       | 本 README                                                                                                                                                                                                                                                    |
+| Step 0 环境基线                         | 已完成                       | [真实验收记录](artifacts/environment/step0/idle-summary.json)                                                                                                                                                                                                 |
+| Step 1 schema/config/CLI                | 已完成                       | [`gaugur_lite/`](gaugur_lite)、[`configs/`](configs)、[`tests/unit/`](tests/unit)                                                                                                                                                                         |
+| Step 2 指标与系统采样                   | 已完成                       | [60 秒探针](artifacts/telemetry/step2/formal-probe/summary.json)、[120 秒开销实验](artifacts/telemetry/step2/formal-overhead.json)                                                                                                                             |
+| Step 3 真实 Pyxel workload              | 已完成                       | [24 run 验收汇总](artifacts/workloads/step3/acceptance.json)、[上游校验](artifacts/workloads/step3/upstream-verification.json)                                                                                                                                 |
+| Step 4 压力 benchmark 与校准            | 已完成                       | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json)                                        |
+| Step 5 实验计划与 Windows Runner        | 已完成                       | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json)                                                                 |
+| Step 6 正式独占基线                     | 已完成                       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json)                                                             |
+| Step 7 历史敏感度/强度 profile          | 工程验收完成                 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json)；压力修复后需重新 profile  |
+| Step 8 历史共置控制组                   | 工程验收完成                 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json)；不作为有效性证据                |
+| Step 9 模型数据集                       | 已完成并独立复核             | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1)                                                                                                   |
+| Step 10 CM/RM/基线实现                  | 已完成并独立验收             | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json)                                                                  |
+| Step 11 消融实验实现                    | 已完成并独立验收             | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融验收](artifacts/reports/formal-v1/ablations/formal-ablation-acceptance.json)、[RM 消融图](artifacts/reports/formal-v1/ablations/ablation-rm-mae.png)                                             |
+| Step 12 QoS 安全装箱 replay             | 已完成并独立验收             | [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[装箱验收](artifacts/reports/formal-v1/packing/formal-packing-acceptance.json)、[槽位/QoS 图](artifacts/reports/formal-v1/packing/packing-slots.png)                                                        |
+| Step 12R-1 外部 benchmark pilot         | 已失败（保留现场）           | [`artifacts/effectiveness/pilot/stress-pilot-acceptance.json`](artifacts/effectiveness/pilot/stress-pilot-acceptance.json)；benchmark 确实运行但未产生负标签                                                                                                |
+| Step 12R-2 高帧率 workload pilot        | 已失败（保留现场）           | [`artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json`](artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json)；实际 FPS 已提高但仍无负标签                                                                                   |
+| Step 12R-3 同核 affinity workload pilot | 已失败（保留现场）           | [`affinity pilot 验收`](artifacts/effectiveness/affinity-pilot/highfps-pilot-acceptance.json)；CPU `[0]` 已真实生效，但仍无负标签                                                                                                                         |
+| Step 12R-4 QoS threshold sensitivity    | 已完成（探索性）             | [`阈值敏感性 JSON`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.json)、[`阈值敏感性图`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.png)；只重算既有 truth，不重跑游戏 |
+| Step 12R-5 合成非线性交互验收           | 已完成（算法验证）           | [`合成验收 JSON`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation.json)、[`合成指标图`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation-metrics.png)；验证 CM/RM 能学习预设关系              |
+| Step 14 复现报告                        | 已完成并独立验收             | [`最终报告`](artifacts/reports/formal-v1/report.md)、[`报告清单`](artifacts/reports/formal-v1/reproduction_manifest.json)、[`报告验收`](artifacts/reports/formal-v1/report-verification.json)                                                             |
+| 方法有效性结论                          | 当前 workload 集合下无法验证 | Step 12R-1/2/3 均未产生负 QoS 标签，不能作为“CM 优于基线”的证据                                                                                                                                                                                            |
+| Python 实现                             | 已完成                       | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12R-1/2/3 均保留严格失败门禁                                                                                                           |
+| 正式实验数据、模型与报告                | 历史控制链路已生成           | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成；均不得作为方法有效性证据，等待用户授权新的 workload 方案                                                |
 
 ## 1. 复现目标与边界
 
@@ -79,17 +78,6 @@
 | 在线集群   | 请求级调度                | 基于实测组合表的离线 replay                       |
 
 因此本项目应称为“GAugur 方法的轻量复现”或“GAugur-Lite”，不能称为原论文数值级完整复现。
-
-### 1.4 当前版本不做
-
-- 不运行 GameLab server/client；
-- 不使用 WebRTC、视频编码、屏幕采集或键鼠注入；
-- 不安装 WSL；
-- 不自动控制商业游戏；
-- 不声称代理压力等同于严格隔离的 LLC、GPU-L2 或 PCIe benchmark；
-- 不把 workload ID 输入主模型；
-- 不把模型预测值当作调度 ground truth；
-- 不引入强化学习。
 
 ## 3. 指标与术语
 
@@ -802,7 +790,7 @@ subprocess.Popen(
 
 #### 验收
 
-以下安装命令耗时较长，由用户在 **Anaconda PowerShell Prompt** 中运行。当前仓库默认 Anaconda 位于 `D:\anaconda3`：
+以下安装命令在 **Anaconda PowerShell Prompt** 中运行。当前仓库默认 Anaconda 位于 `D:\anaconda3`：
 
 ```powershell
 Set-Location D:\github\GameLab-RLCG
@@ -829,26 +817,6 @@ if ($acceptanceExitCode -ne 0) {
 > Windows 上不要使用 `torch==2.4.0+cu121`：该版本的官方 wheel 存在已知 DLL 打包回归，
 > `fbgemm.dll`/`torch_cpu.dll` 会依赖但未携带 `libomp140.x86_64.dll`。该问题被纳入
 > [PyTorch 2.4.1 修复范围](https://github.com/pytorch/pytorch/issues/131662)，本项目因此锁定`torch==2.4.1+cu121`。
-
-若曾经安装本项目旧锁定值 `2.4.0+cu121`，执行下面的官方 wheel 无缓存升级；下载约 2.4 GB：
-
-```powershell
-python -m pip install `
-  --upgrade `
-  --force-reinstall `
-  --no-cache-dir `
-  -r requirements-torch-cu121.txt
-
-python -m pip check
-$acceptanceOutput = python scripts\verify_step0_environment.py
-$acceptanceExitCode = $LASTEXITCODE
-$acceptanceOutput | Out-File `
-  artifacts\environment\step0\acceptance.json -Encoding utf8
-$acceptanceOutput
-if ($acceptanceExitCode -ne 0) {
-  throw "Step 0 environment verification failed (exit $acceptanceExitCode)"
-}
-```
 
 验证通过后再运行约 60 秒的真实空载基线采集：
 
@@ -1555,9 +1523,7 @@ Step 4 的 60 个 worker 本身就是相同四类 benchmark 的独占运行，�
 
 随后 [`formal-v1-profile-t84.csv`](artifacts/plans/formal-v1-profile-t84.csv) 在完全隔离的 `data/raw/step7-t84/` 下实际取得 71 个有效单元，并留下三次 `85°C>84°C` 的无效 attempt：其中两个单元各经一次冷启动恢复，第三个单元在 `a001` 后按审计规则停止。全部 attempt、invocation 报告、清理动作和 cooldown 记录都保留。该轮已证明 Runner、84°C 硬门、断点恢复和数据链路可工作，但实测每个 24-row 批次约 40.8 分钟；继续完成 profile 后，Step 8 的 216 个共置 run 仍需约 6 小时，会挤压模型和调度实验时间。
 
-因此 82°C pilot 和 71-run t84 timing trial 都只作为协议证据，明确标记为 `included_in_final_profiles=false`。不会删除旧数据，也不会把不同 warmup/measurement/cooldown 的结果混入同一训练表。
-
-#### 10/30/10 秒短时序正式协议
+因此 82°C pilot 和 71-run t84 timing trial 都只作为协议证据，明确标记为 `included_in_final_profiles=false`。
 
 > **状态修订（2026-08-16）：本节描述的 84°C s30 方案已经停止，不再是正式数据源。**
 > 它实际完成 23 个有效 run 后，在 `gpu_compute/p100` 出现一次 `85°C>84°C`；随后一次调用只运行到单元测试失败，未创建 a002。全部结果作为安全 pilot 保留并排除，不得继续运行 `run_step7_acceptance.ps1`。当前正式方案见下方“Safety-v2”小节。
@@ -1715,7 +1681,7 @@ PowerShell parser / Python compile / git diff --check: PASS
 
 #### Safety-v2：降载后的正式 profile 协议（当前有效）
 
-当前阶段不是寻找 GPU 热边界的压力测试，而是为 GAugur 模型采集可控、可重复的资源干扰曲线。旧映射在本机 `gpu_compute` 的中高档多次触及 85°C；继续把温度门从 82°C 提到 84°C 不能改善实验定义，只会让保护门接近负载的稳定工作点。因此停止旧路线，不把“触发热保护”当成模型标签。
+旧映射在本机 `gpu_compute` 的中高档多次触及 85°C；继续把温度门从 82°C 提到 84°C 不能改善实验定义，只会让保护门接近负载的稳定工作点。因此停止旧路线，不把“触发热保护”当成模型标签。
 
 [`safety-v2-amendment.json`](artifacts/profiles/step7/safety-v2-amendment.json) 从冻结计划、首批 run report、24 个 index、有效 summary、高温 failure/cleanup/cooldown 和下一次单测日志重算以下事实：
 
@@ -2690,16 +2656,16 @@ PASS Step 11 formal ablation acceptance: artifacts\\reports\\formal-v1\\ablation
 
 验收 JSON 中的变体状态为 8 个 `passed`、1 个 `skipped`（`pressure_11_curve`）。完整的 5 档敏感度、均值标签参考变体为 `full_mean_fps`；所有 RM 指标均按 combination bootstrap 生成 95% CI：
 
-| 变体                        |         test RM retention MAE（95% CI） |   extra_test RM retention MAE（95% CI） | test$R^2$ | extra$R^2$ |
-| --------------------------- | --------------------------------------: | --------------------------------------: | ----------: | -----------: |
-| `full_mean_fps`           | 0.000171358（0.000071532–0.000312863） | 0.000091838（0.000060483–0.000130173） |     0.24369 |      0.75222 |
-| `no_sensitivity`          | 0.000170347（0.000071344–0.000312338） | 0.000093153（0.000061703–0.000131007） |     0.25062 |      0.75090 |
-| `no_intensity`            | 0.000167612（0.000066993–0.000311304） | 0.000091637（0.000058799–0.000128984） |     0.24577 |      0.75476 |
-| `intensity_sum`           | 0.000163880（0.000068690–0.000295126） | 0.000094767（0.000061618–0.000131938） |     0.29016 |      0.75357 |
-| `max_pressure_only`       | 0.000171463（0.000071510–0.000313269） | 0.000092109（0.000060640–0.000130291） |     0.24197 |      0.75246 |
-| `no_resource_utilization` | 0.000167612（0.000066993–0.000311304） | 0.000091637（0.000058799–0.000128984） |     0.24577 |      0.75476 |
-| `p05_fps_label`           | 0.000387107（0.000339536–0.000441289） | 0.000373768（0.000338501–0.000420330） |     0.16633 |      0.21655 |
-| `pair_train_triple_test`  | 0.000076576（0.000048527–0.000105317） | 0.000095768（0.000060271–0.000133422） |     0.95872 |      0.74391 |
+| 变体                        |         test RM retention MAE（95% CI） |   extra_test RM retention MAE（95% CI） | test$R^2$ | extra$R^2$ |         |
+| --------------------------- | --------------------------------------: | --------------------------------------: | -------------------------: | ------: |
+| `full_mean_fps`           | 0.000171358（0.000071532–0.000312863） | 0.000091838（0.000060483–0.000130173） |                    0.24369 | 0.75222 |
+| `no_sensitivity`          | 0.000170347（0.000071344–0.000312338） | 0.000093153（0.000061703–0.000131007） |                    0.25062 | 0.75090 |
+| `no_intensity`            | 0.000167612（0.000066993–0.000311304） | 0.000091637（0.000058799–0.000128984） |                    0.24577 | 0.75476 |
+| `intensity_sum`           | 0.000163880（0.000068690–0.000295126） | 0.000094767（0.000061618–0.000131938） |                    0.29016 | 0.75357 |
+| `max_pressure_only`       | 0.000171463（0.000071510–0.000313269） | 0.000092109（0.000060640–0.000130291） |                    0.24197 | 0.75246 |
+| `no_resource_utilization` | 0.000167612（0.000066993–0.000311304） | 0.000091637（0.000058799–0.000128984） |                    0.24577 | 0.75476 |
+| `p05_fps_label`           | 0.000387107（0.000339536–0.000441289） | 0.000373768（0.000338501–0.000420330） |                    0.16633 | 0.21655 |
+| `pair_train_triple_test`  | 0.000076576（0.000048527–0.000105317） | 0.000095768（0.000060271–0.000133422） |                    0.95872 | 0.74391 |
 
 解读保持克制：各变体的 CM test F1 都为 `1.0`，因为当前真实 QoS 标签是单类全通过，不能说明类别区分能力。普通变体的 MAE CI 大幅重叠，不能据此声称敏感度或强度已被证明无效；`p05_fps_label` 使用的是不同的 p05 目标，不能直接与均值标签 MAE 比较。`pair_train_triple_test` 的 test 只有 27 个 RM 样本（81 个 CM 样本），其较低 MAE 也不能与 81 行主 test 直接比较。
 
@@ -2775,15 +2741,15 @@ PASS Step 12 formal packing acceptance: artifacts\reports\formal-v1\packing
 
 正式报告包含 8 个请求、`qos_ratio=0.80`、最大四实例槽位和 7 种策略（`no_colocation`、CM 及五个基线）。所有共置策略都将两个已实测四元组合装入 2 个槽位，平均 4.0 实例/槽位；`no_colocation` 为 8 个槽位。所有策略的实测 QoS 违约率均为 `0.0`，CM 与五个基线的组合 precision/recall 均为 `1.0`，CM 的实测 truth 观测数为 24、违约数为 0：
 
-| 策略 | 槽位数 | 平均实例/槽位 | 实测 QoS 违约率 | 组合 precision | 组合 recall |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `no_colocation` | 8 | 1.0 | 0.0 | — | — |
-| `cm_model` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
-| `sigmoid_count` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
-| `vbp_like` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
-| `linear_additive` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
-| `solo_only` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
-| `no_profile_tree` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
+| 策略                | 槽位数 | 平均实例/槽位 | 实测 QoS 违约率 | 组合 precision | 组合 recall |
+| ------------------- | -----: | ------------: | --------------: | -------------: | ----------: |
+| `no_colocation`   |      8 |           1.0 |             0.0 |             — |          — |
+| `cm_model`        |      2 |           4.0 |             0.0 |            1.0 |         1.0 |
+| `sigmoid_count`   |      2 |           4.0 |             0.0 |            1.0 |         1.0 |
+| `vbp_like`        |      2 |           4.0 |             0.0 |            1.0 |         1.0 |
+| `linear_additive` |      2 |           4.0 |             0.0 |            1.0 |         1.0 |
+| `solo_only`       |      2 |           4.0 |             0.0 |            1.0 |         1.0 |
+| `no_profile_tree` |      2 |           4.0 |             0.0 |            1.0 |         1.0 |
 
 真实图表：
 
@@ -3039,6 +3005,24 @@ python -m gaugur_lite verify `
   --report artifacts\reports\formal-v1\report.md
 ```
 
+实际 Step 14 验收已完成，报告生成器没有重跑游戏或训练模型：
+
+```text
+status=passed
+report=artifacts/reports/formal-v1/report.md
+figure_count=12
+source_count=31
+real_effectiveness_claim=not_validated
+step13_fixed_slot_fps=not_executed
+
+verify: status=passed
+checked_file_count=43
+all_manifest_hashes_match=true
+required_cards_present=true
+```
+
+最终报告明确区分工程链路验收、合成算法验收和真实 workload 有效性；未执行的 Step 13 以阻塞状态图记录，不用零值伪造 FPS 结果。
+
 ## 13. 正式实验规模与时间
 
 原 `formal-v1` 的 720-run 规格仍完整保留，方便审计历史工程链路；但其中 216 个旧共置 run 没有实际 benchmark 压力，不能作为方法有效性的正式数据。Step 12R-1/2/3 都是独立修复实验，不覆盖上述产物，也不把 pilot 计入旧实验规模；三者均已在标签非退化门禁处失败。因此不冻结同核 affinity 条件的全量重采规模，也不开展后续模型训练；只有用户授权的新 workload 方案通过 pilot 后，才重新确定正式规模。
@@ -3221,7 +3205,7 @@ Run 进入模型前必须满足：
 - [X] QoS 安全装箱；
 - [ ] 最大化 FPS replay；
 - [ ] 实测 truth table；
-- [ ] 数据卡、模型卡与最终报告；
+- [X] 数据卡、模型卡与最终报告；
 - [ ] 一键重建流程。
 
 ## 20. 完成与成功标准

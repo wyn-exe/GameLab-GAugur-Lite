@@ -57,6 +57,7 @@ from .profiles import (
     verify_profiles,
 )
 from .replay import ReplayError, run_qos_packing
+from .reporting.report import ReportError, build_reproduction_report, verify_reproduction_report
 from .synthetic_validation import SyntheticValidationError, run_synthetic_validation
 from .runner.plan import PLAN_STAGES, build_plan, load_plan_rows, verify_plan
 from .runner.runner import run_plan
@@ -181,6 +182,66 @@ def doctor(
     typer.echo(stable_json_dumps(report, indent=2))
     if report["status"] != "passed":
         raise typer.Exit(code=1)
+
+
+@app.command("report")
+def reproduction_report(
+    experiment: str = typer.Option("formal-v1", "--experiment"),
+    model_dir: Path = typer.Option(
+        Path("artifacts/models/formal-v1"),
+        "--model-dir",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        readable=True,
+        resolve_path=True,
+    ),
+    output_dir: Path = typer.Option(
+        Path("artifacts/reports/formal-v1"),
+        "--out",
+        file_okay=False,
+        dir_okay=True,
+    ),
+) -> None:
+    """汇总既有验收产物为 Step 14 最终复现报告。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = build_reproduction_report(
+            repo_root=repo_root,
+            experiment=experiment,
+            model_dir=model_dir,
+            output_dir=output_dir,
+        )
+    except (ReportError, FileExistsError, OSError, RuntimeError, ValueError) as exc:
+        typer.echo(f"REPORT_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+
+
+@app.command("verify")
+def reproduction_report_verify(
+    report: Path = typer.Option(
+        ...,
+        "--report",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+    ),
+) -> None:
+    """只读验证 Step 14 报告及其 SHA-256 清单。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = verify_reproduction_report(repo_root=repo_root, report=report)
+    except (ReportError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"REPORT_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
 
 
 def _effective_dry_run(ctx: typer.Context, local_dry_run: bool) -> bool:

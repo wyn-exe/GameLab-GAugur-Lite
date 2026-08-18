@@ -1,0 +1,261 @@
+{
+  "effectiveness_pilots": {
+    "external_benchmark": {
+      "benchmark_cpu_workers": 64,
+      "checks": {
+        "manifest_pressure_matches_plan": true,
+        "negative_label_minimum": false,
+        "non_degenerate_qos_labels": false,
+        "pilot_completed_run_count": true,
+        "plan_pressure_contract_passed": true,
+        "positive_label_minimum": true,
+        "retention_values_finite": true,
+        "stress_benchmark_cpu_workers": true
+      },
+      "completed_run_count": 12,
+      "experiment_id": "formal-effectiveness-v1",
+      "negative_target_count": 0,
+      "pending_run_count": 204,
+      "plan_sha256": "24bdf5c74356b2dbd661dd29790ae7c764a0c832f9670ed21f58c608a374374d",
+      "positive_target_count": 33,
+      "pressure_applied": 1.0,
+      "pressure_requested": 1.0,
+      "qos_ratio": 0.8,
+      "resource": "cpu_compute",
+      "retention_max": 1.0024876505055462,
+      "retention_mean": 1.0011176734939757,
+      "retention_min": 1.0006114891262607,
+      "schema_version": 1,
+      "status": "failed",
+      "target_count": 33
+    },
+    "high_fps": {
+      "checks": {
+        "manifest_fps_multiplier_matches": true,
+        "negative_label_minimum": false,
+        "non_degenerate_qos_labels": false,
+        "pilot_completed_run_count": true,
+        "plan_without_external_benchmark": true,
+        "positive_label_minimum": true,
+        "retention_values_finite": true
+      },
+      "completed_run_count": 12,
+      "experiment_id": "formal-highfps-v1",
+      "negative_target_count": 0,
+      "pending_run_count": 204,
+      "plan_sha256": "56d908fb601f1523910ce27049047660e822cb4d12b9d8a2d29c3f395b7ebed8",
+      "positive_target_count": 33,
+      "qos_ratio": 0.8,
+      "retention_max": 1.0146651420405908,
+      "retention_mean": 1.003124399125935,
+      "retention_min": 0.9898047360824441,
+      "schema_version": 1,
+      "status": "failed",
+      "target_count": 33,
+      "workload_fps_multiplier": 8.0
+    },
+    "same_core_affinity": {
+      "checks": {
+        "baseline_cpu_affinity_matches": true,
+        "baseline_fps_multiplier_matches": true,
+        "manifest_cpu_affinity_matches": true,
+        "manifest_fps_multiplier_matches": true,
+        "negative_label_minimum": false,
+        "non_degenerate_qos_labels": false,
+        "pilot_completed_run_count": true,
+        "plan_without_external_benchmark": true,
+        "positive_label_minimum": true,
+        "retention_values_finite": true
+      },
+      "completed_run_count": 12,
+      "experiment_id": "formal-highfps-affinity-v1",
+      "negative_target_count": 0,
+      "pending_run_count": 204,
+      "plan_sha256": "0fe33a6cd1c8f0622cac2c1725434a729ed3b22e80432a15238ff9a911394a00",
+      "positive_target_count": 33,
+      "qos_ratio": 0.8,
+      "retention_max": 1.0173264219839708,
+      "retention_mean": 1.0034097298669384,
+      "retention_min": 0.9897696720575574,
+      "schema_version": 1,
+      "status": "failed",
+      "target_count": 33,
+      "workload_cpu_affinity": [
+        0
+      ],
+      "workload_fps_multiplier": 8.0
+    },
+    "synthetic_validation": {
+      "checks": {
+        "both_test_labels_present": true,
+        "gaugur_cm_beats_baselines": true,
+        "gaugur_rm_beats_baselines": true,
+        "group_disjoint": true
+      },
+      "interpretation": "仅验证实现能学习预先构造的非线性交互，不证明真实游戏域有效。",
+      "label_counts": {
+        "test_negative": 239,
+        "test_positive": 646,
+        "train_negative": 514,
+        "train_positive": 1301
+      },
+      "metrics": [
+        {
+          "metric": "f1",
+          "model": "gaugur_gradient_boosting",
+          "task": "cm",
+          "value": 0.9654135338345865
+        },
+        {
+          "metric": "f1",
+          "model": "count_only",
+          "task": "cm",
+          "value": 0.8438928804702809
+        },
+        {
+          "metric": "f1",
+          "model": "linear_additive",
+          "task": "cm",
+          "value": 0.9533834586466166
+        },
+        {
+          "metric": "retention_mae",
+          "model": "gaugur_gradient_boosting",
+          "task": "rm",
+          "value": 0.014559906992163923
+        },
+        {
+          "metric": "retention_mae",
+          "model": "count_only",
+          "task": "rm",
+          "value": 0.06584974051211391
+        },
+        {
+          "metric": "retention_mae",
+          "model": "linear_additive",
+          "task": "rm",
+          "value": 0.01914309857635227
+        }
+      ],
+      "rows": {
+        "test": 885,
+        "total": 2700,
+        "train": 1815
+      },
+      "schema_version": 1,
+      "seed": 20260818,
+      "status": "passed",
+      "validation": "synthetic_non_linear_interaction_only"
+    },
+    "threshold_sensitivity": {
+      "analysis": "exploratory_qos_threshold_sensitivity",
+      "interpretation": "仅重算标签分布，不改变历史 truth、不训练模型，也不构成论文有效性验收。",
+      "schema_version": 1,
+      "source": {
+        "path": "D:\\github\\GameLab-RLCG\\data\\interim\\formal-v1\\safety-v2\\colocation-truth.parquet",
+        "rows": 600,
+        "sha256": "dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265"
+      },
+      "status": "passed",
+      "thresholds": [
+        {
+          "negative_fraction": 0.0,
+          "negative_target_count": 0,
+          "positive_fraction": 1.0,
+          "positive_target_count": 600,
+          "qos_ratio": 0.8,
+          "retention_max": 1.0024656131934047,
+          "retention_mean": 1.001112219773951,
+          "retention_min": 0.997938646389641,
+          "target_count": 600
+        },
+        {
+          "negative_fraction": 0.0,
+          "negative_target_count": 0,
+          "positive_fraction": 1.0,
+          "positive_target_count": 600,
+          "qos_ratio": 0.9,
+          "retention_max": 1.0024656131934047,
+          "retention_mean": 1.001112219773951,
+          "retention_min": 0.997938646389641,
+          "target_count": 600
+        },
+        {
+          "negative_fraction": 0.0,
+          "negative_target_count": 0,
+          "positive_fraction": 1.0,
+          "positive_target_count": 600,
+          "qos_ratio": 0.95,
+          "retention_max": 1.0024656131934047,
+          "retention_mean": 1.001112219773951,
+          "retention_min": 0.997938646389641,
+          "target_count": 600
+        },
+        {
+          "negative_fraction": 0.0,
+          "negative_target_count": 0,
+          "positive_fraction": 1.0,
+          "positive_target_count": 600,
+          "qos_ratio": 0.98,
+          "retention_max": 1.0024656131934047,
+          "retention_mean": 1.001112219773951,
+          "retention_min": 0.997938646389641,
+          "target_count": 600
+        },
+        {
+          "negative_fraction": 0.0,
+          "negative_target_count": 0,
+          "positive_fraction": 1.0,
+          "positive_target_count": 600,
+          "qos_ratio": 0.99,
+          "retention_max": 1.0024656131934047,
+          "retention_mean": 1.001112219773951,
+          "retention_min": 0.997938646389641,
+          "target_count": 600
+        },
+        {
+          "negative_fraction": 0.0,
+          "negative_target_count": 0,
+          "positive_fraction": 1.0,
+          "positive_target_count": 600,
+          "qos_ratio": 0.995,
+          "retention_max": 1.0024656131934047,
+          "retention_mean": 1.001112219773951,
+          "retention_min": 0.997938646389641,
+          "target_count": 600
+        },
+        {
+          "negative_fraction": 0.02,
+          "negative_target_count": 12,
+          "positive_fraction": 0.98,
+          "positive_target_count": 588,
+          "qos_ratio": 1.0,
+          "retention_max": 1.0024656131934047,
+          "retention_mean": 1.001112219773951,
+          "retention_min": 0.997938646389641,
+          "target_count": 600
+        }
+      ]
+    }
+  },
+  "engineering_acceptance": {
+    "ablations": "passed",
+    "colocation": "passed",
+    "colocation_verification": "passed",
+    "dataset": "passed",
+    "evaluation": "passed",
+    "models": "passed",
+    "packing": "passed",
+    "profile": "passed"
+  },
+  "experiment": "formal-v1",
+  "notes": [
+    "formal-v1 truth is retained as an engineering control dataset, not effectiveness evidence",
+    "all three real workload pilots failed the non-degenerate QoS-label gate",
+    "synthetic validation is algorithm-only and does not substitute for real games"
+  ],
+  "real_effectiveness_claim": "not_validated",
+  "schema_version": 1,
+  "status": "passed",
+  "step13_fixed_slot_fps": "not_executed"
+}
