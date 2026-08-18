@@ -100,15 +100,15 @@ flowchart LR
 
 论文选取七类对游戏重要的共享资源，记资源总数为 $R=7$：
 
-| 缩写 | 资源 | 压力 benchmark 的核心思路 |
-|---|---|---|
-| CPU-CE | CPU 核执行能力 | 逐步提高 CPU 核忙碌程度；论文沿用既有 CPU benchmark 设计 |
-| LLC | CPU 最后一级缓存 | 控制工作集与访问模式，对 LLC 施加不同占用压力 |
-| MEM-BW | 主存带宽 | 通过流式内存访问逐步占用带宽 |
-| GPU-CE | GPU 核执行能力 | 在各 GPU 核反复执行同一 kernel，在轮次间插入 sleep，将利用率调到目标压力 $x$ |
-| GPU-BW | GPU 显存带宽 | 在 GPU 内存数组之间反复流式复制，通过 sleep 调节到目标带宽占用 |
-| GPU-L2 | GPU L2 缓存 | 构造大小为 $x\times capacity$ 的数组并随机访问；相邻地址跨度超过 L1 容量，使访问落到 L2 |
-| PCIe-BW | CPU–GPU PCIe 带宽 | 在 CPU 内存与 GPU 内存之间执行流式数据传输 |
+| 缩写    | 资源               | 压力 benchmark 的核心思路                                                                |
+| ------- | ------------------ | ---------------------------------------------------------------------------------------- |
+| CPU-CE  | CPU 核执行能力     | 逐步提高 CPU 核忙碌程度；论文沿用既有 CPU benchmark 设计                                 |
+| LLC     | CPU 最后一级缓存   | 控制工作集与访问模式，对 LLC 施加不同占用压力                                            |
+| MEM-BW  | 主存带宽           | 通过流式内存访问逐步占用带宽                                                             |
+| GPU-CE  | GPU 核执行能力     | 在各 GPU 核反复执行同一 kernel，在轮次间插入 sleep，将利用率调到目标压力$x$            |
+| GPU-BW  | GPU 显存带宽       | 在 GPU 内存数组之间反复流式复制，通过 sleep 调节到目标带宽占用                           |
+| GPU-L2  | GPU L2 缓存        | 构造大小为$x\times capacity$ 的数组并随机访问；相邻地址跨度超过 L1 容量，使访问落到 L2 |
+| PCIe-BW | CPU–GPU PCIe 带宽 | 在 CPU 内存与 GPU 内存之间执行流式数据传输                                               |
 
 论文没有把 CPU/GPU 内存容量本身作为预测维度。它的实验观察是：只要共置游戏的总内存需求未超过服务器容量，内存容量对 FPS 的影响很小。这个结论不等于可以忽略 OOM；容量约束仍应作为调度前的硬过滤条件。
 
@@ -278,27 +278,27 @@ $$
 
 ### 10.1 硬件与运行环境
 
-| 项目 | 原论文设置 |
-|---|---|
-| 操作系统 | Windows 10 |
-| CPU | 4 核 Intel i7-7700 |
-| 内存 | 8 GB RAM |
-| GPU | NVIDIA GeForce GTX 1060 |
-| 多游戏并发 | 多显示器 + ASTER Windows 多座席软件，每个显示器提供独立桌面 |
-| 游戏规模 | 100 款真实热门游戏，覆盖多种类型 |
-| 单压力维度采样 | $k=10$，即 11 个压力点 |
-| 分辨率 profiling | 每款游戏测两个分辨率 |
+| 项目             | 原论文设置                                                  |
+| ---------------- | ----------------------------------------------------------- |
+| 操作系统         | Windows 10                                                  |
+| CPU              | 4 核 Intel i7-7700                                          |
+| 内存             | 8 GB RAM                                                    |
+| GPU              | NVIDIA GeForce GTX 1060                                     |
+| 多游戏并发       | 多显示器 + ASTER Windows 多座席软件，每个显示器提供独立桌面 |
+| 游戏规模         | 100 款真实热门游戏，覆盖多种类型                            |
+| 单压力维度采样   | $k=10$，即 11 个压力点                                    |
+| 分辨率 profiling | 每款游戏测两个分辨率                                        |
 
 ### 10.2 共置数据集
 
 论文共实测 700 个组合：
 
 | 组合大小 | 组合数量 |
-|---:|---:|
-| 2 个游戏 | 500 |
-| 3 个游戏 | 100 |
-| 4 个游戏 | 100 |
-| 合计 | 700 |
+| -------: | -------: |
+| 2 个游戏 |      500 |
+| 3 个游戏 |      100 |
+| 4 个游戏 |      100 |
+|     合计 |      700 |
 
 游戏从 100 款游戏中随机选择，每个游戏的分辨率也随机选择。700 个组合中随机选 400 个组合生成训练集，其余 300 个组合生成测试集。论文不考虑五个及以上游戏的组合，因为在其服务器上，四个以上邻居会使大多数游戏 FPS 很低。
 
@@ -398,318 +398,6 @@ GAugur(RM)、Sigmoid 和 SMiTe 都采用逐请求贪心：把当前请求放到�
 当前轻量复现与原论文保持相同边界，同样不实现编码和网络链路，而是集中验证敏感度、强度、CM/RM 与干扰感知调度。性能对象由真实商业游戏缩减为可控的类游戏合成 workload，因此必须称为“GAugur 思想的轻量再实现”，不能称为数值级完整复现。
 
 GameLab 端到端扩展仍有研究价值，但已从当前实施范围移除。下文第 14–21 节保留的是早期 GameLab 扩展设想，仅作为归档备选，不代表当前开发计划；Windows-only 的目录、命令和验收标准以根 [README](../../README.md) 为准。
-
-## 14. （归档备选）GameLab 现有能力与 GAugur 模块映射
-
-| GAugur 所需能力 | GameLab 当前可用部分 | Lite 版需要补齐 |
-|---|---|---|
-| 固定游戏/场景运行 | 可采集服务器屏幕并通过 WebRTC 发送 | 可重复 workload 驱动、预热/采样窗口、运行元数据 |
-| 独占 FPS | `Server/server.py` 已统计 Server FPS | 输出结构化 CSV/JSONL；区分采集 FPS、渲染 FPS 和编码后 FPS |
-| 客户端 FPS | `Client/client.py` 已统计 Client FPS | 同步 `run_id`，写结构化日志 |
-| 码率 | 服务端 sender bitrate、客户端 transport bitrate 已有日志 | 统一字段、稳定采样周期、缺失值处理 |
-| 帧级关联 | 服务端可叠加 frame id、时间戳、分辨率 QR | 客户端尚未解 QR；补充解码或使用旁路元数据通道 |
-| 可控分辨率 | 服务端支持 downsample/send resolution | 固定分辨率实验矩阵与像素数特征 |
-| 编码复杂度 | 已有可选 EVCA 场景复杂度与码率阶梯 | 将复杂度作为可选协变量，不与 GAugur 强度概念混用 |
-| CPU/GPU 压力 | 尚无 GAugur 式七类 benchmark | 实现/接入压力生成器并校准压力档位 |
-| 多实例共置 | 当前主流程更接近单服务端/单客户端 | 多进程编排、端口/桌面/采集区域隔离、统一开始时间 |
-| 训练与预测 | 尚无 GAugur 特征工程与模型 | 数据构建、Group split、GBDT/GBRT、基线与评估脚本 |
-| 调度器 | 尚无干扰感知装箱 | Lite 阶段先做离线 replay 模拟，不立即搭建真实集群 |
-
-### 当前平台限制
-
-GameLab 的输入注入部分包含 X11 依赖，整体脚本也偏 Linux/Bash，而当前本地环境为 Windows。首版可采用固定视频/可脚本化渲染 workload，绕过交互输入；若要运行真实交互式游戏，应迁移到 Linux 主机，或为 Windows 实现等价输入与多实例隔离。
-
-## 15. （归档备选）GameLab-GAugur-Lite 复现边界
-
-本科推免项目的关键不是把“100 款商业游戏、700 个组合”机械照搬，而是建立一条可验证、可重复、有对照组的最小研究闭环。
-
-### 15.1 建议研究问题
-
-> 在 GameLab 的端到端云游戏管线中，基于目标 workload 的敏感度曲线与邻居 workload 的干扰强度，能否比“只看共置数量”或“直接相加强度”的基线更准确地预测 FPS QoS 和性能保留率？
-
-可选扩展问题：
-
-> 加入编码复杂度、码率和客户端 FPS 后，模型能否预测端到端 QoS，而不只是服务器采集 FPS？
-
-### 15.2 最小可行实验规模
-
-| 维度 | 最小版本 | 推荐版本 |
-|---|---:|---:|
-| workload 数 | 4 | 6–10 |
-| workload 类型 | 可重复 3D/视频/图形 demo | 轻/中/重 GPU 与不同 CPU/内存特征均覆盖 |
-| 分辨率 | 720p、1080p | 720p、900p、1080p |
-| 共置大小 | 2 | 2、3，资源允许时加入 4 |
-| 每个配置重复 | 3 次 | 5 次 |
-| 单次预热 | 30 s | 60 s |
-| 单次正式采样 | 60 s | 120–180 s |
-| 压力维度 | CPU、内存带宽、GPU 综合压力 | 尽可能拆分 CPU-CE、MEM-BW、GPU-CE、GPU-BW |
-| 压力档位 | 0、0.25、0.5、0.75、1 | 0 到 1 共 11 档，对齐原文 $k=10$ |
-
-如果只有一块普通消费级 GPU，多个真实游戏进程可能难以稳定捕获。可以先选可脚本化且许可明确的开源 benchmark/workload，保证可复现性优先于“游戏名气”。
-
-### 15.3 两层目标，避免一次做得过大
-
-**Level A：可完成的核心复现**
-
-- 独占基线与二游戏共置；
-- 2–4 个代理压力维度；
-- 敏感度曲线、强度、邻居均值/方差；
-- GBDT 分类与 GBRT 回归；
-- Sigmoid、加和线性模型、资源利用率模型三个基线；
-- 服务器 FPS 的 QoS/保留率预测；
-- 离线调度 replay。
-
-**Level B：GameLab 特色扩展**
-
-- 三/四实例共置；
-- 客户端 FPS、码率、帧延迟、丢帧率；
-- QR 或元数据通道实现端到端帧关联；
-- 编码器设置与场景复杂度特征；
-- 真实在线 admission control。
-
-## 16. 建议的数据格式
-
-### 16.1 每次运行元数据 `runs.csv`
-
-```text
-run_id,mode,target_id,neighbor_ids,resolution,width,height,pixels,
-pressure_type,pressure_level,repeat,seed,warmup_s,duration_s,
-codec,target_bitrate_mbps,host_id,gpu_driver,started_at
-```
-
-其中：
-
-- `mode ∈ {solo, pressure_profile, colocation}`；
-- `neighbor_ids` 用排序后的稳定 JSON 字符串保存，避免 `A+B` 与 `B+A` 被当成不同组合；
-- `seed`、驱动版本和时间必须保留，便于解释漂移。
-
-### 16.2 时序测量 `metrics.csv`
-
-```text
-run_id,timestamp_s,server_fps,client_fps,sender_bitrate_mbps,
-receiver_bitrate_mbps,cpu_util,gpu_util,gpu_mem_util,
-frame_id,capture_ts_ms,receive_ts_ms
-```
-
-### 16.3 单次运行汇总 `run_summary.csv`
-
-```text
-run_id,server_fps_mean,server_fps_p05,server_fps_min,
-client_fps_mean,client_fps_p05,bitrate_mean,
-retention_ratio,loss_ratio,qos_threshold,qos_satisfied
-```
-
-除了均值，必须保存 p05 或最小 FPS。原论文已指出均值可能掩盖短时 QoS 违约，Lite 版可把这一局限转化为一个小的扩展实验。
-
-### 16.4 模型样本 `model_samples.parquet`
-
-每个“目标游戏 × 共置运行”生成一行：
-
-```text
-run_id,target_id,target_solo_fps,qos_threshold,
-sensitivity_*,neighbor_count,intensity_mean_*,intensity_var_*,
-retention_ratio,loss_ratio,qos_satisfied
-```
-
-不要把 `target_id` 直接作为数值标签输入主模型，否则模型可能记住具体游戏而非学习敏感度/强度关系。它应只用于分组、审计和误差分析。
-
-## 17. 推荐实验协议
-
-### 17.1 单次测量顺序
-
-1. 关闭非必要后台任务并记录硬件、驱动、温度与电源模式；
-2. 固定 workload、场景、随机种子、分辨率和画质；
-3. 预热，使 shader 编译、缓存与频率进入稳定状态；
-4. 先测 benchmark 独占时间或吞吐；
-5. 测每个 workload 的独占 FPS；
-6. 测 workload 与不同资源/压力档位的 profiling；
-7. 随机化共置配置执行顺序，避免温度与时间趋势偏置；
-8. 每个配置至少重复三次；
-9. 每次运行后检查 FPS 方差、异常退出和日志完整性。
-
-### 17.2 数据切分
-
-主结果建议使用：
-
-```text
-GroupShuffleSplit(groups=colocation_id)
-```
-
-补充结果建议使用：
-
-```text
-GroupKFold(groups=target_id)
-```
-
-前者对应“已 profiling 的游戏，预测未测组合”；后者更严格，观察模型对未参与训练的目标 workload 是否泛化。两者不能混成同一个数字。
-
-### 17.3 评价指标
-
-分类：
-
-- Accuracy；
-- Precision；
-- Recall；
-- F1；
-- 混淆矩阵；
-- 特别报告 false positive rate，因为它对应 QoS 违约风险。
-
-回归：
-
-- 论文对齐指标：$MAPE_\delta=mean(|\hat\delta-\delta|/\delta)$；
-- MAE of retention ratio；
-- FPS MAE：$mean(|\widehat{FPS}-FPS|)$；
-- 按二/三/四实例组合分别报告误差；
-- 误差 CDF，与原文 Figure 7(c) 对齐。
-
-稳定性：
-
-- 同配置重复实验的变异系数；
-- 不同运行时段/温度区间的误差；
-- FPS mean 与 p05 两种 QoS 标签的差异。
-
-## 18. 必须实现的基线与消融
-
-只有一个复杂模型而没有基线，无法证明敏感度/强度设计有效。
-
-### 18.1 基线
-
-1. **No-colocation**：每实例独占；用于资源用量上界，不是预测模型；
-2. **Count-only / Sigmoid**：只输入邻居数量；
-3. **Utilization / VBP-like**：输入 CPU/GPU/内存利用率和，先做容量过滤；
-4. **Linear-additive / SMiTe-like**：只取最大压力敏感度，并把邻居强度相加后线性回归；
-5. **Solo-FPS only**：只看独占 FPS 和 QoS，验证 profiling 特征是否真正增益。
-
-### 18.2 消融
-
-- 去掉敏感度，仅保留邻居强度；
-- 去掉强度，仅保留目标敏感度；
-- 用强度求和替换均值/方差；
-- 用单个最大压力点替换完整敏感度曲线；
-- 去掉分辨率/像素数；
-- 加入/去掉端到端编码与传输特征；
-- mean FPS 标签与 p05 FPS 标签对比。
-
-这些消融能逐一对应论文的 Observations 1–8，比单纯追求更高模型精度更有研究解释力。
-
-## 19. 调度 replay 的最小实现
-
-不必先搭建多机集群。可以基于收集到的请求分布与模型预测进行离线 replay：
-
-### QoS 安全装箱
-
-1. 枚举 Lite workload 的候选组合，限制最大组合大小；
-2. 对组合内每个目标分别调用 CM；
-3. 全部预测满足 QoS 才把组合加入可行集合；
-4. 使用论文 Algorithm 1 的最大组合优先贪心装箱；
-5. 报告服务器数、实际 QoS 违约率和平均利用率。
-
-### 固定服务器最大化 FPS
-
-1. 请求逐个到达；
-2. 暂时放入每台服务器，使用 RM 预测该服务器内所有实例的 FPS；
-3. 选择预测平均 FPS 最高且满足容量约束的服务器；
-4. 用实测组合表回放“真实”结果；
-5. 与 count-only、linear-additive、VBP-like 比较。
-
-如果候选组合没有真实测量值，不应把模型预测再当作 ground truth。Lite 规模应优先覆盖调度评估涉及的组合，或只在有实测值的组合子集上 replay。
-
-## 20. 预期目录结构
-
-```text
-GameLab-RLCG/
-├─ ai-testbed/                  # 原始 GameLab 底座
-├─ docs/
-│  └─ papers/
-│     ├─ GAugur_HPDC_2019.pdf
-│     └─ GAugur_中文解读.md
-├─ gaugur_lite/                 # 后续实现建议
-│  ├─ benchmarks/              # 压力生成与校准
-│  ├─ orchestration/           # 独占/共置实验编排
-│  ├─ telemetry/               # GameLab 指标结构化采集
-│  ├─ features/                # S、I 与聚合特征
-│  ├─ models/                  # CM、RM、基线、切分
-│  ├─ scheduler/               # 装箱与 replay
-│  └─ configs/                 # workload/实验矩阵 YAML
-├─ data/                       # 建议忽略原始大文件，仅提交 schema/小样例
-└─ results/                    # 表格、图、模型卡与可复现报告
-```
-
-## 21. 分阶段里程碑
-
-### M0：环境可运行
-
-- GameLab 单服务端/客户端跑通；
-- 结构化记录 server FPS、client FPS、码率；
-- 固定 workload 可重复运行；
-- 三次重复的 FPS 变异系数可接受。
-
-### M1：独占与共置数据闭环
-
-- 4 个 workload × 2 个分辨率独占测量；
-- 完成所有二实例组合及重复；
-- 生成 `retention_ratio`、QoS 标签和基础可视化。
-
-### M2：GAugur 特征闭环
-
-- 至少实现 CPU、内存带宽、GPU 三个代理压力维度；
-- 画出每个 workload 的敏感度曲线；
-- 测 benchmark slowdown 得到强度；
-- 验证非线性、敏感度/强度不相关、强度不完全可加中的至少一项。
-
-### M3：预测模型
-
-- 实现 CM/RM；
-- 按组合分组切分；
-- 与 3 个基线比较；
-- 输出总体误差、按组合大小误差、CDF、混淆矩阵和消融。
-
-### M4：系统价值
-
-- 离线调度 replay；
-- 报告服务器数、QoS 违约率、平均 FPS；
-- 加入 client FPS/码率或端到端延迟作为 GameLab 特色扩展。
-
-## 22. 推免材料中建议怎样表述
-
-### 可以如实写
-
-> 在 Windows Conda 环境中对南开大学—百度联合实验室 HPDC 2019 工作 GAugur 进行轻量复现，构建多维 CPU/GPU 类游戏 workload 和资源压力基准，实现敏感度/强度 profiling、分类/回归干扰预测、基线消融与 QoS 感知调度 replay。
-
-### 不应在没有证据时写
-
-- “完整复现了原论文 100 款游戏与 700 个组合”；
-- “复现误差达到论文 7.9%”，除非实验协议与结果确实支持；
-- “使用了论文官方代码”，因为原文没有给出官方实现；
-- “证明了方法可以泛化到任意游戏/硬件”；
-- 把论文结果直接写成自己的实验结果。
-
-### 更能体现研究能力的材料
-
-- 一张原论文方法到 Windows 实验模块的对应图；
-- 一张敏感度曲线图，展示非线性或不同 workload 差异；
-- 一张 GAugur-Lite 与三种基线的误差 CDF；
-- 一张 QoS 安全装箱的服务器数—违约率权衡图；
-- 一页失败案例分析：模型在哪类 workload、分辨率或温度状态下失效；
-- 完整的配置、随机种子、环境清单与一键运行说明。
-
-## 23. 复现验收清单
-
-- [ ] 原始 PDF、DOI、来源和作者信息可追溯；
-- [ ] 独占/共置 FPS 定义一致，$\delta$ 方向没有写反；
-- [ ] 每个压力点有预热、固定时长和至少三次重复；
-- [ ] benchmark 独占基线与共置 slowdown 均有记录；
-- [ ] 分辨率、画质、场景、种子和驱动版本固定或被记录；
-- [ ] 同一共置运行拆出的样本没有跨训练/测试集泄漏；
-- [ ] 模型输入未直接包含可让模型“背答案”的游戏 ID；
-- [ ] CM 同时报告 precision/recall 和 false positive；
-- [ ] RM 按组合大小报告误差，并绘制误差 CDF；
-- [ ] 至少有 count-only、linear-additive、VBP-like 三个基线；
-- [ ] 调度 replay 的 ground truth 来自实测，而不是另一层模型预测；
-- [ ] 清楚区分原论文结果、Windows Lite 复现结果与归档的 GameLab 扩展设想；
-- [ ] 失败配置和负面结果也被保留并解释。
-
----
 
 ## 参考入口
 
