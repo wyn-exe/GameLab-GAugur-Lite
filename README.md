@@ -22,9 +22,9 @@
 | Step 9 模型数据集                | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1)                                                                        |
 | Step 10 CM/RM/基线实现           | 已完成并独立验收 | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json)                                       |
 | Step 11 消融实验实现             | 已完成并独立验收 | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融验收](artifacts/reports/formal-v1/ablations/formal-ablation-acceptance.json)、[RM 消融图](artifacts/reports/formal-v1/ablations/ablation-rm-mae.png)                  |
-| Step 12 QoS 安全装箱 replay      | 已实现，待正式验收 | [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[`scripts/run_step12_final.ps1`](scripts/run_step12_final.ps1)、请求序列与 replay 单测                                                                                       |
-| Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12 正式命令待上传后运行                                                                                   |
-| 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表及 Step 11 消融报告已生成；Step 12 replay 报告待验收             |
+| Step 12 QoS 安全装箱 replay      | 已完成并独立验收 | [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[装箱验收](artifacts/reports/formal-v1/packing/formal-packing-acceptance.json)、[槽位/QoS 图](artifacts/reports/formal-v1/packing/packing-slots.png) |
+| Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12 全量 119 项单测通过                                                                                   |
+| 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成             |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行；已实现阶段会在对应小节记录真实入口和验收产物。
 
@@ -2750,7 +2750,7 @@ python -m gaugur_lite replay pack `
   --out artifacts\reports\formal-v1\packing
 ```
 
-#### Step 12 实现与本地短验收（2026-08-18）
+#### Step 12 实现与真实验收（2026-08-18）
 
 新增 [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[`configs/requests/formal.yaml`](configs/requests/formal.yaml)、[`scripts/run_step12_acceptance.ps1`](scripts/run_step12_acceptance.ps1)、[`scripts/run_step12_final.ps1`](scripts/run_step12_final.ps1) 和 [`tests/unit/test_replay.py`](tests/unit/test_replay.py)。实现约束如下：
 
@@ -2759,19 +2759,43 @@ python -m gaugur_lite replay pack `
 - 组合是否真的满足 QoS 只由 Step 8 的 `colocation-truth.parquet` 判定，报告实测违约率、违约计数、组合 precision/recall、槽位数和平均实例数/槽位。
 - 同时报告 `no_colocation`、`cm_model`、`sigmoid_count`、`vbp_like`、`linear_additive`、`solo_only` 与 `no_profile_tree`；服务器仍是离线 replay 中的抽象槽位，不是实际云服务器。
 
-本阶段只完成了代码、请求契约、短单测和静态检查；尚未把正式 replay 的槽位数、实测 QoS 违约率和图表写成验收结果。请先提交本阶段源码，再运行下方完整命令；你上传输出后，我会把真实 JSON、图表和 SHA-256 补入本节。
-
-本地短验收（未替代正式入口）已经实际通过：
+用户在已提交源码上运行正式入口，完整单测、模型 replay、实测 truth 审计和图表生成均通过：
 
 ```text
-4 passed in 1.46s
-python -m py_compile gaugur_lite\replay.py gaugur_lite\cli.py  -> PASS
-PowerShell parser: run_step12_acceptance.ps1 PASS; run_step12_final.ps1 PASS
-replay smoke: status=passed, checks=8/8
-no_colocation slots=8; cm_model slots=2; all five baselines slots=2; measured QoS violation rate=0.0
+119 passed, 1 warning in 7.82s
+PASS Step 12 formal packing acceptance: artifacts\reports\formal-v1\packing
+[Step 12 final] PASS: QoS-safe packing, measured truth audit and baseline comparison verified.
 ```
 
-这次 smoke 使用现有 Step 9/10/8 正式产物写入临时目录 `.test-tmp/step12-replay-smoke-2`；正式报告不会复用该临时目录，避免把 smoke 结果冒充正式验收。
+正式报告包含 8 个请求、`qos_ratio=0.80`、最大四实例槽位和 7 种策略（`no_colocation`、CM 及五个基线）。所有共置策略都将两个已实测四元组合装入 2 个槽位，平均 4.0 实例/槽位；`no_colocation` 为 8 个槽位。所有策略的实测 QoS 违约率均为 `0.0`，CM 与五个基线的组合 precision/recall 均为 `1.0`，CM 的实测 truth 观测数为 24、违约数为 0：
+
+| 策略 | 槽位数 | 平均实例/槽位 | 实测 QoS 违约率 | 组合 precision | 组合 recall |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `no_colocation` | 8 | 1.0 | 0.0 | — | — |
+| `cm_model` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
+| `sigmoid_count` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
+| `vbp_like` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
+| `linear_additive` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
+| `solo_only` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
+| `no_profile_tree` | 2 | 4.0 | 0.0 | 1.0 | 1.0 |
+
+真实图表：
+
+![Step 12 QoS-safe packing slots and measured violations](artifacts/reports/formal-v1/packing/packing-slots.png)
+
+右图全部为 0 是本次正式 truth 的真实结果，不是缺失值。由于当前正式标签和可支持候选组合均为单一可行类别，本阶段只能证明 replay 的数据契约、装箱流程和 truth 审计链路通过，不能据此声称 CM 优于基线；该限制与 Step 10/11 的退化标签观察一致。
+
+验收产物：[`formal-packing-acceptance.json`](artifacts/reports/formal-v1/packing/formal-packing-acceptance.json)、[`packing-summary.json`](artifacts/reports/formal-v1/packing/packing-summary.json)、[`packing-slots.png`](artifacts/reports/formal-v1/packing/packing-slots.png)。关键 SHA-256：
+
+```text
+packing-summary.json             ff3e32fa9cabe41a2eae96071778aa74c65a59150e26c6c676dff69639805019
+packing-slots.png                e5b6c2512714dc5c287d7e5816f7e2a6948a9e464e87aa42920ad875b9f69f4c
+formal-packing-acceptance.json   257be4d0ad7d2945fbc931d30989d47fea5cb7a8b2ab3ec95edffc3b46262768
+unit-test-log                    4446b1b2a1eb05b059e2c3e843cb2ffb4aaf6748aeb9eb680c0c1efebef5df01
+requests.yaml                    dc766b9ba98a5b3bb07f2d1d35e0538ebbe61a0eb825e00da4a716b45f913fe3
+colocation-truth.parquet         dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265
+model-manifest.json              b64d2580691c1fbbdd7771b30636617249e9ef8dece88ddefce956fe55258a9b
+```
 
 ```powershell
 conda activate gaugur-lite
@@ -3024,7 +3048,7 @@ Run 进入模型前必须满足：
 
 ### M4：调度与报告
 
-- [ ] QoS 安全装箱；
+- [X] QoS 安全装箱；
 - [ ] 最大化 FPS replay；
 - [ ] 实测 truth table；
 - [ ] 数据卡、模型卡与最终报告；

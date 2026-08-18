@@ -1,0 +1,551 @@
+{
+  "artifacts": {
+    "plot": "packing-slots.png",
+    "summary": "packing-summary.json"
+  },
+  "check_count": 8,
+  "checks": {
+    "all_strategies_reported": true,
+    "combination_metrics_reported": true,
+    "dataset_split_contract_passed": true,
+    "ground_truth_used_for_actual_metrics": true,
+    "model_feature_contract_passed": true,
+    "no_colocation_reference_present": true,
+    "request_count_positive": true,
+    "truth_rows_600": true
+  },
+  "experiment_id": "formal-v1",
+  "ground_truth_sha256": "dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265",
+  "max_group_size": 4,
+  "model_manifest_sha256": "b64d2580691c1fbbdd7771b30636617249e9ef8dece88ddefce956fe55258a9b",
+  "passed_count": 8,
+  "qos_ratio": 0.8,
+  "request_count": 8,
+  "requests_sha256": "dc766b9ba98a5b3bb07f2d1d35e0538ebbe61a0eb825e00da4a716b45f913fe3",
+  "schema_version": 1,
+  "seed": 20260811,
+  "status": "passed",
+  "strategies": [
+    {
+      "actual_feasible_combination_count": 0,
+      "actual_feasible_slot_count": 8,
+      "actual_qos_observation_count": 8,
+      "actual_qos_violation_count": 0,
+      "actual_qos_violation_rate": 0.0,
+      "average_instances_per_slot": 1.0,
+      "combination_precision": null,
+      "combination_recall": null,
+      "placement_trace": [],
+      "predicted_feasible_combination_count": 0,
+      "request_count": 8,
+      "slot_count": 8,
+      "slot_size_histogram": {
+        "1": 8
+      },
+      "slots": [
+        {
+          "combination_key": null,
+          "slot_id": 1,
+          "workload_ids": [
+            "daylight"
+          ]
+        },
+        {
+          "combination_key": null,
+          "slot_id": 2,
+          "workload_ids": [
+            "mega_wing"
+          ]
+        },
+        {
+          "combination_key": null,
+          "slot_id": 3,
+          "workload_ids": [
+            "pyxel_bubbles"
+          ]
+        },
+        {
+          "combination_key": null,
+          "slot_id": 4,
+          "workload_ids": [
+            "pyxel_snake"
+          ]
+        },
+        {
+          "combination_key": null,
+          "slot_id": 5,
+          "workload_ids": [
+            "pyxel_jump"
+          ]
+        },
+        {
+          "combination_key": null,
+          "slot_id": 6,
+          "workload_ids": [
+            "pyxel_platformer"
+          ]
+        },
+        {
+          "combination_key": null,
+          "slot_id": 7,
+          "workload_ids": [
+            "pyxel_shooter"
+          ]
+        },
+        {
+          "combination_key": null,
+          "slot_id": 8,
+          "workload_ids": [
+            "space_rescue"
+          ]
+        }
+      ],
+      "strategy": "no_colocation",
+      "supported_candidate_count": 0
+    },
+    {
+      "actual_feasible_combination_count": 72,
+      "actual_feasible_slot_count": 2,
+      "actual_qos_observation_count": 24,
+      "actual_qos_violation_count": 0,
+      "actual_qos_violation_rate": 0.0,
+      "average_instances_per_slot": 4.0,
+      "combination_precision": 1.0,
+      "combination_recall": 1.0,
+      "placement_trace": [
+        {
+          "action": "placed_group",
+          "group": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ],
+          "request_ids": [
+            "req-01",
+            "req-02",
+            "req-03",
+            "req-04"
+          ],
+          "slot": 0
+        },
+        {
+          "action": "placed_group",
+          "group": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ],
+          "request_ids": [
+            "req-05",
+            "req-06",
+            "req-07",
+            "req-08"
+          ],
+          "slot": 1
+        }
+      ],
+      "predicted_feasible_combination_count": 72,
+      "request_count": 8,
+      "slot_count": 2,
+      "slot_size_histogram": {
+        "4": 2
+      },
+      "slots": [
+        {
+          "combination_key": "daylight+mega_wing+pyxel_bubbles+pyxel_snake",
+          "slot_id": 1,
+          "workload_ids": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ]
+        },
+        {
+          "combination_key": "pyxel_jump+pyxel_platformer+pyxel_shooter+space_rescue",
+          "slot_id": 2,
+          "workload_ids": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ]
+        }
+      ],
+      "strategy": "cm_model",
+      "supported_candidate_count": 72
+    },
+    {
+      "actual_feasible_combination_count": 72,
+      "actual_feasible_slot_count": 2,
+      "actual_qos_observation_count": 24,
+      "actual_qos_violation_count": 0,
+      "actual_qos_violation_rate": 0.0,
+      "average_instances_per_slot": 4.0,
+      "combination_precision": 1.0,
+      "combination_recall": 1.0,
+      "placement_trace": [
+        {
+          "action": "placed_group",
+          "group": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ],
+          "request_ids": [
+            "req-01",
+            "req-02",
+            "req-03",
+            "req-04"
+          ],
+          "slot": 0
+        },
+        {
+          "action": "placed_group",
+          "group": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ],
+          "request_ids": [
+            "req-05",
+            "req-06",
+            "req-07",
+            "req-08"
+          ],
+          "slot": 1
+        }
+      ],
+      "predicted_feasible_combination_count": 72,
+      "request_count": 8,
+      "slot_count": 2,
+      "slot_size_histogram": {
+        "4": 2
+      },
+      "slots": [
+        {
+          "combination_key": "daylight+mega_wing+pyxel_bubbles+pyxel_snake",
+          "slot_id": 1,
+          "workload_ids": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ]
+        },
+        {
+          "combination_key": "pyxel_jump+pyxel_platformer+pyxel_shooter+space_rescue",
+          "slot_id": 2,
+          "workload_ids": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ]
+        }
+      ],
+      "strategy": "sigmoid_count",
+      "supported_candidate_count": 72
+    },
+    {
+      "actual_feasible_combination_count": 72,
+      "actual_feasible_slot_count": 2,
+      "actual_qos_observation_count": 24,
+      "actual_qos_violation_count": 0,
+      "actual_qos_violation_rate": 0.0,
+      "average_instances_per_slot": 4.0,
+      "combination_precision": 1.0,
+      "combination_recall": 1.0,
+      "placement_trace": [
+        {
+          "action": "placed_group",
+          "group": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ],
+          "request_ids": [
+            "req-01",
+            "req-02",
+            "req-03",
+            "req-04"
+          ],
+          "slot": 0
+        },
+        {
+          "action": "placed_group",
+          "group": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ],
+          "request_ids": [
+            "req-05",
+            "req-06",
+            "req-07",
+            "req-08"
+          ],
+          "slot": 1
+        }
+      ],
+      "predicted_feasible_combination_count": 72,
+      "request_count": 8,
+      "slot_count": 2,
+      "slot_size_histogram": {
+        "4": 2
+      },
+      "slots": [
+        {
+          "combination_key": "daylight+mega_wing+pyxel_bubbles+pyxel_snake",
+          "slot_id": 1,
+          "workload_ids": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ]
+        },
+        {
+          "combination_key": "pyxel_jump+pyxel_platformer+pyxel_shooter+space_rescue",
+          "slot_id": 2,
+          "workload_ids": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ]
+        }
+      ],
+      "strategy": "vbp_like",
+      "supported_candidate_count": 72
+    },
+    {
+      "actual_feasible_combination_count": 72,
+      "actual_feasible_slot_count": 2,
+      "actual_qos_observation_count": 24,
+      "actual_qos_violation_count": 0,
+      "actual_qos_violation_rate": 0.0,
+      "average_instances_per_slot": 4.0,
+      "combination_precision": 1.0,
+      "combination_recall": 1.0,
+      "placement_trace": [
+        {
+          "action": "placed_group",
+          "group": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ],
+          "request_ids": [
+            "req-01",
+            "req-02",
+            "req-03",
+            "req-04"
+          ],
+          "slot": 0
+        },
+        {
+          "action": "placed_group",
+          "group": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ],
+          "request_ids": [
+            "req-05",
+            "req-06",
+            "req-07",
+            "req-08"
+          ],
+          "slot": 1
+        }
+      ],
+      "predicted_feasible_combination_count": 72,
+      "request_count": 8,
+      "slot_count": 2,
+      "slot_size_histogram": {
+        "4": 2
+      },
+      "slots": [
+        {
+          "combination_key": "daylight+mega_wing+pyxel_bubbles+pyxel_snake",
+          "slot_id": 1,
+          "workload_ids": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ]
+        },
+        {
+          "combination_key": "pyxel_jump+pyxel_platformer+pyxel_shooter+space_rescue",
+          "slot_id": 2,
+          "workload_ids": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ]
+        }
+      ],
+      "strategy": "linear_additive",
+      "supported_candidate_count": 72
+    },
+    {
+      "actual_feasible_combination_count": 72,
+      "actual_feasible_slot_count": 2,
+      "actual_qos_observation_count": 24,
+      "actual_qos_violation_count": 0,
+      "actual_qos_violation_rate": 0.0,
+      "average_instances_per_slot": 4.0,
+      "combination_precision": 1.0,
+      "combination_recall": 1.0,
+      "placement_trace": [
+        {
+          "action": "placed_group",
+          "group": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ],
+          "request_ids": [
+            "req-01",
+            "req-02",
+            "req-03",
+            "req-04"
+          ],
+          "slot": 0
+        },
+        {
+          "action": "placed_group",
+          "group": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ],
+          "request_ids": [
+            "req-05",
+            "req-06",
+            "req-07",
+            "req-08"
+          ],
+          "slot": 1
+        }
+      ],
+      "predicted_feasible_combination_count": 72,
+      "request_count": 8,
+      "slot_count": 2,
+      "slot_size_histogram": {
+        "4": 2
+      },
+      "slots": [
+        {
+          "combination_key": "daylight+mega_wing+pyxel_bubbles+pyxel_snake",
+          "slot_id": 1,
+          "workload_ids": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ]
+        },
+        {
+          "combination_key": "pyxel_jump+pyxel_platformer+pyxel_shooter+space_rescue",
+          "slot_id": 2,
+          "workload_ids": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ]
+        }
+      ],
+      "strategy": "solo_only",
+      "supported_candidate_count": 72
+    },
+    {
+      "actual_feasible_combination_count": 72,
+      "actual_feasible_slot_count": 2,
+      "actual_qos_observation_count": 24,
+      "actual_qos_violation_count": 0,
+      "actual_qos_violation_rate": 0.0,
+      "average_instances_per_slot": 4.0,
+      "combination_precision": 1.0,
+      "combination_recall": 1.0,
+      "placement_trace": [
+        {
+          "action": "placed_group",
+          "group": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ],
+          "request_ids": [
+            "req-01",
+            "req-02",
+            "req-03",
+            "req-04"
+          ],
+          "slot": 0
+        },
+        {
+          "action": "placed_group",
+          "group": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ],
+          "request_ids": [
+            "req-05",
+            "req-06",
+            "req-07",
+            "req-08"
+          ],
+          "slot": 1
+        }
+      ],
+      "predicted_feasible_combination_count": 72,
+      "request_count": 8,
+      "slot_count": 2,
+      "slot_size_histogram": {
+        "4": 2
+      },
+      "slots": [
+        {
+          "combination_key": "daylight+mega_wing+pyxel_bubbles+pyxel_snake",
+          "slot_id": 1,
+          "workload_ids": [
+            "daylight",
+            "mega_wing",
+            "pyxel_bubbles",
+            "pyxel_snake"
+          ]
+        },
+        {
+          "combination_key": "pyxel_jump+pyxel_platformer+pyxel_shooter+space_rescue",
+          "slot_id": 2,
+          "workload_ids": [
+            "pyxel_jump",
+            "pyxel_platformer",
+            "pyxel_shooter",
+            "space_rescue"
+          ]
+        }
+      ],
+      "strategy": "no_profile_tree",
+      "supported_candidate_count": 72
+    }
+  ]
+}
