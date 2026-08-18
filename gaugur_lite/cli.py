@@ -41,6 +41,7 @@ from .effectiveness import (
     EffectivenessError,
     audit_high_fps_pilot,
     audit_stress_pilot,
+    analyze_qos_thresholds,
     build_high_fps_plan,
     build_stress_plan,
 )
@@ -1029,6 +1030,39 @@ def effectiveness_audit_high_fps_pilot(
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] != "passed":
         raise typer.Exit(code=3)
+
+
+@effectiveness_app.command("threshold-sensitivity")
+def effectiveness_threshold_sensitivity(
+    truth: Path = typer.Option(
+        ...,
+        "--truth",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="既有 colocation truth parquet；只读，不重跑游戏。",
+    ),
+    output_dir: Path = typer.Option(..., "--out-dir", help="阈值敏感性分析产物目录。"),
+    thresholds: str = typer.Option(
+        "0.80,0.90,0.95,0.98,0.99,0.995,1.00",
+        "--thresholds",
+        help="逗号分隔的 QoS ratio；必须在实验解释确定后冻结。",
+    ),
+) -> None:
+    """仅对已有 truth 重算 QoS 标签分布，不修改历史数据或训练模型。"""
+
+    try:
+        result = analyze_qos_thresholds(
+            source=truth,
+            output_dir=output_dir,
+            thresholds=_parse_csv_floats(thresholds, option_name="--thresholds"),
+        )
+    except (EffectivenessError, FileExistsError, OSError, RuntimeError, ValueError) as exc:
+        typer.echo(f"EFFECTIVENESS_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
 
 
 @telemetry_app.command("probe")

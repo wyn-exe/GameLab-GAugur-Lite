@@ -10,6 +10,7 @@ from gaugur_lite.effectiveness import (
     _high_fps_rows,
     _parse_cpu_affinity,
     _stress_rows,
+    summarize_qos_thresholds,
     audit_stress_pilot,
 )
 from gaugur_lite.runner.plan import PLAN_COLUMNS
@@ -99,6 +100,16 @@ def test_high_fps_rows_preserve_shape_without_external_benchmark() -> None:
 def test_effectiveness_cpu_affinity_is_canonical() -> None:
     assert _parse_cpu_affinity(None) is None
     assert _parse_cpu_affinity("1,0,1") == (0, 1)
+
+
+def test_qos_threshold_sensitivity_recomputes_labels_without_changing_retention() -> None:
+    summary = summarize_qos_thresholds(
+        [0.989, 0.995, 1.0, 1.01], [0.80, 0.99, 1.00]
+    )
+
+    assert [item["negative_target_count"] for item in summary] == [0, 1, 2]
+    assert [item["positive_target_count"] for item in summary] == [4, 3, 2]
+    assert all(item["retention_min"] == 0.989 for item in summary)
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,130 @@
+{
+  "audio_mode": "muted",
+  "barrier_used": true,
+  "barrier_wait_s": 0.04655309999361634,
+  "controller": "daylight_patrol_v1",
+  "controller_trace_sha256": "f738b5e7ad603c0ae8214d7dbb348ddb06e736e9c6b431250d93c067882ba3b9",
+  "cpu_affinity": [
+    0
+  ],
+  "display_scale": 2,
+  "draw_count": 3189,
+  "draw_interval_ms": {
+    "count": 2395,
+    "max": 32.267,
+    "mean": 12.517501503131523,
+    "min": 0.3639,
+    "p95": 14.6974
+  },
+  "draw_time_ms": {
+    "count": 2396,
+    "max": 1.6622,
+    "mean": 0.14129198664440734,
+    "min": 0.0371,
+    "p95": 0.1966
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 40.0551089,
+  "entrypoint": "games/pyxel/apps-src/30SecondsOfDaylight/src/main.py",
+  "fps_multiplier": 8.0,
+  "game_fps": {
+    "count": 30,
+    "max": 80.14474338543664,
+    "mean": 79.82711131580933,
+    "min": 78.79490093572639,
+    "p05": 78.96044871124053,
+    "p95": 80.13538725277492,
+    "windows_used": 30
+  },
+  "headless": false,
+  "logical_height": 120,
+  "logical_width": 160,
+  "max_frames": 0,
+  "measurement_coverage_ratio": 1.0,
+  "measurement_coverage_s": 30.012410000000003,
+  "measurement_finished_monotonic_ns": 161715431535100,
+  "measurement_metric_rows": 30,
+  "measurement_started_monotonic_ns": 161685431261300,
+  "metric_rows": 40,
+  "missed_deadline_count": 40,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "planned_measurement_end_monotonic_ns": 161715427262200,
+  "planned_measurement_start_monotonic_ns": 161685427262200,
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "duration_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 3189,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 40,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 3189,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": null
+      },
+      {
+        "actual": 80,
+        "name": "target_fps_matches_multiplier",
+        "passed": true,
+        "threshold": 80
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      },
+      {
+        "actual": 1.0,
+        "name": "measurement_coverage",
+        "passed": true,
+        "skipped": false,
+        "threshold": 0.95
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "registry_target_fps": 10,
+  "run_id": "formal-highfps-affinity-v1__solo__daylight__r02",
+  "schema_version": 1,
+  "seed": 1006,
+  "status": "completed",
+  "stop_reason": "duration_reached",
+  "target_fps": 80,
+  "title": "30 Seconds of Daylight",
+  "update_count": 3189,
+  "update_time_ms": {
+    "count": 2396,
+    "max": 0.6455,
+    "mean": 0.07397136894824707,
+    "min": 0.0099,
+    "p95": 0.1313
+  },
+  "warmup_requested_s": 10.0,
+  "window_observations": 30,
+  "workload_id": "daylight"
+}

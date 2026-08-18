@@ -25,10 +25,11 @@
 | Step 12 QoS 安全装箱 replay      | 已完成并独立验收 | [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[装箱验收](artifacts/reports/formal-v1/packing/formal-packing-acceptance.json)、[槽位/QoS 图](artifacts/reports/formal-v1/packing/packing-slots.png) |
 | Step 12R-1 外部 benchmark pilot  | 已失败（保留现场） | [`artifacts/effectiveness/pilot/stress-pilot-acceptance.json`](artifacts/effectiveness/pilot/stress-pilot-acceptance.json)；benchmark 确实运行但未产生负标签 |
 | Step 12R-2 高帧率 workload pilot  | 已失败（保留现场） | [`artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json`](artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json)；实际 FPS 已提高但仍无负标签 |
-| Step 12R-3 同核 affinity workload pilot | 已实现，待 pilot | [`scripts/run_effectiveness_affinity_pilot.ps1`](scripts/run_effectiveness_affinity_pilot.ps1)、同一真实 workload 共享受限 CPU 核与正负标签门禁 |
-| 方法有效性结论                   | 尚未验证         | Step 12R-1/2 均不能作为“CM 优于基线”的证据；必须先通过 Step 12R-3 并以同一运行条件重建数据 |
+| Step 12R-3 同核 affinity workload pilot | 已失败（保留现场） | [`affinity pilot 验收`](artifacts/effectiveness/affinity-pilot/highfps-pilot-acceptance.json)；CPU `[0]` 已真实生效，但仍无负标签 |
+| Step 12R-4 QoS threshold sensitivity | 已完成（探索性） | [`阈值敏感性 JSON`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.json)、[`阈值敏感性图`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.png)；只重算既有 truth，不重跑游戏 |
+| 方法有效性结论                   | 当前 workload 集合下无法验证 | Step 12R-1/2/3 均未产生负 QoS 标签，不能作为“CM 优于基线”的证据 |
 | Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12R-1/2/3 均保留严格失败门禁                                                                                   |
-| 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成；有效性数据待重采             |
+| 正式实验数据、模型与报告         | 历史控制链路已生成 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成；均不得作为方法有效性证据，等待用户授权新的 workload 方案 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行；已实现阶段会在对应小节记录真实入口和验收产物。
 
@@ -2868,7 +2869,7 @@ PowerShell parser: PASS
 
 这不是方法有效性验收；它是第二条真实 workload 路线的负面结果，说明单纯提高 FPS 仍不足以复现论文所需的干扰强度。
 
-### Step 12R-3：同核 affinity 真实 workload pilot（已实现，待实测）
+### Step 12R-3：同核 affinity 真实 workload pilot（已实测失败，现场保留）
 
 第三版仍不启动外部 benchmark，而是给每个真实 workload 进程设置同一个受限 CPU 集合。solo 基线和共置 run 使用完全相同的 affinity（默认逻辑 CPU `0`）；solo 时该 workload 独占该核，共置时多个真实 workload 共享该核，形成可解释的 workload-to-workload CPU 争用。实际 affinity 会写入 workload summary、attempt manifest、共置 truth 和 baseline manifest；如果 Windows 无法应用指定核，run 直接失败，不会静默降级为全 CPU。
 
@@ -2882,19 +2883,63 @@ pwsh.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_effectiveness_affinity_pilot.ps1
 ```
 
-输出目录为 `artifacts/effectiveness/affinity-pilot/`，计划为 `artifacts/plans/formal-highfps-affinity-v1.csv`。本阶段尚无真实验收结果；如果同核 affinity 仍不能产生负标签，应停止继续对 Pyxel workload 加压，并将结论明确限定为“当前 workload 集合不足以验证论文有效性”。
+脚本实际完成 24 个同条件 solo 与 12 个主共置 run。验收文件为 [`highfps-pilot-acceptance.json`](artifacts/effectiveness/affinity-pilot/highfps-pilot-acceptance.json)，计划 SHA-256 为 `0fe33a6cd1c8f0622cac2c1725434a729ed3b22e80432a15238ff9a911394a00`：
+
+```text
+workload_fps_multiplier=8.0
+workload_cpu_affinity=[0]
+completed_run_count=12, pending_run_count=204
+target_count=33, positive=33, negative=0
+retention_min=0.9897696720575574
+retention_max=1.0173264219839708
+retention_mean=1.0034097298669384
+status=failed
+```
+
+`baseline_cpu_affinity_matches`、`manifest_cpu_affinity_matches`、`baseline_fps_multiplier_matches`、`manifest_fps_multiplier_matches` 和所有 QoS 运行质量门均为 `true`，所以失败不是 affinity 未应用或记录不一致：每个真实 workload 确实被限制到 CPU `[0]`。失败的两个门禁是 `negative_label_minimum=false` 与 `non_degenerate_qos_labels=false`。
+
+因此不启动剩余 204 个 run，也不再继续给当前 Pyxel workload 调高 FPS、收窄 affinity 或修改 QoS 阈值来制造标签。三种彼此独立的施压路线均没有在 `Q=0.80` 下形成负 QoS 标签，当前仓库的轻量 Pyxel workload 集合只能验证工程链路，**不能验证 GAugur 方法有效性或 CM 优于基线**。若要继续论文有效性复现，需要用户明确授权扩展研究范围：换用一组负载更重、来源可追溯且彼此独立的真实 workload，并从 solo/profile/共置 truth 起在新条件下重建数据；不能复用旧模型结果作方法结论。
 
 本阶段实现级检查已实际通过：
 
 ```text
-29 passed in 2.94s
+30 passed in 2.96s
 Python py_compile: PASS
 PowerShell parser (两份 pilot 脚本): PASS
 ```
 
+### Step 12R-4：QoS 阈值敏感性分析（已完成，探索性）
+
+为避免重新采集 720 个物理 run，本阶段只读取已有 `formal-v1` truth，按多个预先列出的 `qos_ratio` 重新计算标签数量；不修改 parquet、不重写历史 CM 表、不训练模型。该分析只能回答“标签标准如何影响类别分布”，不能把阈值事后调到有负类当作论文有效性证据。
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+python -m gaugur_lite effectiveness threshold-sensitivity `
+  --truth data\interim\formal-v1\safety-v2\colocation-truth.parquet `
+  --out-dir artifacts\effectiveness\qos-threshold-sensitivity\formal-v1 `
+  --thresholds 0.80,0.90,0.95,0.98,0.99,0.995,1.00
+```
+
+实际验收产物为 [`qos-threshold-sensitivity.json`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.json)、[`qos-threshold-sensitivity.csv`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.csv) 和 [`qos-threshold-sensitivity.png`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.png)。输入 truth 共 600 行，哈希为 `dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265`，实际结果为：
+
+```text
+qos_ratio   positive   negative
+0.800       600        0
+0.900       600        0
+0.950       600        0
+0.980       600        0
+0.990       600        0
+0.995       600        0
+1.000       588        12
+```
+
+这说明当前数据只有把“任何可测得的下降都算失败”（`qos_ratio=1.0`）时才出现少量负类；这不是论文的 60 FPS QoS 标准，也可能把测量噪声当成违约。因此本阶段不据此重训模型或宣称 CM 有效，只保留为标签标准敏感性证据。
+
 ### Step 13：实现固定槽位最大化 FPS replay
 
-> 暂不对旧 `formal-v1` 模型运行本阶段。它只能作为工程 replay 控制结果；应等待 Step 12R-3 pilot 通过且新的同条件 profile、共置 truth、数据集和模型全部生成后再执行。
+> 当前不执行本阶段作为论文方法实验。旧 `formal-v1` 模型只能作为工程 replay 控制结果；Step 12R-1/2/3 都未产生非退化 QoS 标签，后续模型训练或 replay 不能支持有效性结论。只有在经用户授权的新 workload 条件下重建 profile、共置 truth、数据集和模型后，才可恢复本阶段。
 
 逐请求：
 
@@ -2963,7 +3008,7 @@ python -m gaugur_lite verify `
 
 ## 13. 正式实验规模与时间
 
-原 `formal-v1` 的 720-run 规格仍完整保留，方便审计历史工程链路；但其中 216 个旧共置 run 没有实际 benchmark 压力，不能作为方法有效性的正式数据。Step 12R-1/2/3 都是独立修复实验，不覆盖上述产物，也不把 pilot 计入旧实验规模。只有 Step 12R-3 在同核 affinity 条件下产生非退化 QoS 标签后，才冻结其完整重采规模与后续模型训练计划。
+原 `formal-v1` 的 720-run 规格仍完整保留，方便审计历史工程链路；但其中 216 个旧共置 run 没有实际 benchmark 压力，不能作为方法有效性的正式数据。Step 12R-1/2/3 都是独立修复实验，不覆盖上述产物，也不把 pilot 计入旧实验规模；三者均已在标签非退化门禁处失败。因此不冻结同核 affinity 条件的全量重采规模，也不开展后续模型训练；只有用户授权的新 workload 方案通过 pilot 后，才重新确定正式规模。
 
 正式规格固定为：真实游戏 $W=8$、资源代理 $R=4$、压力档位 $P=5$、重复 $K=3$、固定原生画布/窗口策略、60 个主组合与 12 个额外四元组合。
 
@@ -2984,7 +3029,7 @@ total                                           720
 
 ## 14. 最终流程（历史控制数据与压力修复）
 
-Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；旧 Step 8 已完成 216 个共置 run、600 行 target truth、图表生成和 8/8 独立复核，但因未携带 benchmark 压力，它只保留为控制数据，不能支持方法有效性结论。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载；Step 12R-1/2 均已失败，当前正式入口是上节 `run_effectiveness_affinity_pilot.ps1`，在它通过前不得继续用旧 truth 扩展模型或 replay 结论：
+Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；旧 Step 8 已完成 216 个共置 run、600 行 target truth、图表生成和 8/8 独立复核，但因未携带 benchmark 压力，它只保留为控制数据，不能支持方法有效性结论。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载；Step 12R-1/2/3 都已在负标签门禁失败，当前不存在可继续的正式有效性采集入口，也不得用旧 truth 扩展模型或 replay 结论：
 
 ```powershell
 conda activate gaugur-lite

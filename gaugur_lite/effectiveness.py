@@ -6,7 +6,7 @@ import csv
 import json
 import math
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from .benchmarks.engine import BENCHMARK_RESOURCES
 from .colocation import (
@@ -31,6 +31,110 @@ from .schema import RunMode, make_run_id
 
 class EffectivenessError(RuntimeError):
     """有效性修复实验的计划、压力或标签质量门失败。"""
+
+
+def summarize_qos_thresholds(
+    retentions: Iterable[float], thresholds: Iterable[float]
+) -> list[dict[str, Any]]:
+    """在不重跑实验的前提下，统计不同 QoS ratio 的标签分布。"""
+
+    values = [float(value) for value in retentions]
+    if not values or not all(math.isfinite(value) and value > 0 for value in values):
+        raise EffectivenessError("retention 样本必须非空、有限且为正数")
+    normalized: list[float] = []
+    for threshold in thresholds:
+        value = float(threshold)
+        if not 0.0 < value <= 1.0 or not math.isfinite(value):
+            raise EffectivenessError("QoS ratio 必须位于 (0, 1]")
+        if value not in normalized:
+            normalized.append(value)
+    if not normalized:
+        raise EffectivenessError("至少需要一个 QoS ratio")
+    result: list[dict[str, Any]] = []
+    for threshold in normalized:
+        negative = sum(value < threshold for value in values)
+        positive = len(values) - negative
+        result.append(
+            {
+                "qos_ratio": threshold,
+                "target_count": len(values),
+                "positive_target_count": positive,
+                "negative_target_count": negative,
+                "positive_fraction": positive / len(values),
+                "negative_fraction": negative / len(values),
+                "retention_min": min(values),
+                "retention_max": max(values),
+                "retention_mean": sum(values) / len(values),
+            }
+        )
+    return result
+
+
+def analyze_qos_thresholds(
+    *, source: Path, output_dir: Path, thresholds: Iterable[float]
+) -> dict[str, Any]:
+    """读取既有共置 truth，输出阈值敏感性 JSON/CSV/PNG，不修改原始数据。"""
+
+    source = source.resolve()
+    output_dir = output_dir.resolve()
+    if not source.is_file():
+        raise EffectivenessError(f"truth parquet 不存在: {source}")
+    try:
+        import pyarrow.parquet as pq
+    except ImportError as exc:  # pragma: no cover - formal environment supplies pyarrow.
+        raise EffectivenessError("阈值敏感性分析需要 pyarrow") from exc
+    rows = pq.read_table(source, columns=["retention_ratio"]).to_pylist()
+    summary = summarize_qos_thresholds(
+        (row["retention_ratio"] for row in rows), thresholds
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    outputs = {
+        "json": output_dir / "qos-threshold-sensitivity.json",
+        "csv": output_dir / "qos-threshold-sensitivity.csv",
+        "plot": output_dir / "qos-threshold-sensitivity.png",
+    }
+    existing = [path for path in outputs.values() if path.exists()]
+    if existing:
+        raise FileExistsError(f"阈值敏感性产物已存在，拒绝覆盖: {existing[0]}")
+    try:
+        source_hash = _file_sha256(source)
+    except OSError as exc:
+        raise EffectivenessError(f"无法计算 truth 哈希: {source}") from exc
+    result: dict[str, Any] = {
+        "schema_version": 1,
+        "status": "passed",
+        "analysis": "exploratory_qos_threshold_sensitivity",
+        "source": {"path": str(source), "sha256": source_hash, "rows": len(rows)},
+        "thresholds": summary,
+        "interpretation": (
+            "仅重算标签分布，不改变历史 truth、不训练模型，也不构成论文有效性验收。"
+        ),
+    }
+    outputs["json"].write_text(stable_json_dumps(result, indent=2) + "\n", encoding="utf-8")
+    with outputs["csv"].open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(summary[0]))
+        writer.writeheader()
+        writer.writerows(summary)
+    try:
+        import matplotlib.pyplot as plt
+
+        x_values = [item["qos_ratio"] for item in summary]
+        negative_values = [item["negative_target_count"] for item in summary]
+        positive_values = [item["positive_target_count"] for item in summary]
+        figure, axis = plt.subplots(figsize=(7.2, 4.2))
+        axis.plot(x_values, positive_values, marker="o", label="positive targets")
+        axis.plot(x_values, negative_values, marker="o", label="negative targets")
+        axis.set_xlabel("QoS ratio threshold")
+        axis.set_ylabel("Target count")
+        axis.set_title("QoS threshold sensitivity (existing truth only)")
+        axis.grid(alpha=0.25)
+        axis.legend()
+        figure.tight_layout()
+        figure.savefig(outputs["plot"], dpi=160)
+        plt.close(figure)
+    except ImportError as exc:  # pragma: no cover - formal environment includes matplotlib.
+        raise EffectivenessError("阈值敏感性图表需要 matplotlib") from exc
+    return result
 
 
 _EXPECTED_SOLO_RUNS = 24

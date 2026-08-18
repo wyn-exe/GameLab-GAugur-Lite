@@ -1,0 +1,195 @@
+{
+  "artifact_sha256": {
+    "barrier.json": "82dab17d0f739a8eafddb8499071131ec8c1573073eadfb6a0aad4d02cfe9db5",
+    "cooldown.jsonl": "6ae1c078cfe0efad42a7bc16e27b51a0a631689b0c0e58f2c0ed416a884f3e5f",
+    "layout.json": "86c5322ecb4f0df1c0f4a95ee55bbdae8a98d95f58800ecf950abdc7d69a8e03",
+    "manifest.json": "5d27747b4ccf0d6060d490e4ff3d1259e25a128707b35f8841734980393d1865",
+    "system_metrics.jsonl": "dcde8f8ac82bc5d9b649e3f753a19d6e6ca410361ebeb853afb1cbabd6fee607",
+    "window_observations.jsonl": "fcb2af05b3e00ded64091ddd70fd6d58270ad1106a9871f7c3bc1d218e7f71c3",
+    "workloads/daylight/game_metrics.jsonl": "9a358d76a59f23a62daabceb2b91094b1a1ff0489485fde8a6f8668b49a8d73c",
+    "workloads/daylight/heartbeat.json": "333db40f69ff3a3356015b4e8816738bc3346ea2ea37ef9dbfda7d7e1a154f2d",
+    "workloads/daylight/measurement-start.json": "459b67e1160c7e4cbb396a0d26e0d5ab84706e7efb10b8a90e5e0d74a2b2b4bf",
+    "workloads/daylight/ready.json": "bcef1a02f44c7c05eb9454177f5fdb67d930018698931601784cf85cee149bf5",
+    "workloads/daylight/status.json": "2048300780b2bc379f376bb45798a054afa775c4957bb86912bd1e0878ddde25",
+    "workloads/daylight/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/daylight/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/daylight/stop.json": "114ba4b58d08228297f9748516110899ce8ecb7ba5ab67a033f34a1a0a567d44",
+    "workloads/daylight/summary.json": "b5d83cfa1638708d3829c522d545392d04d3eaa34e6fbf7a5a95860592efd826"
+  },
+  "attempt": 1,
+  "benchmark": null,
+  "cleanup": {
+    "actions": [],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 10.028410700004315,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 48.0,
+    "samples": 11,
+    "thermal_target_c": 70.0,
+    "thermal_target_reached": true
+  },
+  "external_occlusion_checked": false,
+  "gpu_temp_c_max": 51.0,
+  "gpu_temp_limit_c": 80.0,
+  "gpu_thermal_slowdown_seen": false,
+  "measurement_end_monotonic_ns": 161501846898100,
+  "measurement_start_monotonic_ns": 161471846898100,
+  "mode": "solo",
+  "pressure_applied": null,
+  "pressure_requested": null,
+  "resource": null,
+  "run_id": "formal-highfps-affinity-v1__solo__daylight__r01",
+  "schema_version": 1,
+  "split": "not_applicable",
+  "stage": "solo",
+  "status": "completed",
+  "system_coverage_ratio": 0.9994999999999999,
+  "system_coverage_s": 29.985,
+  "system_sample_count": 31,
+  "valid": true,
+  "window_sample_count": 31,
+  "windows_pairwise_nonoverlap": true,
+  "workload_cpu_affinity": [
+    0
+  ],
+  "workload_fps_multiplier": 8.0,
+  "workload_ids": [
+    "daylight"
+  ],
+  "workload_overlap_ratio": 0.9999554866666667,
+  "workload_overlap_s": 29.9986646,
+  "workloads": [
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.08867960001225583,
+      "controller": "daylight_patrol_v1",
+      "controller_trace_sha256": "46076bb8a2053802c5acc69088386b18a2d45f10a71ef2ee204ae360b23410be",
+      "cpu_affinity": [
+        0
+      ],
+      "display_scale": 2,
+      "draw_count": 3182,
+      "draw_interval_ms": {
+        "count": 2386,
+        "max": 30.9365,
+        "mean": 12.565837259010896,
+        "min": 0.3274,
+        "p95": 14.4026
+      },
+      "draw_time_ms": {
+        "count": 2387,
+        "max": 0.5754,
+        "mean": 0.14997084206116462,
+        "min": 0.0372,
+        "p95": 0.218
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.0906477,
+      "entrypoint": "games/pyxel/apps-src/30SecondsOfDaylight/src/main.py",
+      "fps_multiplier": 8.0,
+      "game_fps": {
+        "count": 30,
+        "max": 80.07988215404997,
+        "mean": 79.52751470475185,
+        "min": 78.49553880417149,
+        "p05": 78.6486058937274,
+        "p95": 80.05931901345569,
+        "windows_used": 30
+      },
+      "headless": false,
+      "logical_height": 120,
+      "logical_width": 160,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 30.013413399999997,
+      "measurement_finished_monotonic_ns": 161501854183100,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 161471855518500,
+      "metric_rows": 40,
+      "missed_deadline_count": 24,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 161501846898100,
+      "planned_measurement_start_monotonic_ns": 161471846898100,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 3182,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 3182,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 80,
+            "name": "target_fps_matches_multiplier",
+            "passed": true,
+            "threshold": 80
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "registry_target_fps": 10,
+      "run_id": "formal-highfps-affinity-v1__solo__daylight__r01",
+      "schema_version": 1,
+      "seed": 1006,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 80,
+      "title": "30 Seconds of Daylight",
+      "update_count": 3182,
+      "update_time_ms": {
+        "count": 2387,
+        "max": 0.804,
+        "mean": 0.07830519480519481,
+        "min": 0.0113,
+        "p95": 0.1355
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "daylight"
+    }
+  ]
+}
