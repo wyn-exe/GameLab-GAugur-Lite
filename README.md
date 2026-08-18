@@ -18,9 +18,9 @@
 | Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
 | Step 7 敏感度/强度 profile | 已完成 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
-| Step 8 真实共置组合      | 实现与预检完成 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[truth table 构建器](gaugur_lite/colocation.py)；正式采集等待干净提交后启动 |
-| Python 实现              | 分阶段实现中 | Step 0–8 的 plan、runner、profile、共置 truth 构建与自动验收已落实，102 项单测通过 |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo run 与 480 个正式 profile run 已生成；Step 8 的 180 个主共置与 36 个四元外推 run 尚未启动 |
+| Step 8 真实共置组合      | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json) |
+| Python 实现              | 分阶段实现中 | Step 0–8 的 plan、runner、profile、共置 truth 构建与自动验收已落实，103 项单测通过 |
+| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置和 36 个四元外推 run 已生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -2269,7 +2269,37 @@ python -m pytest tests\unit -q
 }
 ```
 
-正式采集尚未在本工作树启动：当前实现和 README 仍未由用户提交，按不可混合 provenance 的规则不能让未提交源码进入正式数据。提交后运行上面的非 `PreflightOnly` 命令；最终验收将把 216/216、600 行 truth、图表和独立复核的真实输出补入本节。
+#### Step 8 真实验收（2026-08-18）
+
+用户在提交 `9f56a038` 后运行正式入口。第一次构建在 Parquet 写入阶段发现冻结计划包含 109 个超过有符号 `int64` 的完整 `uint64` seed；修复后脚本从已保留的 216-row JSONL 安全恢复，没有重跑任何游戏。第二次运行的完整单测和最终验收输出为：
+
+```text
+103 passed in 7.55s
+PASS Step 8 formal acceptance: D:\github\GameLab-RLCG\artifacts\colocation\step8\safety-v2
+[Step 8 final] PASS: all formal colocation attempts and truth artifacts verified.
+```
+
+真实产物和数量：
+
+| 项目 | 实际结果 |
+| --- | ---: |
+| 主物理 run | 180 |
+| 四元额外物理 run | 36 |
+| 物理 run 总数 | 216 |
+| 主 target truth | 456 |
+| 四元额外 target truth | 144 |
+| target truth 总数 | 600 |
+| 独立复核 | 8/8 passed |
+
+Retention 汇总（`mean-FPS / frozen solo baseline mean-FPS`）为：主二元均值 `1.0010782065`、主三元均值 `1.0011363494`、四元外推均值 `1.0011036426`；全体范围为 `[0.9979386464, 1.0024656132]`，其中 588/600 个 target 高于 1，未裁剪高于 1 的值或对应负 loss。
+
+最终验收 JSON：[formal-colocation-acceptance.json](artifacts/colocation/step8/safety-v2/formal-colocation-acceptance.json)；独立复核：[formal-colocation-verification.json](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json)。计划 SHA-256 为 `c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2`；JSONL、Parquet、PNG SHA-256 分别为 `0c599a1865c37dc2ffb45add6d613be09a3da1930c762badfc184824e0e8f8b7`、`dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265`、`508874b6fd5311d59c073fdfe99391983e9cdf6e40388b48cd439b694c64ccc4`。
+
+Retention 图表：
+
+![Step 8 measured retention by colocation size](artifacts/colocation/step8/safety-v2/plots/retention-by-size.png)
+
+正式数据文件为 [`colocation-runs.jsonl`](data/interim/formal-v1/safety-v2/colocation-runs.jsonl)、[`colocation-truth.parquet`](data/interim/formal-v1/safety-v2/colocation-truth.parquet) 和 [`colocation-summary.json`](data/interim/formal-v1/safety-v2/colocation-summary.json)。
 
 ### Step 9：构建模型数据集
 
@@ -2581,9 +2611,9 @@ total                                           720
 
 `smoke.yaml` 只用于在正式采集前验证游戏资源、自动输入、进程生命周期、CUDA benchmark 同步和数据 schema，不生成模型样本，也不构成缩小版实验。正式结果只接受 `formal-v1` 的完整组合 manifest。
 
-## 14. 最终流程（当前实现至 Step 8 的采集前预检）
+## 14. 最终流程（当前实现至 Step 8 的真实验收）
 
-Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；Step 8 的 truth 构建、独立复核与安全采集入口已实现，并已通过只读预检。当前应提交并上传本阶段的 `gaugur_lite/colocation.py`、CLI、Step 8 scripts、tests 和 README；提交完成后再运行 Step 8 的真实 216-run 采集。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载：
+Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；Step 8 已完成 216 个真实共置 run、600 行 target truth、图表生成和 8/8 独立复核。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载；Step 9 从已验收的 Step 8 truth 开始构建模型数据集：
 
 ```powershell
 conda activate gaugur-lite

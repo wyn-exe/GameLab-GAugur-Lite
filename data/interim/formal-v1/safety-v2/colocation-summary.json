@@ -1,0 +1,113 @@
+{
+  "aggregate": {
+    "by_stage_and_size": [
+      {
+        "combination_size": 4,
+        "retention_above_one_count": 140,
+        "retention_max": 1.0024656131934047,
+        "retention_mean": 1.0011036426222437,
+        "retention_min": 0.999385975457789,
+        "retention_sample_std": 0.0005310023212423376,
+        "stage": "colocation-extra-test",
+        "target_sample_count": 144
+      },
+      {
+        "combination_size": 2,
+        "retention_above_one_count": 162,
+        "retention_max": 1.0024523165367474,
+        "retention_mean": 1.0010782065055805,
+        "retention_min": 0.997938646389641,
+        "retention_sample_std": 0.0006069685171094892,
+        "stage": "colocation-main",
+        "target_sample_count": 168
+      },
+      {
+        "combination_size": 3,
+        "retention_above_one_count": 286,
+        "retention_max": 1.0024498749273218,
+        "retention_mean": 1.0011363494230208,
+        "retention_min": 0.9994680912751324,
+        "retention_sample_std": 0.00047670361677947827,
+        "stage": "colocation-main",
+        "target_sample_count": 288
+      }
+    ],
+    "retention_above_one_count": 588,
+    "retention_max": 1.0024656131934047,
+    "retention_min": 0.997938646389641
+  },
+  "artifacts": {
+    "colocation_runs": "data/interim/formal-v1/safety-v2/colocation-runs.jsonl",
+    "colocation_runs_sha256": "0c599a1865c37dc2ffb45add6d613be09a3da1930c762badfc184824e0e8f8b7",
+    "colocation_truth": "data/interim/formal-v1/safety-v2/colocation-truth.parquet",
+    "colocation_truth_sha256": "dfdafe4fef50eb5c4b42d71f78fc9d1226c2aa3f29fb55ae5bc7fa9aeba4d265",
+    "retention_by_size_plot": "artifacts/colocation/step8/safety-v2/plots/retention-by-size.png",
+    "retention_by_size_plot_sha256": "508874b6fd5311d59c073fdfe99391983e9cdf6e40388b48cd439b694c64ccc4"
+  },
+  "checks": {
+    "all_system_coverage": true,
+    "all_target_counts_match_combination_size": true,
+    "all_target_coverage": true,
+    "all_windows_nonoverlap": true,
+    "all_workload_overlap": true,
+    "baseline_status_passed": true,
+    "baseline_workloads_match_plan": true,
+    "extra_pair_cooccurrence_two_or_three": true,
+    "extra_physical_run_count_36": true,
+    "extra_quad_count_12": true,
+    "extra_target_count_144": true,
+    "extra_three_repeats_per_key": true,
+    "extra_workload_occurrences_six": true,
+    "finite_positive_retention": true,
+    "main_combination_count_60": true,
+    "main_extra_disjoint": true,
+    "main_pair_count_28": true,
+    "main_physical_run_count_180": true,
+    "main_split_counts_36_12_12": true,
+    "main_split_stable_per_key": true,
+    "main_target_count_456": true,
+    "main_three_repeats_per_key": true,
+    "main_triple_count_32": true,
+    "no_gpu_thermal_slowdown": true,
+    "plan_generated_from_clean_commit": true,
+    "plan_verified": true,
+    "single_colocation_config_sha256": true,
+    "single_execution_root_commit": true,
+    "single_execution_source_tree": true,
+    "triple_workload_occurrences_twelve": true,
+    "unique_physical_run_keys": true,
+    "unique_target_truth_keys": true
+  },
+  "definition": {
+    "loss_ratio": "1 - retention_ratio; values below zero are preserved rather than clipped",
+    "physical_run": "one synchronized process set identified by colocation_id",
+    "retention_ratio": "target colocated mean FPS / frozen solo baseline mean FPS",
+    "target_truth": "one target workload extracted from one physical run"
+  },
+  "execution": {
+    "root_commits": [
+      "e84fa1a5a4978eaa6ea5fe7ba4ebb0fcd2b79ddb"
+    ],
+    "root_dirty_values": [
+      "False"
+    ],
+    "source_tree_sha256s": [
+      "f6cc6db2febcbfeff1ab67488ac4b858497bd45242c91074aba78486716d6013"
+    ]
+  },
+  "experiment_id": "formal-v1",
+  "extra_physical_run_count": 36,
+  "extra_target_truth_count": 144,
+  "inputs": {
+    "plan": "artifacts/plans/formal-v1-safety-v2-s30.csv",
+    "plan_sha256": "c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2",
+    "solo_baselines": "data/interim/formal-v1/solo-baselines.json",
+    "solo_baselines_sha256": "965d4e5a68df4293442f0272422b1f38a67b8595f2bcc7c02c939196aaf096e6"
+  },
+  "main_physical_run_count": 180,
+  "main_target_truth_count": 456,
+  "physical_run_count": 216,
+  "schema_version": 1,
+  "status": "passed",
+  "target_truth_count": 600
+}
