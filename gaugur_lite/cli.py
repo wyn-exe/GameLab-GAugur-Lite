@@ -48,6 +48,7 @@ from .profiles import (
     build_profiles,
     verify_profiles,
 )
+from .replay import ReplayError, run_qos_packing
 from .runner.plan import PLAN_STAGES, build_plan, load_plan_rows, verify_plan
 from .runner.runner import run_plan
 from .workloads.launcher import build_step3_acceptance, launch_smoke
@@ -91,10 +92,17 @@ features_app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+replay_app = typer.Typer(
+    name="replay",
+    help="离线模型 replay 与实测 truth 对照。",
+    no_args_is_help=True,
+    add_completion=False,
+)
 app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(workload_app, name="workload")
 app.add_typer(benchmark_app, name="benchmark")
 app.add_typer(features_app, name="features")
+app.add_typer(replay_app, name="replay")
 
 
 def _version_callback(value: bool) -> None:
@@ -832,6 +840,36 @@ def ablate_models(
         )
     except (AblationError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         typer.echo(f"ABLATION_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@replay_app.command("pack")
+def replay_pack(
+    model: Path = typer.Option(..., "--model", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    requests: Path = typer.Option(..., "--requests", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    ground_truth: Path = typer.Option(..., "--ground-truth", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    dataset_directory: Path = typer.Option(Path("data/processed/formal-v1"), "--dataset-dir", exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True),
+    qos_ratio: float | None = typer.Option(None, "--qos-ratio", min=0.001, max=1.0),
+    output_directory: Path = typer.Option(..., "--out", help="独占创建的 QoS 装箱报告目录。"),
+) -> None:
+    """按最大可行组合优先贪心装箱，并用实测 truth 回放实际 QoS。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = run_qos_packing(
+            repo_root=repo_root,
+            model_path=model,
+            requests_path=requests,
+            ground_truth_path=ground_truth,
+            dataset_dir=dataset_directory,
+            output_dir=output_directory,
+            qos_ratio=qos_ratio,
+        )
+    except (ReplayError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"REPLAY_ERROR: {type(exc).__name__}: {exc}", err=True)
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] != "passed":

@@ -22,10 +22,11 @@
 | Step 9 模型数据集                | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1)                                                                        |
 | Step 10 CM/RM/基线实现           | 已完成并独立验收 | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json)                                       |
 | Step 11 消融实验实现             | 已完成并独立验收 | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融验收](artifacts/reports/formal-v1/ablations/formal-ablation-acceptance.json)、[RM 消融图](artifacts/reports/formal-v1/ablations/ablation-rm-mae.png)                  |
-| Python 实现                      | 分阶段实现中     | Step 0–11 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融与自动验收已落实；全量 115 项单测通过                                                                                                            |
-| 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表及 Step 11 消融报告已生成                                                                                                |
+| Step 12 QoS 安全装箱 replay      | 已实现，待正式验收 | [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[`scripts/run_step12_final.ps1`](scripts/run_step12_final.ps1)、请求序列与 replay 单测                                                                                       |
+| Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12 正式命令待上传后运行                                                                                   |
+| 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表及 Step 11 消融报告已生成；Step 12 replay 报告待验收             |
 
-本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
+本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行；已实现阶段会在对应小节记录真实入口和验收产物。
 
 ## 1. 复现目标与边界
 
@@ -2737,15 +2738,46 @@ formal-ablation-acceptance.json 90dd84212c3ec1ead08afa4f36a6ff0f77c1492b2f0799c0
 
 这里的“服务器”是本地 replay 中的抽象同构节点，不代表真的部署多台云服务器。
 
-计划命令：
+正式入口（可单独运行；推荐使用下方 `run_step12_final.ps1` 做全量前置检查）：
 
 ```powershell
 python -m gaugur_lite replay pack `
   --model artifacts\models\formal-v1\cm.joblib `
   --requests configs\requests\formal.yaml `
-  --ground-truth data\interim\colocation_truth.parquet `
+  --ground-truth data\interim\formal-v1\safety-v2\colocation-truth.parquet `
+  --dataset-dir data\processed\formal-v1 `
   --qos-ratio 0.80 `
   --out artifacts\reports\formal-v1\packing
+```
+
+#### Step 12 实现与本地短验收（2026-08-18）
+
+新增 [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[`configs/requests/formal.yaml`](configs/requests/formal.yaml)、[`scripts/run_step12_acceptance.ps1`](scripts/run_step12_acceptance.ps1)、[`scripts/run_step12_final.ps1`](scripts/run_step12_final.ps1) 和 [`tests/unit/test_replay.py`](tests/unit/test_replay.py)。实现约束如下：
+
+- 以首个未分配请求为锚点，在其余请求中从四元到二元枚举；只有 CM/基线预测的“所有目标均满足 QoS”组合才可建立槽位，同尺寸候选按请求顺序稳定选择；无可行候选时回退单实例。
+- 只在 Step 9 已有的二/三/四元组合特征域内调用模型；不支持的候选组合不会伪造预测，直接回退单实例。
+- 组合是否真的满足 QoS 只由 Step 8 的 `colocation-truth.parquet` 判定，报告实测违约率、违约计数、组合 precision/recall、槽位数和平均实例数/槽位。
+- 同时报告 `no_colocation`、`cm_model`、`sigmoid_count`、`vbp_like`、`linear_additive`、`solo_only` 与 `no_profile_tree`；服务器仍是离线 replay 中的抽象槽位，不是实际云服务器。
+
+本阶段只完成了代码、请求契约、短单测和静态检查；尚未把正式 replay 的槽位数、实测 QoS 违约率和图表写成验收结果。请先提交本阶段源码，再运行下方完整命令；你上传输出后，我会把真实 JSON、图表和 SHA-256 补入本节。
+
+本地短验收（未替代正式入口）已经实际通过：
+
+```text
+4 passed in 1.46s
+python -m py_compile gaugur_lite\replay.py gaugur_lite\cli.py  -> PASS
+PowerShell parser: run_step12_acceptance.ps1 PASS; run_step12_final.ps1 PASS
+replay smoke: status=passed, checks=8/8
+no_colocation slots=8; cm_model slots=2; all five baselines slots=2; measured QoS violation rate=0.0
+```
+
+这次 smoke 使用现有 Step 9/10/8 正式产物写入临时目录 `.test-tmp/step12-replay-smoke-2`；正式报告不会复用该临时目录，避免把 smoke 结果冒充正式验收。
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+pwsh.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step12_final.ps1
 ```
 
 ### Step 13：实现固定槽位最大化 FPS replay
