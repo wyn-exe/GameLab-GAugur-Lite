@@ -57,6 +57,7 @@ from .profiles import (
     verify_profiles,
 )
 from .replay import ReplayError, run_qos_packing
+from .synthetic_validation import SyntheticValidationError, run_synthetic_validation
 from .runner.plan import PLAN_STAGES, build_plan, load_plan_rows, verify_plan
 from .runner.runner import run_plan
 from .workloads.launcher import build_step3_acceptance, launch_smoke
@@ -1063,6 +1064,23 @@ def effectiveness_threshold_sensitivity(
         typer.echo(f"EFFECTIVENESS_ERROR: {type(exc).__name__}: {exc}", err=True)
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
+
+
+@effectiveness_app.command("synthetic-validation")
+def effectiveness_synthetic_validation(
+    output_dir: Path = typer.Option(..., "--out-dir", help="合成算法验收产物目录。"),
+    seed: int = typer.Option(20260818, "--seed"),
+) -> None:
+    """在固定非线性交互数据上验证 CM/RM 与简化基线。"""
+
+    try:
+        result = run_synthetic_validation(output_dir=output_dir, seed=seed)
+    except (SyntheticValidationError, FileExistsError, OSError, RuntimeError, ValueError) as exc:
+        typer.echo(f"EFFECTIVENESS_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
 
 
 @telemetry_app.command("probe")

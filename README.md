@@ -27,6 +27,7 @@
 | Step 12R-2 高帧率 workload pilot  | 已失败（保留现场） | [`artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json`](artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json)；实际 FPS 已提高但仍无负标签 |
 | Step 12R-3 同核 affinity workload pilot | 已失败（保留现场） | [`affinity pilot 验收`](artifacts/effectiveness/affinity-pilot/highfps-pilot-acceptance.json)；CPU `[0]` 已真实生效，但仍无负标签 |
 | Step 12R-4 QoS threshold sensitivity | 已完成（探索性） | [`阈值敏感性 JSON`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.json)、[`阈值敏感性图`](artifacts/effectiveness/qos-threshold-sensitivity/formal-v1/qos-threshold-sensitivity.png)；只重算既有 truth，不重跑游戏 |
+| Step 12R-5 合成非线性交互验收 | 已完成（算法验证） | [`合成验收 JSON`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation.json)、[`合成指标图`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation-metrics.png)；验证 CM/RM 能学习预设关系 |
 | 方法有效性结论                   | 当前 workload 集合下无法验证 | Step 12R-1/2/3 均未产生负 QoS 标签，不能作为“CM 优于基线”的证据 |
 | Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12R-1/2/3 均保留严格失败门禁                                                                                   |
 | 正式实验数据、模型与报告         | 历史控制链路已生成 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成；均不得作为方法有效性证据，等待用户授权新的 workload 方案 |
@@ -2936,6 +2937,38 @@ qos_ratio   positive   negative
 ```
 
 这说明当前数据只有把“任何可测得的下降都算失败”（`qos_ratio=1.0`）时才出现少量负类；这不是论文的 60 FPS QoS 标准，也可能把测量噪声当成违约。因此本阶段不据此重训模型或宣称 CM 有效，只保留为标签标准敏感性证据。
+
+### Step 12R-5：合成非线性交互算法验收（已完成）
+
+为验证当前 CM/RM 实现本身是否能学习论文强调的非线性、多邻居关系，本阶段生成固定 seed 的合成表：16 个虚拟 workload、2/3/4 邻居组合、4 个资源维度、组合级 train/test 切分。truth 由一阶项、平方项、资源间交互项和方差项构造；该数据不含真实游戏、不会替代真实 workload，也不用于论文效果结论。
+
+计划命令（只运行 CPU 模型训练，不启动窗口或 GPU）：
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+python -m gaugur_lite effectiveness synthetic-validation `
+  --out-dir artifacts\effectiveness\synthetic-validation\formal-v1-v3 `
+  --seed 20260818
+```
+
+实际验收文件为 [`synthetic-validation.json`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation.json)、[`synthetic-validation-metrics.csv`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation-metrics.csv) 和 [`synthetic-validation-metrics.png`](artifacts/effectiveness/synthetic-validation/formal-v1-v3/synthetic-validation-metrics.png)：
+
+```text
+rows: total=2700, train=1815, test=885
+test labels: positive=646, negative=239
+CM F1: GAugur gradient_boosting=0.9654
+       count_only=0.8439
+       linear_additive=0.9534
+RM retention MAE: GAugur gradient_boosting=0.01456
+                  count_only=0.06585
+                  linear_additive=0.01914
+group_disjoint=true
+status=passed
+```
+
+这证明实现能够在预先构造的非线性交互关系上优于简化基线，并不证明它在真实游戏域有效；真实域结论仍受 Step 12R-1/2/3 的全正类结果限制。
 
 ### Step 13：实现固定槽位最大化 FPS replay
 

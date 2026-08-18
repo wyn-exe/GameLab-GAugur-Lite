@@ -1,0 +1,62 @@
+{
+  "checks": {
+    "both_test_labels_present": true,
+    "gaugur_cm_beats_baselines": true,
+    "gaugur_rm_beats_baselines": true,
+    "group_disjoint": true
+  },
+  "interpretation": "仅验证实现能学习预先构造的非线性交互，不证明真实游戏域有效。",
+  "label_counts": {
+    "test_negative": 239,
+    "test_positive": 646,
+    "train_negative": 514,
+    "train_positive": 1301
+  },
+  "metrics": [
+    {
+      "metric": "f1",
+      "model": "gaugur_gradient_boosting",
+      "task": "cm",
+      "value": 0.9654135338345865
+    },
+    {
+      "metric": "f1",
+      "model": "count_only",
+      "task": "cm",
+      "value": 0.8438928804702809
+    },
+    {
+      "metric": "f1",
+      "model": "linear_additive",
+      "task": "cm",
+      "value": 0.9533834586466166
+    },
+    {
+      "metric": "retention_mae",
+      "model": "gaugur_gradient_boosting",
+      "task": "rm",
+      "value": 0.014559906992163923
+    },
+    {
+      "metric": "retention_mae",
+      "model": "count_only",
+      "task": "rm",
+      "value": 0.06584974051211391
+    },
+    {
+      "metric": "retention_mae",
+      "model": "linear_additive",
+      "task": "rm",
+      "value": 0.01914309857635227
+    }
+  ],
+  "rows": {
+    "test": 885,
+    "total": 2700,
+    "train": 1815
+  },
+  "schema_version": 1,
+  "seed": 20260818,
+  "status": "passed",
+  "validation": "synthetic_non_linear_interaction_only"
+}
