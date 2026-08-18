@@ -4,26 +4,26 @@
 
 ## 项目状态
 
-| 模块                     | 状态         | 产物                                                         |
-| ------------------------ | ------------ | ------------------------------------------------------------ |
-| 原论文归档               | 已完成       | [GAugur_HPDC_2019.pdf](docs/papers/GAugur_HPDC_2019.pdf)      |
-| 论文中文解读             | 已完成       | [GAugur 中文解读](docs/papers/GAugur_中文解读.md)             |
-| 八个真实小游戏           | 已下载       | [游戏清单与试玩方法](games/README.md)                         |
-| Windows-only 实现方案    | 已完成       | 本 README                                                    |
-| Step 0 环境基线          | 已完成       | [真实验收记录](artifacts/environment/step0/idle-summary.json) |
-| Step 1 schema/config/CLI | 已完成       | [`gaugur_lite/`](gaugur_lite)、[`configs/`](configs)、[`tests/unit/`](tests/unit) |
-| Step 2 指标与系统采样    | 已完成       | [60 秒探针](artifacts/telemetry/step2/formal-probe/summary.json)、[120 秒开销实验](artifacts/telemetry/step2/formal-overhead.json) |
-| Step 3 真实 Pyxel workload | 已完成     | [24 run 验收汇总](artifacts/workloads/step3/acceptance.json)、[上游校验](artifacts/workloads/step3/upstream-verification.json) |
-| Step 4 压力 benchmark 与校准 | 已完成   | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json) |
-| Step 5 实验计划与 Windows Runner | 已完成 | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json) |
-| Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
-| Step 7 敏感度/强度 profile | 已完成 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
-| Step 8 真实共置组合      | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json) |
-| Step 9 模型数据集        | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1) |
-| Step 10 CM/RM/基线实现   | 已完成并独立验收 | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json) |
-| Step 11 消融实验实现     | 已实现并完成预检 | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融配置](configs/experiments/ablations.yaml)、[验收入口](scripts/run_step11_final.ps1)；正式消融待用户运行 |
-| Python 实现              | 分阶段实现中 | Step 0–11 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融与自动验收已落实；全量 115 项单测通过 |
-| 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集及 Step 10 模型/评估图表已生成；Step 11 待生成 |
+| 模块                             | 状态             | 产物                                                                                                                                                                                                                              |
+| -------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 原论文归档                       | 已完成           | [GAugur_HPDC_2019.pdf](docs/papers/GAugur_HPDC_2019.pdf)                                                                                                                                                                           |
+| 论文中文解读                     | 已完成           | [GAugur 中文解读](docs/papers/GAugur_中文解读.md)                                                                                                                                                                                  |
+| 八个真实小游戏                   | 已下载           | [游戏清单与试玩方法](games/README.md)                                                                                                                                                                                              |
+| Windows-only 实现方案            | 已完成           | 本 README                                                                                                                                                                                                                         |
+| Step 0 环境基线                  | 已完成           | [真实验收记录](artifacts/environment/step0/idle-summary.json)                                                                                                                                                                      |
+| Step 1 schema/config/CLI         | 已完成           | [`gaugur_lite/`](gaugur_lite)、[`configs/`](configs)、[`tests/unit/`](tests/unit)                                                                                                                                              |
+| Step 2 指标与系统采样            | 已完成           | [60 秒探针](artifacts/telemetry/step2/formal-probe/summary.json)、[120 秒开销实验](artifacts/telemetry/step2/formal-overhead.json)                                                                                                  |
+| Step 3 真实 Pyxel workload       | 已完成           | [24 run 验收汇总](artifacts/workloads/step3/acceptance.json)、[上游校验](artifacts/workloads/step3/upstream-verification.json)                                                                                                      |
+| Step 4 压力 benchmark 与校准     | 已完成           | [60 cell 校准](artifacts/calibration/step4/formal-calibration.json)、[校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)、[独立校验](artifacts/calibration/step4/formal-calibration-verification.json)             |
+| Step 5 实验计划与 Windows Runner | 已完成           | [720-row 正式计划](artifacts/runner/step5/formal-plan.csv)、[四窗口 run](artifacts/runner/step5/recovery-run.json)、[31 项独立校验](artifacts/runner/step5/formal-acceptance-verification.json)                                      |
+| Step 6 正式独占基线              | 已完成           | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json)                                  |
+| Step 7 敏感度/强度 profile       | 已完成           | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
+| Step 8 真实共置组合              | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json)       |
+| Step 9 模型数据集                | 已完成并独立复核 | [RM/CM 数据集](data/processed/formal-v1)、[24/24 独立审计](artifacts/dataset/step9/formal-dataset-verification.json)、[验收入口](scripts/run_step9_final.ps1)                                                                        |
+| Step 10 CM/RM/基线实现           | 已完成并独立验收 | [`gaugur_lite/models/`](gaugur_lite/models)、[模型验收](artifacts/models/formal-v1/formal-model-acceptance.json)、[评估报告](artifacts/reports/formal-v1/evaluation/evaluation-summary.json)                                       |
+| Step 11 消融实验实现             | 已完成并独立验收 | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融验收](artifacts/reports/formal-v1/ablations/formal-ablation-acceptance.json)、[RM 消融图](artifacts/reports/formal-v1/ablations/ablation-rm-mae.png)                  |
+| Python 实现                      | 分阶段实现中     | Step 0–11 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融与自动验收已落实；全量 115 项单测通过                                                                                                            |
+| 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表及 Step 11 消融报告已生成                                                                                                |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
 
@@ -402,12 +402,12 @@ run_game_with_runpy(entrypoint, working_directory)
 
 ### 8.1 四个代理维度
 
-| 名称                 | Lite 核心实现                                      | `pressure_observed`                    | 同步记录的硬件信号 |
-| -------------------- | -------------------------------------------------- | -------------------------------------- | ------------------ |
-| `cpu_compute`        | 8 线程 NumPy `float32` 256×256 矩阵乘法 + duty cycle | worker 实测 active time / elapsed time | 系统 CPU 利用率    |
-| `memory_bandwidth`   | 8 个 64 MiB NumPy buffer 原地读改写 + duty cycle  | worker 实测 active time / elapsed time | 系统 CPU 利用率    |
-| `gpu_compute`        | PyTorch CUDA `float32` 1024×1024 矩阵乘法 + duty cycle | worker 实测 active time / elapsed time | NVML GPU 利用率    |
-| `gpu_memory`         | 预分配并原地更新最大 1 GiB CUDA tensor             | allocated bytes / 1 GiB                | NVML 已用显存      |
+| 名称                 | Lite 核心实现                                            | `pressure_observed`                  | 同步记录的硬件信号 |
+| -------------------- | -------------------------------------------------------- | -------------------------------------- | ------------------ |
+| `cpu_compute`      | 8 线程 NumPy`float32` 256×256 矩阵乘法 + duty cycle   | worker 实测 active time / elapsed time | 系统 CPU 利用率    |
+| `memory_bandwidth` | 8 个 64 MiB NumPy buffer 原地读改写 + duty cycle         | worker 实测 active time / elapsed time | 系统 CPU 利用率    |
+| `gpu_compute`      | PyTorch CUDA`float32` 1024×1024 矩阵乘法 + duty cycle | worker 实测 active time / elapsed time | NVML GPU 利用率    |
+| `gpu_memory`       | 预分配并原地更新最大 1 GiB CUDA tensor                   | allocated bytes / 1 GiB                | NVML 已用显存      |
 
 这些维度分别近似 CPU-CE、MEM-BW、GPU-CE、GPU-BW。本项目不声称隔离 LLC、GPU-L2 或 PCIe-BW。
 
@@ -984,18 +984,18 @@ Commands:
 在 `gaugur-lite` Conda 环境中依次执行普通、全局 dry-run 和后置 dry-run 三种 `doctor` 调用，
 均返回退出码 0。关键结果：
 
-| 字段/检查 | 三次实测结果 | 状态 |
-|---|---:|---:|
-| `status` | `passed` | PASS |
-| config SHA-256 | `9c3819e68c7158b9518dc1d5636032710d7a33a090e8515213d850963d5355cc` | 三次一致 |
-| platform / Python | windows / 3.11.15 | PASS |
-| Pydantic / Typer / PyYAML | 2.13.4 / 0.27.1 / 6.0.3 | PASS |
-| Pyxel / Torch | 2.9.8 / 2.4.1+cu121 | PASS |
-| GPU / 驱动 / 显存 | RTX 4060 Laptop / 560.94 / 8188 MiB | PASS |
-| `read_only` | `true` | PASS |
-| `workload_processes_started` | `0` | PASS |
-| `mutations_performed` | `[]` | PASS |
-| 两种 `--dry-run` 位置 | 均返回 `dry_run: true` | PASS |
+| 字段/检查                      |                                                         三次实测结果 |     状态 |
+| ------------------------------ | -------------------------------------------------------------------: | -------: |
+| `status`                     |                                                           `passed` |     PASS |
+| config SHA-256                 | `9c3819e68c7158b9518dc1d5636032710d7a33a090e8515213d850963d5355cc` | 三次一致 |
+| platform / Python              |                                                    windows / 3.11.15 |     PASS |
+| Pydantic / Typer / PyYAML      |                                              2.13.4 / 0.27.1 / 6.0.3 |     PASS |
+| Pyxel / Torch                  |                                                  2.9.8 / 2.4.1+cu121 |     PASS |
+| GPU / 驱动 / 显存              |                                  RTX 4060 Laptop / 560.94 / 8188 MiB |     PASS |
+| `read_only`                  |                                                             `true` |     PASS |
+| `workload_processes_started` |                                                                `0` |     PASS |
+| `mutations_performed`        |                                                               `[]` |     PASS |
+| 两种`--dry-run` 位置         |                                              均返回`dry_run: true` |     PASS |
 
 `data/raw`、`data/interim`、`data/processed` 当前不存在是预期状态；`doctor` 只验证它们解析后仍位于
 仓库内，不会为了检查而创建目录。至此 Step 1 的四项验收条件全部满足。
@@ -1054,16 +1054,16 @@ CLI 入口为 `telemetry probe` 与 `telemetry overhead`。
 
 60 秒正式探针结果：
 
-| 检查项 | 实测结果 | 门槛 | 结论 |
-| ------ | -------- | ---- | ---- |
-| 采集时长 | 60.0012 s | `>= 60 s` | PASS |
-| JSONL 样本数 | 60 | 60 | PASS |
-| sequence | `0..59` 连续 | 必须连续 | PASS |
-| wall/monotonic 时间 | 均未倒退 | 不得倒退 | PASS |
-| 采样间隔 | mean 0.9995 s，min 0.969 s，max 1.000 s | 请求 1 s | PASS |
-| 间隔绝对误差 P95 | 0.000 s | `<= 0.100 s` | PASS |
-| 必需字段缺失 | 0 | 0 | PASS |
-| status | `completed`，记录 60 行 | 必须与原始行数一致 | PASS |
+| 检查项              | 实测结果                                | 门槛               | 结论 |
+| ------------------- | --------------------------------------- | ------------------ | ---- |
+| 采集时长            | 60.0012 s                               | `>= 60 s`        | PASS |
+| JSONL 样本数        | 60                                      | 60                 | PASS |
+| sequence            | `0..59` 连续                          | 必须连续           | PASS |
+| wall/monotonic 时间 | 均未倒退                                | 不得倒退           | PASS |
+| 采样间隔            | mean 0.9995 s，min 0.969 s，max 1.000 s | 请求 1 s           | PASS |
+| 间隔绝对误差 P95    | 0.000 s                                 | `<= 0.100 s`     | PASS |
+| 必需字段缺失        | 0                                       | 0                  | PASS |
+| status              | `completed`，记录 60 行               | 必须与原始行数一致 | PASS |
 
 探针同时真实取得 CPU、内存、进程、GPU、显存、时钟、功耗和温度字段。例如本次采集中，
 CPU 利用率 mean/P95 为 4.435%/18.8%，GPU 利用率 mean/P95 为 26.53%/51%，GPU 温度最高 52°C。
@@ -1072,12 +1072,12 @@ CPU 利用率 mean/P95 为 4.435%/18.8%，GPU 利用率 mean/P95 为 26.53%/51%�
 120 秒开销实验将 120 秒平均分成 8 个 15 秒阶段，完成 4 组交替顺序的“不开采样器/开启采样器”
 配对测试。开启采样器的阶段共写入 64 条真实系统指标。结果如下：
 
-| repeat | 无采样器 proxy FPS | 有采样器 proxy FPS | 影响 |
-| ------ | ------------------: | ------------------: | ---: |
-| 1 | 827.1305 | 819.8470 | -0.8806% |
-| 2 | 809.7181 | 818.1174 | +1.0373% |
-| 3 | 812.2628 | 817.2398 | +0.6127% |
-| 4 | 804.1126 | 810.8850 | +0.8422% |
+| repeat | 无采样器 proxy FPS | 有采样器 proxy FPS |     影响 |
+| ------ | -----------------: | -----------------: | -------: |
+| 1      |           827.1305 |           819.8470 | -0.8806% |
+| 2      |           809.7181 |           818.1174 | +1.0373% |
+| 3      |           812.2628 |           817.2398 | +0.6127% |
+| 4      |           804.1126 |           810.8850 | +0.8422% |
 
 四组影响的中位数为 **+0.7275%**，绝对影响 mean/max 为 0.8432%/1.0373%，
 满足预设的 `abs(median impact) <= 5%` 门槛。正值表示该组开启采样器时代理吞吐略高，属于配对运行噪声，
@@ -1158,16 +1158,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 正式运行汇总：
 
-| workload | 目标 FPS | 每次帧数 | 3 次 mean FPS 的均值 | FPS CV | controller 轨迹一致 | 结论 |
-| -------- | -------: | ---------: | ----------------------: | -----: | -------------------- | ---- |
-| `pyxel_jump` | 30 | 900 | 30.0552 | 0.0085% | 是 | PASS |
-| `pyxel_bubbles` | 30 | 900 | 30.0535 | 0.0102% | 是 | PASS |
-| `pyxel_snake` | 20 | 600 | 20.0382 | 0.0923% | 是 | PASS |
-| `pyxel_shooter` | 30 | 900 | 29.9987 | 0.3324% | 是 | PASS |
-| `pyxel_platformer` | 30 | 900 | 30.0559 | 0.0031% | 是 | PASS |
-| `daylight` | 10 | 300 | 10.0657 | 0.0017% | 是 | PASS |
-| `mega_wing` | 30 | 900 | 30.0542 | 0.0024% | 是 | PASS |
-| `space_rescue` | 30 | 900 | 30.0557 | 0.0048% | 是 | PASS |
+| workload             | 目标 FPS | 每次帧数 | 3 次 mean FPS 的均值 |  FPS CV | controller 轨迹一致 | 结论 |
+| -------------------- | -------: | -------: | -------------------: | ------: | ------------------- | ---- |
+| `pyxel_jump`       |       30 |      900 |              30.0552 | 0.0085% | 是                  | PASS |
+| `pyxel_bubbles`    |       30 |      900 |              30.0535 | 0.0102% | 是                  | PASS |
+| `pyxel_snake`      |       20 |      600 |              20.0382 | 0.0923% | 是                  | PASS |
+| `pyxel_shooter`    |       30 |      900 |              29.9987 | 0.3324% | 是                  | PASS |
+| `pyxel_platformer` |       30 |      900 |              30.0559 | 0.0031% | 是                  | PASS |
+| `daylight`         |       10 |      300 |              10.0657 | 0.0017% | 是                  | PASS |
+| `mega_wing`        |       30 |      900 |              30.0542 | 0.0024% | 是                  | PASS |
+| `space_rescue`     |       30 |      900 |              30.0557 | 0.0048% | 是                  | PASS |
 
 全部 CV 均低于 5% 门槛，最大值为 `pyxel_shooter` 的 0.3324%。`pyxel_shooter/r02` 有 8 次
 missed deadline，其 mean/p05 FPS 为 29.8836/28.9714，但帧数、状态、窗口健康性和重复稳定性仍通过；
@@ -1243,12 +1243,12 @@ PASS verification: 9 checks, calibration SHA-256=1d8f30961c5c2ef820f47af57d9b349
 
 五档 requested 依次为 `0.00 / 0.25 / 0.50 / 0.75 / 1.00`：
 
-| 资源 | observed mean（依档位） | 最大绝对误差 | 原始硬件信号（0.00 → 1.00） |
-| ---- | ----------------------- | ------------ | ------------------------------ |
-| `cpu_compute` | 0.000000 / 0.263335 / 0.514024 / 0.754965 / 0.999641 | 0.014024 | CPU 4.876% → 66.438% |
-| `memory_bandwidth` | 0.000000 / 0.259135 / 0.515716 / 0.783449 / 0.999884 | 0.033449 | CPU 3.552% → 27.710% |
-| `gpu_compute` | 0.000000 / 0.250806 / 0.500190 / 0.749996 / 0.999155 | 0.000845 | GPU 12.667% → 93.762% |
-| `gpu_memory` | 0.000000 / 0.250000 / 0.500000 / 0.750000 / 1.000000 | 0.000000 | 已用显存 1.369 GiB → 2.456 GiB |
+| 资源                 | observed mean（依档位）                              | 最大绝对误差 | 原始硬件信号（0.00 → 1.00）    |
+| -------------------- | ---------------------------------------------------- | ------------ | ------------------------------- |
+| `cpu_compute`      | 0.000000 / 0.263335 / 0.514024 / 0.754965 / 0.999641 | 0.014024     | CPU 4.876% → 66.438%           |
+| `memory_bandwidth` | 0.000000 / 0.259135 / 0.515716 / 0.783449 / 0.999884 | 0.033449     | CPU 3.552% → 27.710%           |
+| `gpu_compute`      | 0.000000 / 0.250806 / 0.500190 / 0.749996 / 0.999155 | 0.000845     | GPU 12.667% → 93.762%          |
+| `gpu_memory`       | 0.000000 / 0.250000 / 0.500000 / 0.750000 / 1.000000 | 0.000000     | 已用显存 1.369 GiB → 2.456 GiB |
 
 ![Step 4 requested 与 observed 校准曲线](artifacts/calibration/step4/formal-calibration-curves.png)
 
@@ -1360,30 +1360,30 @@ PASS independent verification: 31/31 checks, formal plan SHA-256=97f39a41e830ccb
 
 正式计划结构：
 
-| 阶段 | 组合方式 | 物理 run 数 | 实测检查 |
-| ---- | -------- | ----------: | -------- |
-| solo | 8 workload × 3 repeats | 24 | PASS |
-| profile | 8 workload × 4 resources × 5 levels × 3 repeats | 480 | PASS |
-| colocation-main | 28 pair + 32 triple，各 3 repeats | 180 | PASS |
-| colocation-extra-test | 12 quad × 3 repeats | 36 | PASS |
-| 合计 | 固定执行顺序 | **720** | PASS |
+| 阶段                  | 组合方式                                           |   物理 run 数 | 实测检查 |
+| --------------------- | -------------------------------------------------- | ------------: | -------- |
+| solo                  | 8 workload × 3 repeats                            |            24 | PASS     |
+| profile               | 8 workload × 4 resources × 5 levels × 3 repeats |           480 | PASS     |
+| colocation-main       | 28 pair + 32 triple，各 3 repeats                  |           180 | PASS     |
+| colocation-extra-test | 12 quad × 3 repeats                               |            36 | PASS     |
+| 合计                  | 固定执行顺序                                       | **720** | PASS     |
 
 32 个 triple 从 56 个候选中由 `balanced_subset_v1` 确定性选择：每个 workload 恰出现 12 次，任意 workload pair 共现 3 或 4 次。12 个额外 quad 中每个 workload 恰出现 6 次，任意 pair 共现 2 或 3 次；主组合与额外组合 key 无交集。60 个主组合按 key 固定切分为 train 36、validation 12、test 12，避免同一组合的重复或目标样本跨 split 泄漏。
 
 四窗口 `a002` 的真实质量门：
 
-| 检查项 | 实测结果 | 门槛 | 状态 |
-| ------ | -------- | ---- | ---- |
-| 生命周期 | `PREPARING → STARTING → READY → WARMUP → MEASURING → STOPPING → COOLDOWN → COMPLETED` | 顺序完全一致 | PASS |
-| 四 workload barrier | 4/4 使用共享 barrier 且完成 | 4/4 | PASS |
-| workload 正式覆盖率 | 4/4 均为 1.0 | `>=0.95` | PASS |
-| workload 重叠 | 0.995886；启动 skew 33.2646 ms | `>=0.95` | PASS |
-| 系统采样 | 9 个样本，覆盖率 1.0 | 9 个、`>=0.95` | PASS |
-| GPU 温度 | 最高 49 °C | `<=82 °C` | PASS |
-| 窗口采样 | 9/9 healthy；每次 4 窗口可见、未最小化、PID 匹配且两两不重叠 | 9/9 | PASS |
-| workload stderr | 4/4 为空 | 全部为空 | PASS |
-| artifact 哈希 | 不匹配 0 项 | 0 | PASS |
-| 进程清理 | 遗留受管 PID 0；global kill 未使用 | 0 / `false` | PASS |
+| 检查项              | 实测结果                                                                                       | 门槛             | 状态 |
+| ------------------- | ---------------------------------------------------------------------------------------------- | ---------------- | ---- |
+| 生命周期            | `PREPARING → STARTING → READY → WARMUP → MEASURING → STOPPING → COOLDOWN → COMPLETED` | 顺序完全一致     | PASS |
+| 四 workload barrier | 4/4 使用共享 barrier 且完成                                                                    | 4/4              | PASS |
+| workload 正式覆盖率 | 4/4 均为 1.0                                                                                   | `>=0.95`       | PASS |
+| workload 重叠       | 0.995886；启动 skew 33.2646 ms                                                                 | `>=0.95`       | PASS |
+| 系统采样            | 9 个样本，覆盖率 1.0                                                                           | 9 个、`>=0.95` | PASS |
+| GPU 温度            | 最高 49 °C                                                                                    | `<=82 °C`     | PASS |
+| 窗口采样            | 9/9 healthy；每次 4 窗口可见、未最小化、PID 匹配且两两不重叠                                   | 9/9              | PASS |
+| workload stderr     | 4/4 为空                                                                                       | 全部为空         | PASS |
+| artifact 哈希       | 不匹配 0 项                                                                                    | 0                | PASS |
+| 进程清理            | 遗留受管 PID 0；global kill 未使用                                                             | 0 /`false`     | PASS |
 
 主显示器工作区为 1707×1019。布局证据记录四个外窗分别位于 `(8,8,837,493)`、`(861,8,837,493)`、`(8,517,837,493)`、`(861,517,837,493)`；四个 HWND 都绑定到各自受管 PID。`external_occlusion_checked=false` 被显式记录：本阶段能自动证明窗口自身可见、未最小化、位于目标显示器且互不重叠，**不能证明没有其他外部应用窗口覆盖它们**，所以验收时仍要求用户不要遮挡。
 
@@ -1454,16 +1454,16 @@ PASS independent verification: 6/6 checks, summary SHA-256=965d4e5a68df4293442f0
 
 正式 baseline 数值：
 
-| Workload | Target FPS | Baseline mean FPS | Baseline p05 FPS | 最小 1s-window FPS | Mean FPS CV | 最大相对偏差 |
-| -------- | ---------: | ----------------: | ---------------: | -----------------: | ----------: | -----------: |
-| `daylight` | 10 | 10.01097 | 9.98490 | 9.09784 | 0.08289% | 0.09571% |
-| `mega_wing` | 30 | 29.99904 | 29.94149 | 28.94156 | 0.00175% | 0.00192% |
-| `pyxel_bubbles` | 30 | 30.00929 | 29.92904 | 28.80529 | 0.03934% | 0.04540% |
-| `pyxel_jump` | 30 | 30.00464 | 29.95327 | 28.97729 | 0.03350% | 0.03862% |
-| `pyxel_platformer` | 30 | 30.01087 | 29.94260 | 28.97985 | 0.03472% | 0.04007% |
-| `pyxel_shooter` | 30 | 29.99767 | 29.93604 | 28.72555 | 0.00804% | 0.00928% |
-| `pyxel_snake` | 20 | 20.01133 | 19.96854 | 19.06718 | 0.04688% | 0.05407% |
-| `space_rescue` | 30 | 29.99946 | 29.95400 | 28.97235 | 0.00138% | 0.00147% |
+| Workload             | Target FPS | Baseline mean FPS | Baseline p05 FPS | 最小 1s-window FPS | Mean FPS CV | 最大相对偏差 |
+| -------------------- | ---------: | ----------------: | ---------------: | -----------------: | ----------: | -----------: |
+| `daylight`         |         10 |          10.01097 |          9.98490 |            9.09784 |    0.08289% |     0.09571% |
+| `mega_wing`        |         30 |          29.99904 |         29.94149 |           28.94156 |    0.00175% |     0.00192% |
+| `pyxel_bubbles`    |         30 |          30.00929 |         29.92904 |           28.80529 |    0.03934% |     0.04540% |
+| `pyxel_jump`       |         30 |          30.00464 |         29.95327 |           28.97729 |    0.03350% |     0.03862% |
+| `pyxel_platformer` |         30 |          30.01087 |         29.94260 |           28.97985 |    0.03472% |     0.04007% |
+| `pyxel_shooter`    |         30 |          29.99767 |         29.93604 |           28.72555 |    0.00804% |     0.00928% |
+| `pyxel_snake`      |         20 |          20.01133 |         19.96854 |           19.06718 |    0.04688% |     0.05407% |
+| `space_rescue`     |         30 |          29.99946 |         29.95400 |           28.97235 |    0.00138% |     0.00147% |
 
 最不稳定的是 `daylight`，mean FPS CV 也只有 0.08289%，远低于 5% 门槛；因此 8 个 workload 都可作为后续 retention 分母，无需调整参数或排除。min 列是所有一秒 FPS 窗口的极小值，不是逐帧瞬时 FPS；它用于诊断短抖动，不替代 mean/p05 基线。
 
@@ -1471,19 +1471,19 @@ PASS independent verification: 6/6 checks, summary SHA-256=965d4e5a68df4293442f0
 
 原始 attempt 审计：
 
-| 检查项 | 实测结果 | 状态 |
-| ------ | -------- | ---- |
-| run 目录 / 有效 attempt | 24 / 24，全部为 `a001 completed/valid=true` | PASS |
-| solo 隔离 | benchmark 目录 0，邻居 0 | PASS |
-| 系统样本 | 1464 行，即 24×61；最小覆盖率 0.999483 | PASS |
-| workload 正式覆盖率 | 24/24 均为 1.0 | PASS |
-| 窗口样本 | 1464 行，unhealthy 0 | PASS |
-| GPU 温度 | 各 run 最高温度范围 48–50 °C，均低于 82 °C | PASS |
-| missed deadlines | 合计 2，集中在单个 run；未造成覆盖率/CV 失败 | 记录 |
-| stderr | 24/24 为空 | PASS |
-| plan SHA-256 | 24/24 均为 `94ea3272...369a` | PASS |
-| execution source tree | 24/24 均为 `5446cf24...a6a3` | PASS |
-| 进程清理 | 记录 24 个受管 PID，验收时存活 0；global kill 未使用 | PASS |
+| 检查项                  | 实测结果                                             | 状态 |
+| ----------------------- | ---------------------------------------------------- | ---- |
+| run 目录 / 有效 attempt | 24 / 24，全部为`a001 completed/valid=true`         | PASS |
+| solo 隔离               | benchmark 目录 0，邻居 0                             | PASS |
+| 系统样本                | 1464 行，即 24×61；最小覆盖率 0.999483              | PASS |
+| workload 正式覆盖率     | 24/24 均为 1.0                                       | PASS |
+| 窗口样本                | 1464 行，unhealthy 0                                 | PASS |
+| GPU 温度                | 各 run 最高温度范围 48–50 °C，均低于 82 °C        | PASS |
+| missed deadlines        | 合计 2，集中在单个 run；未造成覆盖率/CV 失败         | 记录 |
+| stderr                  | 24/24 为空                                           | PASS |
+| plan SHA-256            | 24/24 均为`94ea3272...369a`                        | PASS |
+| execution source tree   | 24/24 均为`5446cf24...a6a3`                        | PASS |
+| 进程清理                | 记录 24 个受管 PID，验收时存活 0；global kill 未使用 | PASS |
 
 计划是在 clean S5 commit 上生成的；实际采集发生在 Step 6 实现尚未提交时，所以 attempt 如实记录 `execution_root_dirty=true`。这不被伪装成 clean execution：24 个 attempt 均保存相同的逐文件哈希和 source-tree SHA-256 `5446cf24d8334e3d6f85e1c1142690ef21325c0f0988efb6861da53ea7f5a6a3`，且都基于 commit `71ed4d4...`。本阶段完成后提交的 `gaugur_lite` 源码应与该哈希对应，形成 commit + 精确源码树的双重 provenance。
 
@@ -1557,15 +1557,15 @@ Step 4 的 60 个 worker 本身就是相同四类 benchmark 的独占运行，�
 
 短协议只缩短单次观察窗口，不缩减实验设计：
 
-| 项目 | 长协议 | 短协议 | 是否改变实验单元 |
-| --- | ---: | ---: | --- |
-| warmup | 20 秒 | 10 秒 | 否 |
-| measurement | 60 秒 | 30 秒 | 否；仍按 1 秒窗口统计 FPS |
-| 基础 cooldown | 20 秒 | 10 秒 | 否；高于 74°C 时仍自适应延长，最多 300 秒 |
-| 温度硬门 | 82°C（原始）/84°C（t84） | 84°C | 保留已审计的 t84 门限 |
-| workload/resource/pressure | 8×4×5 | 8×4×5 | 不变 |
-| repeat | 3 | 3 | 不变 |
-| 主/额外组合 | 60/12 个 | 60/12 个 | 不变 |
+| 项目                       |                     长协议 |   短协议 | 是否改变实验单元                           |
+| -------------------------- | -------------------------: | -------: | ------------------------------------------ |
+| warmup                     |                      20 秒 |    10 秒 | 否                                         |
+| measurement                |                      60 秒 |    30 秒 | 否；仍按 1 秒窗口统计 FPS                  |
+| 基础 cooldown              |                      20 秒 |    10 秒 | 否；高于 74°C 时仍自适应延长，最多 300 秒 |
+| 温度硬门                   | 82°C（原始）/84°C（t84） |    84°C | 保留已审计的 t84 门限                      |
+| workload/resource/pressure |                    8×4×5 |  8×4×5 | 不变                                       |
+| repeat                     |                          3 |        3 | 不变                                       |
+| 主/额外组合                |                   60/12 个 | 60/12 个 | 不变                                       |
 
 尚未完成的三类正式数据共 696 行：480 个 profile、180 个主共置 run 和 36 个额外测试 run。长协议名义串行时间为 19.33 小时，短协议为 9.67 小时，节省 9.67 小时；把已经完成但将被排除的 71 个 t84 单元计入沉没成本后，从当前时点仍预计净节省约 7.7 小时。这里不把进程启动、批间冷却和失败审计伪装成零开销，实际应预留约 11–13 小时完成三类采集。
 
@@ -1654,14 +1654,14 @@ artifacts/profiles/step7/
 PASS short protocol: plan rows=720, remaining rows=696, nominal hours=9.67, excluded t84 valid runs=71
 ```
 
-| 正式冻结产物/身份 | SHA-256 或值 |
-| --- | --- |
-| `formal-v1-remaining-s30.csv` | `4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1` |
-| `formal-v1-remaining-s30-manifest.json` | `8d6d26c3134247f37c56df60e894473b884e0d36937906858eecbffc07b149f6` |
+| 正式冻结产物/身份                             | SHA-256 或值                                                         |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| `formal-v1-remaining-s30.csv`               | `4d6510a6c036582c20272883007ba5fdd68809e00cd9ae4134f2b5a7836d2af1` |
+| `formal-v1-remaining-s30-manifest.json`     | `8d6d26c3134247f37c56df60e894473b884e0d36937906858eecbffc07b149f6` |
 | `formal-v1-remaining-s30-combinations.json` | `10aac3972b66717d15a9f5c5e0a7e33d791ef473ebe7ce072482250abe6db546` |
-| `duration-amendment.json` | `c8ec75954ee71890909757e1306c6d81fe750e579e3a42445a4f64b33bdac751` |
-| 短协议 `config_sha256` | `a36b78d2998befbd10330adef8f5ab1f813a7a68144bd44a59f55bb779224525` |
-| 计划生成 commit | `608d817cd8d44787fc0ba4c2f2ee507f0b4c987f` |
+| `duration-amendment.json`                   | `c8ec75954ee71890909757e1306c6d81fe750e579e3a42445a4f64b33bdac751` |
+| 短协议`config_sha256`                       | `a36b78d2998befbd10330adef8f5ab1f813a7a68144bd44a59f55bb779224525` |
+| 计划生成 commit                               | `608d817cd8d44787fc0ba4c2f2ee507f0b4c987f`                         |
 
 独立 `plan-verify` 的 7 项检查全部通过：720 行、720 个唯一 `run_id`、连续 execution index、逐行 SHA-256、计划 SHA-256、组合 sidecar SHA-256 和组合 split 完整性均一致。阶段计数为 `solo=24`、`profile=480`、`colocation-main=180`、`colocation-extra-test=36`；所有行只有 `10/30/10/84` 一个协议、同一 root commit 和 `data/raw/remaining-s30/` 一个 raw 根。`duration-amendment.json` 的 11 个兼容性/隔离检查全部为真，并明确记录 `included_in_final_profiles=false`、t84 `valid/invalid=71/3`、剩余名义时间与节省时间均为 9.67 小时。
 
@@ -1720,12 +1720,12 @@ PowerShell parser / Python compile / git diff --check: PASS
 
 Safety-v2 保留论文复现需要的 `8 workload × 4 resource × 5 pressure × 3 repeat = 480` 个 profile 单元，但把“建模压力”和“执行压力”分开：
 
-| resource | 模型归一化 `pressure_requested` | 实际 `pressure_applied` | 上限 |
-| --- | --- | --- | ---: |
-| `cpu_compute` | 0 / 0.25 / 0.5 / 0.75 / 1 | 与 requested 相同 | 1.0 |
-| `memory_bandwidth` | 0 / 0.25 / 0.5 / 0.75 / 1 | 与 requested 相同 | 1.0 |
-| `gpu_memory` | 0 / 0.25 / 0.5 / 0.75 / 1 | 与 requested 相同 | 1.0 |
-| `gpu_compute` | 0 / 0.25 / 0.5 / 0.75 / 1 | 0 / 0.0625 / 0.125 / 0.1875 / 0.25 | 0.25 |
+| resource             | 模型归一化`pressure_requested` | 实际`pressure_applied`           | 上限 |
+| -------------------- | -------------------------------- | ---------------------------------- | ---: |
+| `cpu_compute`      | 0 / 0.25 / 0.5 / 0.75 / 1        | 与 requested 相同                  |  1.0 |
+| `memory_bandwidth` | 0 / 0.25 / 0.5 / 0.75 / 1        | 与 requested 相同                  |  1.0 |
+| `gpu_memory`       | 0 / 0.25 / 0.5 / 0.75 / 1        | 与 requested 相同                  |  1.0 |
+| `gpu_compute`      | 0 / 0.25 / 0.5 / 0.75 / 1        | 0 / 0.0625 / 0.125 / 0.1875 / 0.25 | 0.25 |
 
 因此 GPU Compute 曲线的 $x=1$ 表示“本机安全执行域的 100%”，即旧 worker 的 0.25 duty，而不是 GPU 的热极限或满功耗极限。报告必须披露这一外部有效性限制；不能把它描述成 RTX 4060 的最大算力压力。`run_id` 继续由归一化压力生成，`pressure_applied` 则进入计划逐行哈希、worker 命令、attempt summary、校准分母和 observed-pressure 质量门。
 
@@ -1827,13 +1827,13 @@ PASS safety-v2 plan: rows=720, profile=480, max temp=80 C,
 GPU applied levels=0,0.0625,0.125,0.1875,0.25
 ```
 
-| Safety-v2 计划产物 | SHA-256 |
-| --- | --- |
-| `formal-v1-safety-v2-s30.csv` | `c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2` |
-| `formal-v1-safety-v2-s30-manifest.json` | `37986c20e237c414136d2947cdd176537381f7a0ebccb9429a7dccb1f4fef7ea` |
+| Safety-v2 计划产物                            | SHA-256                                                              |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| `formal-v1-safety-v2-s30.csv`               | `c1cf6246d317352b5b3e46fae5d1a26104a15128ee59e1edde4f553c153fcae2` |
+| `formal-v1-safety-v2-s30-manifest.json`     | `37986c20e237c414136d2947cdd176537381f7a0ebccb9429a7dccb1f4fef7ea` |
 | `formal-v1-safety-v2-s30-combinations.json` | `1276454a971f8c33f01e202b0c980265b00e5cec16843923aca91e92dd3e5e61` |
 | `formal-v1-safety-v2-s30-verification.json` | `828a6631166f348d7627f815f380a59ec67caf7e91f38668b45efbb3ee80ca4a` |
-| `formal-v1-safety-v2-s30-contract.json` | `ecee5bd407883cf3bd10b029eef64121f50049591efee21ca2a973bd3855a224` |
+| `formal-v1-safety-v2-s30-contract.json`     | `ecee5bd407883cf3bd10b029eef64121f50049591efee21ca2a973bd3855a224` |
 
 独立计划验证 7/7 项通过：计划与组合 SHA-256、720 行计数、连续 execution index、720 个唯一 run ID、逐行 SHA-256 和组合/split 完整性全部一致。兼容合同逐行比较新旧计划的 23 个归一化实验字段，证明 720 个 run ID、workload、组合、split、resource、`pressure_requested`、repeat、seed、游戏哈希和采样间隔没有改变；四个 stage 仍为 `24/480/180/36`，新旧 raw 目录完全不重叠。根目录 [`.gitattributes`](.gitattributes) 将 `artifacts/`、`data/raw/` 和 `data/interim/` 标为不做文本换行转换，避免 Windows `core.autocrlf=true` 在重新检出时改变哈希绑定的 CSV/JSON/JSONL 字节。计划生成及这些验证都没有启动 workload 或 benchmark。
 
@@ -1870,14 +1870,14 @@ PROFILE_ERROR: ProfileError: 独立 benchmark 吞吐 CV 超限: cpu_compute/0.25
 
 候选 001 的冻结哈希如下：
 
-| 被拒绝的校准证据 | SHA-256 |
-| --- | --- |
-| `formal-calibration.json` | `492f7a91c2c3c8fee0f335155dad9cfaa6f7bc9012b3c3cbde130437f7e022e3` |
-| `formal-calibration-metrics.jsonl` | `ee5bf1c1f20b45345211df5adca04a64886be9f99b05b8f608f94dcb3251995b` |
+| 被拒绝的校准证据                         | SHA-256                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| `formal-calibration.json`              | `492f7a91c2c3c8fee0f335155dad9cfaa6f7bc9012b3c3cbde130437f7e022e3` |
+| `formal-calibration-metrics.jsonl`     | `ee5bf1c1f20b45345211df5adca04a64886be9f99b05b8f608f94dcb3251995b` |
 | `formal-calibration-verification.json` | `2c7a576d60c9a6635c40608810434e98d642f84ee37a62985403f743f31af979` |
-| `formal-calibration-status.json` | `4b3ba84444d78d5cf54ef3150bd10a363cecc9135503ac57196db3374778953e` |
-| `pressure-calibration.png` | `6ba56e75b2f31344142e4f37e20cdc9adee81545f0c8aa57ae383a40d62fbe33` |
-| `rejected-candidate-001-audit.json` | `37b590475a99955a6149aad996b7c197a74a3160fcbb7b3cd0ec687817a363c0` |
+| `formal-calibration-status.json`       | `4b3ba84444d78d5cf54ef3150bd10a363cecc9135503ac57196db3374778953e` |
+| `pressure-calibration.png`             | `6ba56e75b2f31344142e4f37e20cdc9adee81545f0c8aa57ae383a40d62fbe33` |
+| `rejected-candidate-001-audit.json`    | `37b590475a99955a6149aad996b7c197a74a3160fcbb7b3cd0ec687817a363c0` |
 
 修复后的短验收没有启动 benchmark 或 Pyxel workload：
 
@@ -1918,11 +1918,11 @@ PROFILE_ERROR: ProfileError: 独立 benchmark 吞吐 CV 超限: cpu_compute/0.5=
 
 终端在遇到排序后的第一个失败单元时停止；独立脚本 [`audit_step7_borderline_calibration.py`](scripts/audit_step7_borderline_calibration.py) 继续重算全部 16 个分母，确认共有三个窄幅失败，且都位于 requested pressure 0.5：
 
-| Resource | 三次吞吐量（ops/s） | 样本 CV |
-| --- | --- | --- |
-| `cpu_compute` | 35,407,091.56 / 32,663,789.41 / 35,891,073.34 | 5.0224% |
+| Resource             | 三次吞吐量（ops/s）                                       | 样本 CV |
+| -------------------- | --------------------------------------------------------- | ------- |
+| `cpu_compute`      | 35,407,091.56 / 32,663,789.41 / 35,891,073.34             | 5.0224% |
 | `memory_bandwidth` | 37,660,402,264.46 / 34,523,155,989.90 / 37,827,512,582.14 | 5.0761% |
-| `gpu_compute` | 340,527,424.44 / 309,708,903.93 / 314,059,262.30 | 5.1892% |
+| `gpu_compute`      | 340,527,424.44 / 309,708,903.93 / 314,059,262.30          | 5.1892% |
 
 其余 13 个分母通过，最高 CV 为 2.77%。420 个 telemetry 样本的 GPU 温度为 48–70°C，超过 80°C 的样本为 0，热降频样本为 0；因此这仍是分母统计稳定性问题，不是温度或硬件安全问题。候选 002 在追加确认完成前保持 `included_in_profile_denominators=false`、`included_in_model_training=false`。
 
@@ -1937,14 +1937,14 @@ PROFILE_ERROR: ProfileError: 独立 benchmark 吞吐 CV 超限: cpu_compute/0.5=
 
 候选 002 的冻结哈希如下：
 
-| 候选 002 证据 | SHA-256 |
-| --- | --- |
-| `formal-calibration-warmup-v1.json` | `c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade` |
-| `formal-calibration-warmup-v1-metrics.jsonl` | `e7085927e777bcdcfb7a15c6fe9224187025c480bddb4bdd1da36dc6a76ce821` |
+| 候选 002 证据                                      | SHA-256                                                              |
+| -------------------------------------------------- | -------------------------------------------------------------------- |
+| `formal-calibration-warmup-v1.json`              | `c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade` |
+| `formal-calibration-warmup-v1-metrics.jsonl`     | `e7085927e777bcdcfb7a15c6fe9224187025c480bddb4bdd1da36dc6a76ce821` |
 | `formal-calibration-warmup-v1-verification.json` | `a1ec29ab3f436cad0af0639ff4adcc674bb26add12768048c7c686ec842859b7` |
-| `formal-calibration-warmup-v1-status.json` | `f4ab8c6f0447883ae8e610168669d0ad3fccb9b343b02f0a597fc8c16a649d47` |
-| `pressure-calibration-warmup-v1.png` | `13653637596a47353f8e985674ebc0fd16a4a158cd36ba37e3924885d58561b6` |
-| `borderline-candidate-002-audit.json` | `bf9e3c2f3553cea05cbba12b65594c6d9304e8b664eaca3e9c16e03699eaa490` |
+| `formal-calibration-warmup-v1-status.json`       | `f4ab8c6f0447883ae8e610168669d0ad3fccb9b343b02f0a597fc8c16a649d47` |
+| `pressure-calibration-warmup-v1.png`             | `13653637596a47353f8e985674ebc0fd16a4a158cd36ba37e3924885d58561b6` |
+| `borderline-candidate-002-audit.json`            | `bf9e3c2f3553cea05cbba12b65594c6d9304e8b664eaca3e9c16e03699eaa490` |
 
 追加确认实现的短验收没有启动任何确认 worker 或游戏：
 
@@ -1975,11 +1975,11 @@ base SHA-256=c95429c7c7b9e8bc9dd3e699300da4444dcff40e250a43ddf2431ebd08a89ade
 
 全部五次重复的独立重算结果为：
 
-| Resource | r01–r05 吞吐量（ops/s） | 五重复样本 CV | 5% 门 |
-| --- | --- | ---: | --- |
-| `cpu_compute/0.5` | 35,407,091.56 / 32,663,789.41 / 35,891,073.34 / 31,697,880.46 / 31,938,062.53 | 5.9178% | FAIL |
-| `gpu_compute/0.5` | 340,527,424.44 / 309,708,903.93 / 314,059,262.30 / 319,707,328.73 / 335,370,266.86 | 4.1535% | PASS |
-| `memory_bandwidth/0.5` | 37,660,402,264.46 / 34,523,155,989.90 / 37,827,512,582.14 / 35,843,266,111.63 / 36,668,915,979.54 | 3.7452% | PASS |
+| Resource                 | r01–r05 吞吐量（ops/s）                                                                          | 五重复样本 CV | 5% 门 |
+| ------------------------ | ------------------------------------------------------------------------------------------------- | ------------: | ----- |
+| `cpu_compute/0.5`      | 35,407,091.56 / 32,663,789.41 / 35,891,073.34 / 31,697,880.46 / 31,938,062.53                     |       5.9178% | FAIL  |
+| `gpu_compute/0.5`      | 340,527,424.44 / 309,708,903.93 / 314,059,262.30 / 319,707,328.73 / 335,370,266.86                |       4.1535% | PASS  |
+| `memory_bandwidth/0.5` | 37,660,402,264.46 / 34,523,155,989.90 / 37,827,512,582.14 / 35,843,266,111.63 / 36,668,915,979.54 |       3.7452% | PASS  |
 
 固定规则要求三个单元全部通过，因此不能只采用已经通过的 GPU/内存结果，也不能删除较低的 CPU 重复、把阈值事后改为 6%，或继续追加 r06/r07 直到偶然通过。Candidate 002 整体状态由 `requires_confirmation` 转为 `rejected`，继续保持 `included_in_profile_denominators=false`、`included_in_model_training=false`；正式 profile 仍为 `0/480`。
 
@@ -1995,12 +1995,12 @@ REJECTED Candidate 002 confirmation: failed=cpu_compute/p0.50, combined CV=5.917
 PASS independent audit: 10/10 checks
 ```
 
-| Candidate 002 确认证据 | SHA-256 |
-| --- | --- |
-| `formal-calibration-confirmation-v1.json` | `d55b1ef32f7a151bdfc188a769d8d6a49ba8c2efad0132694086d8f8d7107dfa` |
+| Candidate 002 确认证据                               | SHA-256                                                              |
+| ---------------------------------------------------- | -------------------------------------------------------------------- |
+| `formal-calibration-confirmation-v1.json`          | `d55b1ef32f7a151bdfc188a769d8d6a49ba8c2efad0132694086d8f8d7107dfa` |
 | `formal-calibration-confirmation-v1-metrics.jsonl` | `1e7960e56d802f53a8e3fedf28cafea7cf30ac60eeb32d804d84992bdd11cd87` |
-| `formal-calibration-confirmation-v1-status.json` | `51010733b4d2251d269910f00792c8721f140d123b1676e0dab51b27594ffced` |
-| `rejected-candidate-002-confirmation-audit.json` | `3c0ba2c71d3ae7b404b37154cd702b5495d268db12ff3adbe531db2c631bd790` |
+| `formal-calibration-confirmation-v1-status.json`   | `51010733b4d2251d269910f00792c8721f140d123b1676e0dab51b27594ffced` |
+| `rejected-candidate-002-confirmation-audit.json`   | `3c0ba2c71d3ae7b404b37154cd702b5495d268db12ff3adbe531db2c631bd790` |
 
 失败形态与实现审查共同指出下一候选必须在执行前控制 CPU benchmark 的调度与短窗口稳定性：当前 worker 使用 8 个外层线程、NumPy/OpenBLAS，配置中 `cpu_affinity=null`，Windows 电源方案为“平衡”，而主机为 24 个物理核/32 个逻辑核。这里仅把这些记录为 Candidate 003 的设计输入，尚未修改 benchmark、配置或正式计划，也未运行任何选择性重试。
 
@@ -2018,13 +2018,13 @@ Candidate 003 是独立的新候选，不读取 Candidate 002 的 r01–r05 吞�
 
 Candidate003 在干净提交 `a64ef29c7fc8797ddce43266fd219c8b86555f4f` 上从 51°C 开始，100/100 worker 均正常完成，1600 条 telemetry 的 GPU 温度为 44–69°C，超过 80°C 的样本和热降频样本均为 0。压力作用校准本身通过，但独立吞吐分母审计发现以下 5/16 个非零单元超过预注册门槛：
 
-| Resource | 五重复样本 CV | 5% 门 |
-| --- | ---: | --- |
-| `cpu_compute/0.25` | 6.1234% | FAIL |
-| `cpu_compute/1.0` | 5.8877% | FAIL |
-| `gpu_compute/0.5` | 6.1083% | FAIL |
-| `gpu_compute/0.75` | 8.0313% | FAIL |
-| `gpu_compute/1.0` | 5.4590% | FAIL |
+| Resource             | 五重复样本 CV | 5% 门 |
+| -------------------- | ------------: | ----- |
+| `cpu_compute/0.25` |       6.1234% | FAIL  |
+| `cpu_compute/1.0`  |       5.8877% | FAIL  |
+| `gpu_compute/0.5`  |       6.1083% | FAIL  |
+| `gpu_compute/0.75` |       8.0313% | FAIL  |
+| `gpu_compute/1.0`  |       5.4590% | FAIL  |
 
 因此 `formal-calibration-stable-v1.json` 只表示“压力作用质量门通过”，不表示可作为正式吞吐分母。Candidate003 保持 `included_in_profile_denominators=false`、`included_in_model_training=false`，且不得只重跑五个失败格。独立脚本 [`audit_step7_rejected_candidate003.py`](scripts/audit_step7_rejected_candidate003.py) 从 100 份磁盘 worker status、1600 条 JSONL 和全部校准文件重新计算，通过 8/8 项检查：
 
@@ -2052,11 +2052,11 @@ pooled-v3 的不可变合同如下：
 
 真实 pooled 结果为：
 
-| 质量门 | 阈值 | 真实最大值 | 最大值所在单元 | 结果 |
-| --- | ---: | ---: | --- | --- |
-| 10-repeat 样本 CV | `<=10%` | 7.4641% | `gpu_compute/0.25` | PASS |
-| 均值相对标准误 RSE | `<=5%` | 2.3604% | `gpu_compute/0.25` | PASS |
-| 两轮均值漂移 | `<=10%` | 8.5158% | `gpu_compute/0.5` | PASS |
+| 质量门             |      阈值 | 真实最大值 | 最大值所在单元       | 结果 |
+| ------------------ | --------: | ---------: | -------------------- | ---- |
+| 10-repeat 样本 CV  | `<=10%` |    7.4641% | `gpu_compute/0.25` | PASS |
+| 均值相对标准误 RSE |  `<=5%` |    2.3604% | `gpu_compute/0.25` | PASS |
+| 两轮均值漂移       | `<=10%` |    8.5158% | `gpu_compute/0.5`  | PASS |
 
 [`prepare_step7_pooled_calibration.py`](scripts/prepare_step7_pooled_calibration.py) 每次都从两份 calibration、两份 JSONL、两份 status/verification、两棵共 800 文件的 worker 树及 Candidate003 rejection audit 重算 Candidate004 rejection audit、[`formal-calibration-pooled-v3.json`](artifacts/calibration/step7-safety-v2/formal-calibration-pooled-v3.json) 和 [`formal-calibration-pooled-v3-acceptance.json`](artifacts/calibration/step7-safety-v2/formal-calibration-pooled-v3-acceptance.json)。已有派生文件只允许逐字节相等；`--verify-only` 缺文件或不相等即失败，不会覆盖证据。
 
@@ -2099,29 +2099,29 @@ PASS Step 7 safety-v2 acceptance: artifacts/profiles/step7/safety-v2
 
 独立验收不是只检查文件存在，而是从 480 个 raw attempt 重新计算 JSONL、Parquet、汇总和三张 PNG。真实质量结果如下：
 
-| 检查项 | 真实结果 | 门槛 | 结论 |
-| --- | ---: | ---: | --- |
-| 正式 run / 聚合 profile / 曲线 | 480 / 160 / 32 | 480 / 160 / 32 | PASS |
-| 每格重复数 | 3 | 3 | PASS |
-| 最低 measurement coverage | 99.9949% | `>=95%` | PASS |
-| 最低 system coverage | 99.8933% | `>=95%` | PASS |
-| 最低 workload overlap | 99.8908% | `>=95%` | PASS |
-| 最大 applied-observed pressure 误差 | 0.03430 | `<=0.05` | PASS |
-| pressure=0 最大 retention 偏差 | 0.002393 | `<=0.05` | PASS |
-| 正式测量最高 GPU 温度 | 67°C | `<=80°C` | PASS |
+| 检查项                              |                    真实结果 |           门槛 | 结论 |
+| ----------------------------------- | --------------------------: | -------------: | ---- |
+| 正式 run / 聚合 profile / 曲线      |              480 / 160 / 32 | 480 / 160 / 32 | PASS |
+| 每格重复数                          |                           3 |              3 | PASS |
+| 最低 measurement coverage           |                    99.9949% |      `>=95%` | PASS |
+| 最低 system coverage                |                    99.8933% |      `>=95%` | PASS |
+| 最低 workload overlap               |                    99.8908% |      `>=95%` | PASS |
+| 最大 applied-observed pressure 误差 |                     0.03430 |     `<=0.05` | PASS |
+| pressure=0 最大 retention 偏差      |                    0.002393 |     `<=0.05` | PASS |
+| 正式测量最高 GPU 温度               |                       67°C |    `<=80°C` | PASS |
 | pooled 分母最大 CV / RSE / 跨轮漂移 | 7.4641% / 2.3604% / 8.5158% | 10% / 5% / 10% | PASS |
-| 独立 verification | 12/12 | 全部通过 | PASS |
+| 独立 verification                   |                       12/12 |       全部通过 | PASS |
 
 关键产物及 SHA-256：
 
-| 产物 | SHA-256 |
-| --- | --- |
-| [`profile-summary.json`](data/interim/formal-v1/safety-v2/profile-summary.json) | `6c672baeebe7693bfd84c838ba88ab185eb863ca15a89909983fa50df3d4fd8e` |
-| [`profile-runs.jsonl`](data/interim/formal-v1/safety-v2/profile-runs.jsonl) | `ef0d8e5b2eb60b19dc4669f3b9f752eff01e093ac3eb7b8b2d0ffb737be03418` |
-| [`profiles.parquet`](data/interim/formal-v1/safety-v2/profiles.parquet) | `1aa784f2f89dbc2e9a273a6c64f5cef21dce363a1392a6dbaf698c4c02f7b330` |
-| [`sensitivity-curves.png`](artifacts/profiles/step7/safety-v2/plots/sensitivity-curves.png) | `9efd437417b0f678b2b27ea00a864e63730d2a54a5b765dedb8228bc6c64f233` |
-| [`intensity-heatmap.png`](artifacts/profiles/step7/safety-v2/plots/intensity-heatmap.png) | `ef56ea37b81a7232ab71e02f5050a9d7d7754755783892946579bd719ddc967a` |
-| [`sensitivity-intensity.png`](artifacts/profiles/step7/safety-v2/plots/sensitivity-intensity.png) | `3ef019599f696a14f2bc57581958e956270f0cb3a3038a8d65548ec0ce98b2c5` |
+| 产物                                                                                                       | SHA-256                                                              |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [`profile-summary.json`](data/interim/formal-v1/safety-v2/profile-summary.json)                           | `6c672baeebe7693bfd84c838ba88ab185eb863ca15a89909983fa50df3d4fd8e` |
+| [`profile-runs.jsonl`](data/interim/formal-v1/safety-v2/profile-runs.jsonl)                               | `ef0d8e5b2eb60b19dc4669f3b9f752eff01e093ac3eb7b8b2d0ffb737be03418` |
+| [`profiles.parquet`](data/interim/formal-v1/safety-v2/profiles.parquet)                                   | `1aa784f2f89dbc2e9a273a6c64f5cef21dce363a1392a6dbaf698c4c02f7b330` |
+| [`sensitivity-curves.png`](artifacts/profiles/step7/safety-v2/plots/sensitivity-curves.png)               | `9efd437417b0f678b2b27ea00a864e63730d2a54a5b765dedb8228bc6c64f233` |
+| [`intensity-heatmap.png`](artifacts/profiles/step7/safety-v2/plots/intensity-heatmap.png)                 | `ef56ea37b81a7232ab71e02f5050a9d7d7754755783892946579bd719ddc967a` |
+| [`sensitivity-intensity.png`](artifacts/profiles/step7/safety-v2/plots/sensitivity-intensity.png)         | `3ef019599f696a14f2bc57581958e956270f0cb3a3038a8d65548ec0ce98b2c5` |
 | [`formal-profile-verification.json`](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) | `df5f96e6f3d9d9cddb86052d9cdabd779b646e88d2a41779800cd7be0bb73864` |
 
 ![八个 workload 的敏感度曲线](artifacts/profiles/step7/safety-v2/plots/sensitivity-curves.png)
@@ -2284,15 +2284,15 @@ PASS Step 8 formal acceptance: D:\github\GameLab-RLCG\artifacts\colocation\step8
 
 真实产物和数量：
 
-| 项目 | 实际结果 |
-| --- | ---: |
-| 主物理 run | 180 |
-| 四元额外物理 run | 36 |
-| 物理 run 总数 | 216 |
-| 主 target truth | 456 |
-| 四元额外 target truth | 144 |
-| target truth 总数 | 600 |
-| 独立复核 | 8/8 passed |
+| 项目                  |   实际结果 |
+| --------------------- | ---------: |
+| 主物理 run            |        180 |
+| 四元额外物理 run      |         36 |
+| 物理 run 总数         |        216 |
+| 主 target truth       |        456 |
+| 四元额外 target truth |        144 |
+| target truth 总数     |        600 |
+| 独立复核              | 8/8 passed |
 
 Retention 汇总（`mean-FPS / frozen solo baseline mean-FPS`）为：主二元均值 `1.0010782065`、主三元均值 `1.0011363494`、四元外推均值 `1.0011036426`；全体范围为 `[0.9979386464, 1.0024656132]`，其中 588/600 个 target 高于 1，未裁剪高于 1 的值或对应负 loss。
 
@@ -2414,14 +2414,14 @@ PASS Step 9 formal dataset acceptance: D:\github\GameLab-RLCG\artifacts\dataset\
 
 真实行数与质量门：
 
-| 项目 | 实际结果 |
-| --- | ---: |
-| base samples | 600 |
-| 主 RM / CM | 456 / 1368 |
-| 四元额外 RM / CM | 144 / 432 |
-| 独立审计 | 24/24 passed |
-| retention > 1 | 588/600 |
-| `target_id` 进入模型特征 | 否 |
+| 项目                       |     实际结果 |
+| -------------------------- | -----------: |
+| base samples               |          600 |
+| 主 RM / CM                 |   456 / 1368 |
+| 四元额外 RM / CM           |    144 / 432 |
+| 独立审计                   | 24/24 passed |
+| retention > 1              |      588/600 |
+| `target_id` 进入模型特征 |           否 |
 
 实际主 split 的 RM/CM 行数为 train `279/837`、validation `96/288`、test `81/243`，额外测试为 `144/432`；组合 split 保持稳定且 72 个 combination 全部通过三重复质量门。
 
@@ -2589,10 +2589,10 @@ CM 的真实标签在 train/validation/test/extra_test 均为正类，因此结�
 
 最终选择与 RM 指标：
 
-| split | CM accuracy / F1 / FPR | RM retention MAE（95% CI） | FPS MAE | $R^2$ | MAPE$_\delta$ |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| test（243 CM / 81 RM） | 1.000 / 1.000 / 0.000 | 0.00017136（0.00005925–0.00032108） | 0.00236657 | 0.24369 | 0.12785 |
-| extra_test（432 CM / 144 RM） | 1.000 / 1.000 / 0.000 | 0.00009184（0.00005772–0.00012289） | 0.00211351 | 0.75222 | 0.07982 |
+| split                         | CM accuracy / F1 / FPR |           RM retention MAE（95% CI） |    FPS MAE | $R^2$ | MAPE$_\delta$ |         |
+| ----------------------------- | ---------------------: | -----------------------------------: | ---------: | ------------------------: | ------: |
+| test（243 CM / 81 RM）        |  1.000 / 1.000 / 0.000 | 0.00017136（0.00005925–0.00032108） | 0.00236657 |                   0.24369 | 0.12785 |
+| extra_test（432 CM / 144 RM） |  1.000 / 1.000 / 0.000 | 0.00009184（0.00005772–0.00012289） | 0.00211351 |                   0.75222 | 0.07982 |
 
 选定模型在 test 的 retention MAE 为 `0.00017136`，略优于最好的 `no_profile_tree` 基线 `0.00017991`；在 extra_test 上为 `0.00009184`，也优于该基线的 `0.00009660`。这只是当前数据范围内的误差比较，不将单类 CM 的 1.0 指标宣称为有区分度的分类结果。
 
@@ -2670,7 +2670,51 @@ pwsh.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_step11_final.ps1
 ```
 
-正式运行前，本节不声称消融指标已经通过；真实的 `ablation-summary.json`、`ablation-rm-mae.png` 和 `formal-ablation-acceptance.json` 将在用户运行后补入下一段验收记录。
+#### Step 11 真实验收（2026-08-18）
+
+用户在已提交源码上运行正式入口，完整单测、8 个可执行变体、组合级 bootstrap 和图表均通过；11 档曲线变体按数据契约跳过：
+
+```text
+115 passed, 1 warning in 7.46s
+evaluation checks: 6/6 passed
+PASS Step 11 formal ablation acceptance: artifacts\\reports\\formal-v1\\ablations
+[Step 11 final] PASS: ablation variants, bootstrap reports and pair-to-triple protocol verified.
+```
+
+验收 JSON 中的变体状态为 8 个 `passed`、1 个 `skipped`（`pressure_11_curve`）。完整的 5 档敏感度、均值标签参考变体为 `full_mean_fps`；所有 RM 指标均按 combination bootstrap 生成 95% CI：
+
+| 变体                        |         test RM retention MAE（95% CI） |   extra_test RM retention MAE（95% CI） | test$R^2$ | extra$R^2$ |
+| --------------------------- | --------------------------------------: | --------------------------------------: | ----------: | -----------: |
+| `full_mean_fps`           | 0.000171358（0.000071532–0.000312863） | 0.000091838（0.000060483–0.000130173） |     0.24369 |      0.75222 |
+| `no_sensitivity`          | 0.000170347（0.000071344–0.000312338） | 0.000093153（0.000061703–0.000131007） |     0.25062 |      0.75090 |
+| `no_intensity`            | 0.000167612（0.000066993–0.000311304） | 0.000091637（0.000058799–0.000128984） |     0.24577 |      0.75476 |
+| `intensity_sum`           | 0.000163880（0.000068690–0.000295126） | 0.000094767（0.000061618–0.000131938） |     0.29016 |      0.75357 |
+| `max_pressure_only`       | 0.000171463（0.000071510–0.000313269） | 0.000092109（0.000060640–0.000130291） |     0.24197 |      0.75246 |
+| `no_resource_utilization` | 0.000167612（0.000066993–0.000311304） | 0.000091637（0.000058799–0.000128984） |     0.24577 |      0.75476 |
+| `p05_fps_label`           | 0.000387107（0.000339536–0.000441289） | 0.000373768（0.000338501–0.000420330） |     0.16633 |      0.21655 |
+| `pair_train_triple_test`  | 0.000076576（0.000048527–0.000105317） | 0.000095768（0.000060271–0.000133422） |     0.95872 |      0.74391 |
+
+解读保持克制：各变体的 CM test F1 都为 `1.0`，因为当前真实 QoS 标签是单类全通过，不能说明类别区分能力。普通变体的 MAE CI 大幅重叠，不能据此声称敏感度或强度已被证明无效；`p05_fps_label` 使用的是不同的 p05 目标，不能直接与均值标签 MAE 比较。`pair_train_triple_test` 的 test 只有 27 个 RM 样本（81 个 CM 样本），其较低 MAE 也不能与 81 行主 test 直接比较。
+
+`no_resource_utilization` 与 `no_intensity` 数值完全相同是预期结果：Step 9 没有独立 raw utilization 列，该变体按约定移除现有 intensity mean/variance 代理，并在 JSON 中保留说明。`pressure_11_curve` 的结果为：
+
+```text
+status: skipped
+reason: Step 9 feature manifest contains only p000/p025/p050/p075/p100; no 11 档实测 profile
+fabricated_interpolation: false
+```
+
+真实图表：
+
+![Step 11 ablation RM retention MAE](artifacts/reports/formal-v1/ablations/ablation-rm-mae.png)
+
+验收产物：[`formal-ablation-acceptance.json`](artifacts/reports/formal-v1/ablations/formal-ablation-acceptance.json)、[`ablation-summary.json`](artifacts/reports/formal-v1/ablations/ablation-summary.json)。关键 SHA-256：
+
+```text
+ablation-summary.json          37aaa04bf151e508c970de4a3e87cd194050f3373dd0afd8b7bb117977c84384
+ablation-rm-mae.png           64ac109d73bf75afbd6d84686b54a10da4315eeaec1a5986955c38e3a33cc34a
+formal-ablation-acceptance.json 90dd84212c3ec1ead08afa4f36a6ff0f77c1492b2f0799c025ca1a15e73177a6
+```
 
 ### Step 12：实现 QoS 安全装箱 replay
 
