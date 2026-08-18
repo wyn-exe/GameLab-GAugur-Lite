@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from gaugur_lite import effectiveness
-from gaugur_lite.effectiveness import _stress_rows, audit_stress_pilot
+from gaugur_lite.effectiveness import _high_fps_rows, _stress_rows, audit_stress_pilot
 from gaugur_lite.runner.plan import PLAN_COLUMNS
 
 
@@ -68,6 +68,27 @@ def test_stress_rows_attach_real_pressure_and_new_run_identity() -> None:
     assert all(row["run_directory"].startswith("data/raw/formal-effectiveness-v1/") for row in stressed)
     assert all(row["row_sha256"] for row in stressed)
     assert all(row["run_id"].startswith("formal-effectiveness-v1__colocation__a+b__cpu_compute__p100__r01") for row in stressed)
+
+
+def test_high_fps_rows_preserve_shape_without_external_benchmark() -> None:
+    rows = [_base_row(index) for index in range(240)]
+    high_fps = _high_fps_rows(
+        rows,
+        experiment_id="formal-highfps-v1",
+        fps_multiplier=8.0,
+        config_hash="highfps-config",
+        root_commit="c" * 40,
+        raw_root="data/raw/formal-highfps-v1",
+    )
+
+    assert len(high_fps) == 240
+    assert all(row["resource"] == "" for row in high_fps)
+    assert all(row["pressure_requested"] == "" for row in high_fps)
+    assert all(row["pressure_applied"] == "" for row in high_fps)
+    assert all(row["config_sha256"] == "highfps-config" for row in high_fps)
+    assert all(row["root_commit"] == "c" * 40 for row in high_fps)
+    assert all(row["run_id"].startswith("formal-highfps-v1__colocation__a+b__r01") for row in high_fps)
+    assert all(row["row_sha256"] for row in high_fps)
 
 
 @pytest.mark.parametrize(

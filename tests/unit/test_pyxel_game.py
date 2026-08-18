@@ -135,6 +135,42 @@ def test_harness_stops_at_exact_frame_count_and_writes_metrics(tmp_path: Path) -
     assert (tmp_path / "stop.json").is_file()
 
 
+def test_harness_applies_real_workload_fps_multiplier(tmp_path: Path) -> None:
+    """高帧率 pilot 必须改变真实 Pyxel init，而不是另挂一个隐藏 benchmark。"""
+
+    pyxel = FakePyxel()
+    game = get_game("pyxel_platformer")
+    config = GameRunConfig(
+        run_id="formal-highfps-v1__solo__pyxel_platformer__r01",
+        duration_s=30,
+        max_frames=1,
+        headless=True,
+        audio_mode="muted",
+        metric_window_s=0.000001,
+        fps_multiplier=2.0,
+    )
+
+    with JsonlWriter(tmp_path / "game_metrics.jsonl", batch_size=1) as writer:
+        harness = PyxelGameHarness(
+            pyxel=pyxel,
+            game=game,
+            config=config,
+            working_directory=tmp_path,
+            output_directory=tmp_path,
+            writer=writer,
+        )
+        with harness.installed():
+            pyxel.init(128, 128, title=game.title)
+            pyxel.run(lambda: None, lambda: None)
+        summary = harness.summary()
+
+    assert pyxel.init_kwargs["fps"] == int(round(game.target_fps * 2.0))
+    assert summary["target_fps"] == int(round(game.target_fps * 2.0))
+    assert summary["registry_target_fps"] == game.target_fps
+    assert summary["fps_multiplier"] == 2.0
+    assert summary["quality_gate"]["failed_checks"] == []
+
+
 def test_harness_uses_shared_barrier_and_reports_measurement_coverage(tmp_path: Path) -> None:
     pyxel = FakePyxel()
     game = get_game("pyxel_jump")

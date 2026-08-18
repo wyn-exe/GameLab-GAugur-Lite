@@ -39,7 +39,9 @@ from .doctor import build_doctor_report
 from .features.dataset import DatasetError, audit_dataset, build_dataset
 from .effectiveness import (
     EffectivenessError,
+    audit_high_fps_pilot,
     audit_stress_pilot,
+    build_high_fps_plan,
     build_stress_plan,
 )
 from .metrics.telemetry import format_result, run_overhead, run_probe
@@ -963,6 +965,68 @@ def effectiveness_audit_pilot(
         raise typer.Exit(code=3)
 
 
+@effectiveness_app.command("plan-high-fps")
+def effectiveness_plan_high_fps(
+    base_plan: Path = typer.Option(..., "--base-plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    local_config: Path = typer.Option(..., "--local-config", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    output_plan: Path = typer.Option(..., "--out", help="独占创建的高帧率真实 workload 计划 CSV。"),
+    experiment_id: str = typer.Option("formal-highfps-v1", "--experiment-id"),
+    fps_multiplier: float = typer.Option(8.0, "--fps-multiplier", min=1.001, max=16.0),
+    raw_root: str = typer.Option("data/raw/formal-highfps-v1", "--raw-root"),
+) -> None:
+    """生成不携带外部 benchmark、只提高真实游戏循环频率的计划。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = build_high_fps_plan(
+            repo_root=repo_root,
+            base_plan=base_plan,
+            local_config=local_config,
+            output_plan=output_plan,
+            experiment_id=experiment_id,
+            fps_multiplier=fps_multiplier,
+            raw_root=raw_root,
+        )
+    except (EffectivenessError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"EFFECTIVENESS_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+
+
+@effectiveness_app.command("audit-high-fps-pilot")
+def effectiveness_audit_high_fps_pilot(
+    plan: Path = typer.Option(..., "--plan", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    solo_baselines: Path = typer.Option(..., "--solo-baselines", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    qos_ratio: float = typer.Option(0.80, "--qos-ratio", min=0.001, max=1.0),
+    min_completed_runs: int = typer.Option(12, "--min-completed-runs", min=1),
+    min_positive_targets: int = typer.Option(4, "--min-positive-targets", min=1),
+    min_negative_targets: int = typer.Option(4, "--min-negative-targets", min=1),
+    fps_multiplier: float = typer.Option(8.0, "--fps-multiplier", min=1.001, max=16.0),
+    output: Path | None = typer.Option(None, "--output", help="独占写出的高帧率 pilot 审计 JSON。"),
+) -> None:
+    """检查真实游戏高帧率共置是否产生非退化 QoS 标签。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = audit_high_fps_pilot(
+            repo_root=repo_root,
+            plan_file=plan,
+            solo_baselines_file=solo_baselines,
+            qos_ratio=qos_ratio,
+            min_completed_runs=min_completed_runs,
+            min_positive_targets=min_positive_targets,
+            min_negative_targets=min_negative_targets,
+            expected_fps_multiplier=fps_multiplier,
+            output=output,
+        )
+    except (EffectivenessError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"EFFECTIVENESS_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
 @telemetry_app.command("probe")
 def telemetry_probe(
     ctx: typer.Context,
@@ -1400,6 +1464,7 @@ def workload_execute_child(
     barrier_timeout: float = typer.Option(30.0, "--barrier-timeout", min=0.1),
     metric_window: float = typer.Option(1.0, "--metric-window", min=0.1),
     headless: bool = typer.Option(False, "--headless"),
+    fps_multiplier: float = typer.Option(1.0, "--fps-multiplier", min=1.0, max=16.0),
 ) -> None:
     """launcher 专用子进程入口。"""
 
@@ -1426,6 +1491,7 @@ def workload_execute_child(
                 barrier_file=resolved_barrier,
                 barrier_timeout_s=barrier_timeout,
                 metric_window_s=metric_window,
+                fps_multiplier=fps_multiplier,
             ),
             output_directory=resolved_output,
         )

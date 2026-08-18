@@ -120,6 +120,10 @@ def _collect_run_record(
         "execution_root_dirty": provenance.get("root_dirty_at_execution"),
         "execution_source_tree_sha256": provenance["source_tree_sha256"],
         "target_fps": int(workload["target_fps"]),
+        "registry_target_fps": int(
+            workload.get("registry_target_fps", workload["target_fps"])
+        ),
+        "fps_multiplier": float(workload.get("fps_multiplier", 1.0)),
         "mean_fps": float(fps["mean"]),
         "p05_fps": float(fps["p05"]),
         "min_fps": float(fps["min"]),
@@ -175,6 +179,8 @@ def compute_solo_baselines(
     source_hashes = sorted({str(item["execution_source_tree_sha256"]) for item in records})
     execution_commits = sorted({str(item["execution_root_commit"]) for item in records})
     config_hashes = sorted({str(item["config_sha256"]) for item in records})
+    # 兼容 Step 6 的历史 solo records；旧记录等价于原生倍率 1。
+    fps_multipliers = sorted({float(item.get("fps_multiplier", 1.0)) for item in records})
     baselines = []
     for workload_id, items in sorted(grouped.items()):
         mean_values = [float(item["mean_fps"]) for item in items]
@@ -193,6 +199,7 @@ def compute_solo_baselines(
             "mean_fps_cv": cv_pct <= fps_cv_threshold_pct,
             "coverage": coverage_ok,
             "target_fps_consistent": len({item["target_fps"] for item in items}) == 1,
+            "fps_multiplier_consistent": len({float(item.get("fps_multiplier", 1.0)) for item in items}) == 1,
         }
         baseline_id = config_sha256(
             {
@@ -213,6 +220,10 @@ def compute_solo_baselines(
                 "workload_id": workload_id,
                 "baseline_id": baseline_id,
                 "target_fps": items[0]["target_fps"],
+                "registry_target_fps": int(
+                    items[0].get("registry_target_fps", items[0]["target_fps"])
+                ),
+                "fps_multiplier": float(items[0].get("fps_multiplier", 1.0)),
                 "repeat_count": len(items),
                 "repeats": [item["repeat"] for item in items],
                 "run_ids": [item["run_id"] for item in items],
@@ -239,6 +250,7 @@ def compute_solo_baselines(
         "single_config_sha256": len(config_hashes) == 1,
         "single_execution_source_tree": len(source_hashes) == 1,
         "single_execution_root_commit": len(execution_commits) == 1,
+        "single_fps_multiplier": len(fps_multipliers) == 1,
         "all_baselines_stable": all(item["valid_for_retention"] for item in baselines),
     }
     result = {
@@ -270,6 +282,7 @@ def compute_solo_baselines(
             "dirty_values": sorted(
                 {str(item["execution_root_dirty"]) for item in records}
             ),
+            "fps_multipliers": fps_multipliers,
         },
         "run_count": len(records),
         "workload_count": len(grouped),

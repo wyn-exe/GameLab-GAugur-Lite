@@ -281,6 +281,7 @@ def _collect_run_record(
     baselines: dict[str, dict[str, Any]],
     allow_pressure: bool = False,
     expected_benchmark_cpu_workers: int | None = None,
+    expected_workload_fps_multiplier: float | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """从一个哈希验证过的有效 attempt 提取物理 run 和每目标 truth。"""
 
@@ -305,6 +306,26 @@ def _collect_run_record(
         or summary.get("windows_pairwise_nonoverlap") is not True
         or summary.get("gpu_thermal_slowdown_seen") is True
         or summary.get("cleanup", {}).get("global_kill_used") is not False
+        or (
+            expected_workload_fps_multiplier is not None
+            and abs(
+                float(summary.get("workload_fps_multiplier", 0.0))
+                - expected_workload_fps_multiplier
+            )
+            > 1e-9
+        )
+        or (
+            expected_workload_fps_multiplier is not None
+            and abs(
+                float(
+                    manifest.get("runtime_contract", {}).get(
+                        "workload_fps_multiplier", 0.0
+                    )
+                )
+                - expected_workload_fps_multiplier
+            )
+            > 1e-9
+        )
         or (
             allow_pressure
             and manifest.get("execution_provenance", {}).get("root_dirty_at_execution") is not False
@@ -372,6 +393,7 @@ def _collect_run_record(
             if isinstance(benchmark, dict)
             else None
         ),
+        "workload_fps_multiplier": summary.get("workload_fps_multiplier", 1.0),
         "attempt": int(summary["attempt"]),
         "attempt_directory": _relative(repo_root, attempt_dir),
         "summary_sha256": _file_sha256(attempt_dir / "summary.json"),
@@ -397,6 +419,14 @@ def _collect_run_record(
             or workload.get("quality_gate", {}).get("status") != "passed"
             or not isinstance(fps, dict)
             or float(workload.get("measurement_coverage_ratio", 0.0)) < 0.95
+            or (
+                expected_workload_fps_multiplier is not None
+                and abs(
+                    float(workload.get("fps_multiplier", 0.0))
+                    - expected_workload_fps_multiplier
+                )
+                > 1e-9
+            )
         ):
             raise ColocationError(f"目标 workload 质量门未通过: {row.run_id}/{workload_id}")
         mean_fps = float(fps["mean"])

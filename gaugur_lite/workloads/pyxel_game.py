@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -62,6 +63,11 @@ class GameRunConfig:
     warmup_s: float = 0.0
     barrier_file: Path | None = None
     barrier_timeout_s: float = 30.0
+    fps_multiplier: float = 1.0
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.fps_multiplier) or not 1.0 <= self.fps_multiplier <= 16.0:
+            raise ValueError("fps_multiplier 必须位于 [1, 16]")
 
 
 class _StopPyxelLoop(Exception):
@@ -216,16 +222,22 @@ class PyxelGameHarness:
         fps = kwargs.get("fps")
         if fps is None and len(args) >= 2:
             fps = args[1]
+        effective_fps = max(1, int(round(float(fps or 30) * self.config.fps_multiplier)))
         kwargs["display_scale"] = self.game.display_scale
         if self.config.headless:
             kwargs["headless"] = True
-        result = self._originals["init"](width, height, *args, **kwargs)
+        init_args = list(args)
+        if len(init_args) >= 2:
+            init_args[1] = effective_fps
+        else:
+            kwargs["fps"] = effective_fps
+        result = self._originals["init"](width, height, *init_args, **kwargs)
         # Pyxel 会按 init 调用栈改变 cwd；恢复到注册表规定的游戏目录。
         os.chdir(self.working_directory)
         self.logical_width = int(width)
         self.logical_height = int(height)
         self.title = str(title)
-        self.target_fps = int(fps or 30)
+        self.target_fps = effective_fps
         self.pyxel.rseed(self.game.seed)
         return result
 
@@ -523,7 +535,13 @@ class PyxelGameHarness:
             {"name": "metric_count_positive", "passed": bool(self.events), "actual": len(self.events)},
             {"name": "counts_consistent", "passed": count_consistent, "actual": count_consistent},
             {"name": "expected_frames", "passed": expected_frames_ok, "actual": self.draw_count, "threshold": self.config.max_frames or None},
-            {"name": "target_fps_matches_registry", "passed": self.target_fps == self.game.target_fps, "actual": self.target_fps, "threshold": self.game.target_fps},
+            {
+                "name": "target_fps_matches_multiplier",
+                "passed": self.target_fps
+                == int(round(self.game.target_fps * self.config.fps_multiplier)),
+                "actual": self.target_fps,
+                "threshold": int(round(self.game.target_fps * self.config.fps_multiplier)),
+            },
             {"name": "window_healthy", "passed": window_ok, "actual": window_ok, "skipped": self.config.headless},
             {"name": "measurement_coverage", "passed": coverage_ok, "actual": measurement_coverage_ratio, "threshold": 0.95, "skipped": self.config.max_frames > 0},
         ]
@@ -544,6 +562,8 @@ class PyxelGameHarness:
             "logical_width": self.logical_width,
             "logical_height": self.logical_height,
             "target_fps": self.target_fps,
+            "registry_target_fps": self.game.target_fps,
+            "fps_multiplier": self.config.fps_multiplier,
             "duration_requested_s": self.config.duration_s,
             "warmup_requested_s": self.config.warmup_s,
             "barrier_used": self.config.barrier_file is not None,

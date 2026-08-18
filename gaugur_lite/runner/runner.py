@@ -575,6 +575,13 @@ def run_one(
     startup_timeout_s: float = 30.0,
 ) -> dict[str, Any]:
     run_root = _inside_repo(repo_root, row.run_directory)
+    fps_multiplier_raw = os.environ.get("GAUGUR_WORKLOAD_FPS_MULTIPLIER", "1")
+    try:
+        fps_multiplier = float(fps_multiplier_raw)
+    except ValueError as exc:
+        raise ValueError("GAUGUR_WORKLOAD_FPS_MULTIPLIER 必须是数字") from exc
+    if not math.isfinite(fps_multiplier) or not 1.0 <= fps_multiplier <= 16.0:
+        raise ValueError("GAUGUR_WORKLOAD_FPS_MULTIPLIER 必须位于 [1, 16]")
     if run_root.exists() and not resume:
         raise FileExistsError(f"run 目录已存在；使用 --resume 安全复核: {run_root}")
     run_root.mkdir(parents=True, exist_ok=True)
@@ -620,6 +627,7 @@ def run_one(
                 "config_sha256": row.config_sha256,
                 "row_sha256": row.row_sha256,
                 "execution_provenance": execution_provenance,
+                "runtime_contract": {"workload_fps_multiplier": fps_multiplier},
                 "plan_row": row.raw,
             },
         )
@@ -671,6 +679,8 @@ def run_one(
                 str(startup_timeout_s + row.warmup_s),
                 "--output-directory",
                 str(child_dir),
+                "--fps-multiplier",
+                format(fps_multiplier, ".10g"),
             ]
             if headless:
                 command.append("--headless")
@@ -941,6 +951,7 @@ def run_one(
             "resource": row.resource,
             "pressure_requested": row.pressure_requested,
             "pressure_applied": row.pressure_applied,
+            "workload_fps_multiplier": fps_multiplier,
             "measurement_start_monotonic_ns": measurement_start_ns,
             "measurement_end_monotonic_ns": measurement_end_ns,
             "system_sample_count": len(system_rows),
