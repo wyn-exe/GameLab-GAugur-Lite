@@ -1,0 +1,326 @@
+{
+  "artifact_sha256": {
+    "barrier.json": "47f5c469701f0515e8e5dbb1d68a69fbe29345d360f786edc8b6c9483358125b",
+    "cooldown.jsonl": "b4cad7bf92047fb642d1df3ec6242db7464b1c6eda6745e65d93662c5faad800",
+    "layout.json": "a3af06a46994f84ec69dbe42b413056afd9dad11fdb744d20e9eeac76f52848a",
+    "manifest.json": "68e5249467638b5b94ede3da8c34a0a4fa6ecd591de629852aca5b9d9abb5a11",
+    "system_metrics.jsonl": "0c02a0b2543d621f8be98e367ad16a10ed47e63863ddf0debb58068e125d1fa1",
+    "window_observations.jsonl": "407014f948041debd6f3405081be486bd4ceb551aa1e6de6a04f8e53da0850ca",
+    "workloads/daylight/game_metrics.jsonl": "143af21898a1a3a13ba891712e8798371a11e218fbea597522f49ba7fdd454ed",
+    "workloads/daylight/heartbeat.json": "2c989c769ec26bc4ce96eccf8294a54cf74382cd525b2267764463605d726eb3",
+    "workloads/daylight/measurement-start.json": "90066044c2aa4f7fb991a84b355b8c3cad63e30859c07711596fd1c4a7ac9dc7",
+    "workloads/daylight/ready.json": "db5e1355ddef3493328f010ffd1a076043c004c097ee052ff6406fc68377bf8a",
+    "workloads/daylight/status.json": "38c289a7cb188dc620ab63c565d6dda3a4a207f34a2533d630a03cd9a55427df",
+    "workloads/daylight/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/daylight/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/daylight/stop.json": "7abccf375a60561993311f18d6d7e2a2b8bda27f7c30c82e344cb9c11cfd3eec",
+    "workloads/daylight/summary.json": "2fe778bc9d7f87017c490faa847310da1c55519d9b942776798556f50bcda053",
+    "workloads/mega_wing/game_metrics.jsonl": "d314c03274b9038d5981532d00b554c510db6f730394380f7d383423bf0f189a",
+    "workloads/mega_wing/heartbeat.json": "46179a6667fcd8bf452f6e7532bfd5d350a1b79004e478268b902ea57aba1e0a",
+    "workloads/mega_wing/measurement-start.json": "866d8f4ec2c67040c2faebee3440b50bea3bcea46424e76ff175fdf66e84f55b",
+    "workloads/mega_wing/ready.json": "af37f31624c3bfb87f71b33f375634c7c0edea2b7d3249d410c197d45d1cc329",
+    "workloads/mega_wing/status.json": "174a7a3fc57130640aa361cd39d1f3f856c60ddec1b554c16a16fa045f8830a1",
+    "workloads/mega_wing/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/mega_wing/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/mega_wing/stop.json": "e921e15399568e31789f24ffc7bbf74ec42708f3e581de1fffc0f2458ee312e4",
+    "workloads/mega_wing/summary.json": "536b30cef312ffae9c381cd55ea5633edf460e061d28d16be1f119ce1ec2ead0"
+  },
+  "attempt": 1,
+  "benchmark": null,
+  "cleanup": {
+    "actions": [],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 10.028818699996918,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 46.0,
+    "samples": 11,
+    "thermal_target_c": 70.0,
+    "thermal_target_reached": true
+  },
+  "external_occlusion_checked": false,
+  "gpu_temp_c_max": 47.0,
+  "gpu_temp_limit_c": 80.0,
+  "gpu_thermal_slowdown_seen": false,
+  "measurement_end_monotonic_ns": 159527073341900,
+  "measurement_start_monotonic_ns": 159497073341900,
+  "mode": "colocation",
+  "pressure_applied": null,
+  "pressure_requested": null,
+  "resource": null,
+  "run_id": "formal-highfps-v1__colocation__daylight+mega_wing__r01",
+  "schema_version": 1,
+  "split": "test",
+  "stage": "colocation-main",
+  "status": "completed",
+  "system_coverage_ratio": 0.9994999999999999,
+  "system_coverage_s": 29.985,
+  "system_sample_count": 31,
+  "valid": true,
+  "window_sample_count": 31,
+  "windows_pairwise_nonoverlap": true,
+  "workload_fps_multiplier": 8.0,
+  "workload_ids": [
+    "daylight",
+    "mega_wing"
+  ],
+  "workload_overlap_ratio": 0.9997435733333333,
+  "workload_overlap_s": 29.9923072,
+  "workloads": [
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.15866640000604093,
+      "controller": "daylight_patrol_v1",
+      "controller_trace_sha256": "a330ad008c11c97a6c7ab97239e3e39d1f17ece56eca2553cadee62fad2e0e30",
+      "display_scale": 2,
+      "draw_count": 3196,
+      "draw_interval_ms": {
+        "count": 2396,
+        "max": 33.1536,
+        "mean": 12.514834390651085,
+        "min": 0.1223,
+        "p95": 14.5433
+      },
+      "draw_time_ms": {
+        "count": 2397,
+        "max": 0.9139,
+        "mean": 0.1010822277847309,
+        "min": 0.0365,
+        "p95": 0.1968
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.1670244,
+      "entrypoint": "games/pyxel/apps-src/30SecondsOfDaylight/src/main.py",
+      "fps_multiplier": 8.0,
+      "game_fps": {
+        "count": 30,
+        "max": 80.91798961752264,
+        "mean": 79.82949231450402,
+        "min": 77.9315293583058,
+        "p05": 78.88009436855036,
+        "p95": 80.35149912089507,
+        "windows_used": 30
+      },
+      "headless": false,
+      "logical_height": 120,
+      "logical_width": 160,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 30.022419000000003,
+      "measurement_finished_monotonic_ns": 159527082213500,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 159497081651600,
+      "metric_rows": 40,
+      "missed_deadline_count": 10,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 159527073341900,
+      "planned_measurement_start_monotonic_ns": 159497073341900,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 3196,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 3196,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 80,
+            "name": "target_fps_matches_multiplier",
+            "passed": true,
+            "threshold": 80
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "registry_target_fps": 10,
+      "run_id": "formal-highfps-v1__colocation__daylight+mega_wing__r01",
+      "schema_version": 1,
+      "seed": 1006,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 80,
+      "title": "30 Seconds of Daylight",
+      "update_count": 3196,
+      "update_time_ms": {
+        "count": 2397,
+        "max": 1.0447,
+        "mean": 0.04885815602836879,
+        "min": 0.0099,
+        "p95": 0.0868
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "daylight"
+    },
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.1017015999823343,
+      "controller": "mega_wing_patrol_v1",
+      "controller_trace_sha256": "014afc7ddf6a62e2dd5f15d9dedef9b3736facd368bd88ff163c99145a6e73ca",
+      "display_scale": 2,
+      "draw_count": 9274,
+      "draw_interval_ms": {
+        "count": 6970,
+        "max": 34.2824,
+        "mean": 4.301446972740315,
+        "min": 0.1282,
+        "p95": 5.5885
+      },
+      "draw_time_ms": {
+        "count": 6971,
+        "max": 0.3889,
+        "mean": 0.04032904891694162,
+        "min": 0.0135,
+        "p95": 0.0586
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.0837163,
+      "entrypoint": "games/pyxel/apps-src/mega_wing/mega_wing.py",
+      "fps_multiplier": 8.0,
+      "game_fps": {
+        "count": 30,
+        "max": 236.77026181496092,
+        "mean": 232.38209279717918,
+        "min": 223.34825601416833,
+        "p05": 223.66867958493083,
+        "p95": 236.02968197739096,
+        "windows_used": 30
+      },
+      "headless": false,
+      "logical_height": 160,
+      "logical_width": 120,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 0.9999900166666666,
+      "measurement_coverage_s": 29.9997005,
+      "measurement_finished_monotonic_ns": 159527073958800,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 159497077555300,
+      "metric_rows": 40,
+      "missed_deadline_count": 280,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 159527073341900,
+      "planned_measurement_start_monotonic_ns": 159497073341900,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 9274,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 9274,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 240,
+            "name": "target_fps_matches_multiplier",
+            "passed": true,
+            "threshold": 240
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 0.9999900166666666,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "registry_target_fps": 30,
+      "run_id": "formal-highfps-v1__colocation__daylight+mega_wing__r01",
+      "schema_version": 1,
+      "seed": 1007,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 240,
+      "title": "Mega Wing",
+      "update_count": 9274,
+      "update_time_ms": {
+        "count": 6971,
+        "max": 0.7533,
+        "mean": 0.11518694591880649,
+        "min": 0.0379,
+        "p95": 0.1839
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "mega_wing"
+    }
+  ]
+}

@@ -59,7 +59,7 @@ from .replay import ReplayError, run_qos_packing
 from .runner.plan import PLAN_STAGES, build_plan, load_plan_rows, verify_plan
 from .runner.runner import run_plan
 from .workloads.launcher import build_step3_acceptance, launch_smoke
-from .workloads.pyxel_game import GameRunConfig, execute_game_child
+from .workloads.pyxel_game import GameRunConfig, execute_game_child, parse_cpu_affinity
 from .workloads.registry import GAME_REGISTRY, get_game, verify_upstream
 
 
@@ -973,6 +973,7 @@ def effectiveness_plan_high_fps(
     experiment_id: str = typer.Option("formal-highfps-v1", "--experiment-id"),
     fps_multiplier: float = typer.Option(8.0, "--fps-multiplier", min=1.001, max=16.0),
     raw_root: str = typer.Option("data/raw/formal-highfps-v1", "--raw-root"),
+    cpu_affinity: str | None = typer.Option(None, "--cpu-affinity", help="同一真实 workload 共享的逻辑 CPU 集合。"),
 ) -> None:
     """生成不携带外部 benchmark、只提高真实游戏循环频率的计划。"""
 
@@ -986,6 +987,7 @@ def effectiveness_plan_high_fps(
             experiment_id=experiment_id,
             fps_multiplier=fps_multiplier,
             raw_root=raw_root,
+            cpu_affinity=cpu_affinity,
         )
     except (EffectivenessError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         typer.echo(f"EFFECTIVENESS_ERROR: {type(exc).__name__}: {exc}", err=True)
@@ -1002,6 +1004,7 @@ def effectiveness_audit_high_fps_pilot(
     min_positive_targets: int = typer.Option(4, "--min-positive-targets", min=1),
     min_negative_targets: int = typer.Option(4, "--min-negative-targets", min=1),
     fps_multiplier: float = typer.Option(8.0, "--fps-multiplier", min=1.001, max=16.0),
+    cpu_affinity: str | None = typer.Option(None, "--cpu-affinity", help="期望的逻辑 CPU 集合。"),
     output: Path | None = typer.Option(None, "--output", help="独占写出的高帧率 pilot 审计 JSON。"),
 ) -> None:
     """检查真实游戏高帧率共置是否产生非退化 QoS 标签。"""
@@ -1017,6 +1020,7 @@ def effectiveness_audit_high_fps_pilot(
             min_positive_targets=min_positive_targets,
             min_negative_targets=min_negative_targets,
             expected_fps_multiplier=fps_multiplier,
+            expected_cpu_affinity=parse_cpu_affinity(cpu_affinity),
             output=output,
         )
     except (EffectivenessError, FileExistsError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
@@ -1465,6 +1469,7 @@ def workload_execute_child(
     metric_window: float = typer.Option(1.0, "--metric-window", min=0.1),
     headless: bool = typer.Option(False, "--headless"),
     fps_multiplier: float = typer.Option(1.0, "--fps-multiplier", min=1.0, max=16.0),
+    cpu_affinity: str | None = typer.Option(None, "--cpu-affinity", help="逗号分隔的逻辑 CPU 编号。"),
 ) -> None:
     """launcher 专用子进程入口。"""
 
@@ -1492,6 +1497,7 @@ def workload_execute_child(
                 barrier_timeout_s=barrier_timeout,
                 metric_window_s=metric_window,
                 fps_multiplier=fps_multiplier,
+                cpu_affinity=parse_cpu_affinity(cpu_affinity),
             ),
             output_directory=resolved_output,
         )

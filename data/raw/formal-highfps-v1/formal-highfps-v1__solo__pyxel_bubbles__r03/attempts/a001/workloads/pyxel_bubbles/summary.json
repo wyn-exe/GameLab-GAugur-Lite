@@ -1,0 +1,127 @@
+{
+  "audio_mode": "muted",
+  "barrier_used": true,
+  "barrier_wait_s": 0.06838300000526942,
+  "controller": "bubbles_v1",
+  "controller_trace_sha256": "ebd23d7b99149b4dc00098daab8278dedcac9e965a551f1015a087106afb511e",
+  "display_scale": 2,
+  "draw_count": 9272,
+  "draw_interval_ms": {
+    "count": 6971,
+    "max": 32.3269,
+    "mean": 4.300650810500645,
+    "min": 0.2995,
+    "p95": 5.8965
+  },
+  "draw_time_ms": {
+    "count": 6972,
+    "max": 0.2387,
+    "mean": 0.030614572576018358,
+    "min": 0.0115,
+    "p95": 0.0495
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 40.0645732,
+  "entrypoint": "games/pyxel/06_click_game.py",
+  "fps_multiplier": 8.0,
+  "game_fps": {
+    "count": 30,
+    "max": 235.94383459367563,
+    "mean": 232.36651966171,
+    "min": 226.76026904356715,
+    "p05": 229.55512217322828,
+    "p95": 234.9811780076416,
+    "windows_used": 30
+  },
+  "headless": false,
+  "logical_height": 256,
+  "logical_width": 256,
+  "max_frames": 0,
+  "measurement_coverage_ratio": 1.0,
+  "measurement_coverage_s": 30.005692099999997,
+  "measurement_finished_monotonic_ns": 158126768231500,
+  "measurement_metric_rows": 30,
+  "measurement_started_monotonic_ns": 158096765948500,
+  "metric_rows": 40,
+  "missed_deadline_count": 313,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "planned_measurement_end_monotonic_ns": 158126765219700,
+  "planned_measurement_start_monotonic_ns": 158096765219700,
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "duration_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 9272,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 40,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 9272,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": null
+      },
+      {
+        "actual": 240,
+        "name": "target_fps_matches_multiplier",
+        "passed": true,
+        "threshold": 240
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      },
+      {
+        "actual": 1.0,
+        "name": "measurement_coverage",
+        "passed": true,
+        "skipped": false,
+        "threshold": 0.95
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "registry_target_fps": 30,
+  "run_id": "formal-highfps-v1__solo__pyxel_bubbles__r03",
+  "schema_version": 1,
+  "seed": 1002,
+  "status": "completed",
+  "stop_reason": "duration_reached",
+  "target_fps": 240,
+  "title": "Pyxel Bubbles",
+  "update_count": 9272,
+  "update_time_ms": {
+    "count": 6972,
+    "max": 0.5079,
+    "mean": 0.15653300344234078,
+    "min": 0.0408,
+    "p95": 0.2763
+  },
+  "warmup_requested_s": 10.0,
+  "window_observations": 30,
+  "workload_id": "pyxel_bubbles"
+}

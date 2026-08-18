@@ -124,6 +124,7 @@ def _collect_run_record(
             workload.get("registry_target_fps", workload["target_fps"])
         ),
         "fps_multiplier": float(workload.get("fps_multiplier", 1.0)),
+        "cpu_affinity": workload.get("cpu_affinity"),
         "mean_fps": float(fps["mean"]),
         "p05_fps": float(fps["p05"]),
         "min_fps": float(fps["min"]),
@@ -181,6 +182,9 @@ def compute_solo_baselines(
     config_hashes = sorted({str(item["config_sha256"]) for item in records})
     # 兼容 Step 6 的历史 solo records；旧记录等价于原生倍率 1。
     fps_multipliers = sorted({float(item.get("fps_multiplier", 1.0)) for item in records})
+    cpu_affinities = sorted(
+        {tuple(item.get("cpu_affinity") or ()) for item in records}, key=str
+    )
     baselines = []
     for workload_id, items in sorted(grouped.items()):
         mean_values = [float(item["mean_fps"]) for item in items]
@@ -200,6 +204,10 @@ def compute_solo_baselines(
             "coverage": coverage_ok,
             "target_fps_consistent": len({item["target_fps"] for item in items}) == 1,
             "fps_multiplier_consistent": len({float(item.get("fps_multiplier", 1.0)) for item in items}) == 1,
+            "cpu_affinity_consistent": len(
+                {tuple(item.get("cpu_affinity") or ()) for item in items}
+            )
+            == 1,
         }
         baseline_id = config_sha256(
             {
@@ -224,6 +232,7 @@ def compute_solo_baselines(
                     items[0].get("registry_target_fps", items[0]["target_fps"])
                 ),
                 "fps_multiplier": float(items[0].get("fps_multiplier", 1.0)),
+                "cpu_affinity": items[0].get("cpu_affinity"),
                 "repeat_count": len(items),
                 "repeats": [item["repeat"] for item in items],
                 "run_ids": [item["run_id"] for item in items],
@@ -251,6 +260,7 @@ def compute_solo_baselines(
         "single_execution_source_tree": len(source_hashes) == 1,
         "single_execution_root_commit": len(execution_commits) == 1,
         "single_fps_multiplier": len(fps_multipliers) == 1,
+        "single_cpu_affinity": len(cpu_affinities) == 1,
         "all_baselines_stable": all(item["valid_for_retention"] for item in baselines),
     }
     result = {
@@ -283,6 +293,7 @@ def compute_solo_baselines(
                 {str(item["execution_root_dirty"]) for item in records}
             ),
             "fps_multipliers": fps_multipliers,
+            "cpu_affinities": [list(value) for value in cpu_affinities],
         },
         "run_count": len(records),
         "workload_count": len(grouped),

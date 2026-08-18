@@ -51,6 +51,20 @@ _INPUT_NAMES = (
 )
 
 
+def parse_cpu_affinity(value: str | None) -> tuple[int, ...] | None:
+    """解析可审计的 Windows 逻辑 CPU 编号列表，例如 ``0,1``。"""
+
+    if value is None or not value.strip():
+        return None
+    try:
+        cpus = tuple(sorted({int(token.strip()) for token in value.split(",")}))
+    except ValueError as exc:
+        raise ValueError("cpu_affinity 必须是逗号分隔的非负整数") from exc
+    if not cpus or any(cpu < 0 for cpu in cpus):
+        raise ValueError("cpu_affinity 必须至少包含一个非负 CPU 编号")
+    return cpus
+
+
 @dataclass(frozen=True)
 class GameRunConfig:
     run_id: str
@@ -64,10 +78,15 @@ class GameRunConfig:
     barrier_file: Path | None = None
     barrier_timeout_s: float = 30.0
     fps_multiplier: float = 1.0
+    cpu_affinity: tuple[int, ...] | None = None
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.fps_multiplier) or not 1.0 <= self.fps_multiplier <= 16.0:
             raise ValueError("fps_multiplier 必须位于 [1, 16]")
+        if self.cpu_affinity is not None and (
+            not self.cpu_affinity or any(cpu < 0 for cpu in self.cpu_affinity)
+        ):
+            raise ValueError("cpu_affinity 必须是非空的非负 CPU 编号元组")
 
 
 class _StopPyxelLoop(Exception):
@@ -564,6 +583,9 @@ class PyxelGameHarness:
             "target_fps": self.target_fps,
             "registry_target_fps": self.game.target_fps,
             "fps_multiplier": self.config.fps_multiplier,
+            "cpu_affinity": list(self.config.cpu_affinity)
+            if self.config.cpu_affinity is not None
+            else None,
             "duration_requested_s": self.config.duration_s,
             "warmup_requested_s": self.config.warmup_s,
             "barrier_used": self.config.barrier_file is not None,
@@ -636,6 +658,7 @@ def execute_game_child(
     """在 launcher 子进程内执行一个上游入口，并总是落盘最终状态。"""
 
     import pyxel
+    import psutil
 
     upstream = verify_upstream(repo_root)
     if upstream["status"] != "passed":
@@ -659,6 +682,15 @@ def execute_game_child(
         },
     )
     try:
+        # solo 与共置都使用同一核集合；共置时仅真实 workload 彼此争用。
+        if config.cpu_affinity is not None:
+            process = psutil.Process()
+            process.cpu_affinity(list(config.cpu_affinity))
+            if tuple(process.cpu_affinity()) != config.cpu_affinity:
+                raise RuntimeError(
+                    "Windows 未按请求应用 workload CPU affinity: "
+                    f"actual={process.cpu_affinity()} expected={config.cpu_affinity}"
+                )
         random.seed(game.seed)
         with JsonlWriter(output_directory / "game_metrics.jsonl", batch_size=config.batch_size) as writer:
             harness = PyxelGameHarness(

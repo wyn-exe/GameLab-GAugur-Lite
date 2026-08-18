@@ -24,9 +24,10 @@
 | Step 11 消融实验实现             | 已完成并独立验收 | [`gaugur_lite/ablations.py`](gaugur_lite/ablations.py)、[消融验收](artifacts/reports/formal-v1/ablations/formal-ablation-acceptance.json)、[RM 消融图](artifacts/reports/formal-v1/ablations/ablation-rm-mae.png)                  |
 | Step 12 QoS 安全装箱 replay      | 已完成并独立验收 | [`gaugur_lite/replay.py`](gaugur_lite/replay.py)、[装箱验收](artifacts/reports/formal-v1/packing/formal-packing-acceptance.json)、[槽位/QoS 图](artifacts/reports/formal-v1/packing/packing-slots.png) |
 | Step 12R-1 外部 benchmark pilot  | 已失败（保留现场） | [`artifacts/effectiveness/pilot/stress-pilot-acceptance.json`](artifacts/effectiveness/pilot/stress-pilot-acceptance.json)；benchmark 确实运行但未产生负标签 |
-| Step 12R-2 高帧率 workload pilot  | 已实现，待 pilot | [`scripts/run_effectiveness_highfps_pilot.ps1`](scripts/run_effectiveness_highfps_pilot.ps1)、真实 workload 同倍率 solo/共置与正负标签门禁 |
-| 方法有效性结论                   | 尚未验证         | 既有 600-row truth 与 Step 12R-1 均不能作为“CM 优于基线”的证据；必须先通过 Step 12R-2 并以同一运行条件重建数据 |
-| Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12R-1/2 均保留严格失败门禁                                                                                   |
+| Step 12R-2 高帧率 workload pilot  | 已失败（保留现场） | [`artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json`](artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json)；实际 FPS 已提高但仍无负标签 |
+| Step 12R-3 同核 affinity workload pilot | 已实现，待 pilot | [`scripts/run_effectiveness_affinity_pilot.ps1`](scripts/run_effectiveness_affinity_pilot.ps1)、同一真实 workload 共享受限 CPU 核与正负标签门禁 |
+| 方法有效性结论                   | 尚未验证         | Step 12R-1/2 均不能作为“CM 优于基线”的证据；必须先通过 Step 12R-3 并以同一运行条件重建数据 |
+| Python 实现                      | 分阶段实现中     | Step 0–12 的 plan、runner、profile、共置 truth、模型数据集、CM/RM 训练评估、消融、QoS 安全装箱与自动验收已落实；Step 12R-1/2/3 均保留严格失败门禁                                                                                   |
 | 正式实验数据、模型与报告         | 分阶段生成中     | 24 个正式 solo、480 个正式 profile、180 个主共置、36 个四元外推 run、Step 9 数据集、Step 10 模型/评估图表、Step 11 消融及 Step 12 replay 报告已生成；有效性数据待重采             |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行；已实现阶段会在对应小节记录真实入口和验收产物。
@@ -2827,7 +2828,7 @@ status=failed
 
 真实验收 JSON 为 [`stress-pilot-acceptance.json`](artifacts/effectiveness/pilot/stress-pilot-acceptance.json)，计划 SHA-256 为 `24bdf5c74356b2dbd661dd29790ae7c764a0c832f9670ed21f58c608a374374d`。失败原因不是 benchmark 没有运行，而是它没有让轻量 Pyxel 游戏之间形成可观察的负 QoS 标签；这条路线不能靠改变阈值或继续全量采集来“证明”方法有效。由于论文中 benchmark 主要用于 profile，而共置真值应反映 workload 彼此干扰，第一版外部 benchmark 结果只作为可复核的负面工程证据，不进入模型数据集。
 
-### Step 12R-2：真实高帧率 workload pilot（已实现，待实测）
+### Step 12R-2：真实高帧率 workload pilot（已实测失败，现场保留）
 
 第二版不在共置阶段注入外部 benchmark，而是让**每个真实游戏本身**通过 `GAUGUR_WORKLOAD_FPS_MULTIPLIER` 提高 Pyxel 的实际 update/draw 目标频率；默认倍率为 `8`，并将 `registry_target_fps`、实际 `target_fps`、倍率和 runner runtime contract 写入每个 summary/manifest。这样仍运行上游游戏代码和同一输入轨迹，但把计算/绘制循环作为可追踪的 workload 配置改变。它不是原始 `formal-v1` 条件的结果，因此必须先在同一倍率重新生成 24 个 solo 基线，再解释共置标签。
 
@@ -2841,7 +2842,19 @@ pwsh.exe -NoProfile -ExecutionPolicy Bypass `
   -File scripts\run_effectiveness_highfps_pilot.ps1
 ```
 
-脚本会先运行全量单元测试、生成独立 `formal-highfps-v1` 计划、采集同倍率 solo 基线并生成图表，再启动 12 个真实可见窗口共置 run，最后写入 `artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json`。本阶段尚无真实 pilot 输出，故不预填任何 retention 或图表结论。若通过，仍只能说明该**改变后的 workload 条件**产生了可学习的正负样本；随后必须以同一倍率重新 profile、完成其余共置采集、重建数据集并训练/评估模型。若仍退化，则应报告 Pyxel 轻量 workload 的外部有效性限制，而不是继续人为加压。
+脚本实际完成了 24 个同倍率 solo、12 个主共置 run，并在 [`highfps-pilot-acceptance.json`](artifacts/effectiveness/highfps-pilot/highfps-pilot-acceptance.json) 写入失败结果：
+
+```text
+workload_fps_multiplier=8.0
+completed_run_count=12, pending_run_count=204
+target_count=33, positive=33, negative=0
+retention_min=0.9898047360824441
+retention_max=1.0146651420405908
+retention_mean=1.003124399125935
+status=failed
+```
+
+所有 workload 的实际 target FPS 和 quality gate 均通过；失败原因是即使真实游戏循环提高到 8 倍，轻量 Pyxel workload 之间仍没有形成 `Q=0.80` 以下的负标签。因此不启动剩余 204 个 run，也不调整 QoS 阈值凑出类别。
 
 实现级检查（不启动窗口）已实际通过：
 
@@ -2853,11 +2866,35 @@ PASS
 PowerShell parser: PASS
 ```
 
-这不是 pilot 的方法有效性验收；正式验收仍以用户 Conda 环境执行上面的长命令及其 `highfps-pilot-acceptance.json` 为准。
+这不是方法有效性验收；它是第二条真实 workload 路线的负面结果，说明单纯提高 FPS 仍不足以复现论文所需的干扰强度。
+
+### Step 12R-3：同核 affinity 真实 workload pilot（已实现，待实测）
+
+第三版仍不启动外部 benchmark，而是给每个真实 workload 进程设置同一个受限 CPU 集合。solo 基线和共置 run 使用完全相同的 affinity（默认逻辑 CPU `0`）；solo 时该 workload 独占该核，共置时多个真实 workload 共享该核，形成可解释的 workload-to-workload CPU 争用。实际 affinity 会写入 workload summary、attempt manifest、共置 truth 和 baseline manifest；如果 Windows 无法应用指定核，run 直接失败，不会静默降级为全 CPU。
+
+新的 pilot 使用独立的 `formal-highfps-affinity-v1` 计划和 raw 根，仍先采集 24 个 solo，再采集 12 个主共置；`Q=0.80` 下必须至少出现 4 个正标签和 4 个负标签：
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+pwsh.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_effectiveness_affinity_pilot.ps1
+```
+
+输出目录为 `artifacts/effectiveness/affinity-pilot/`，计划为 `artifacts/plans/formal-highfps-affinity-v1.csv`。本阶段尚无真实验收结果；如果同核 affinity 仍不能产生负标签，应停止继续对 Pyxel workload 加压，并将结论明确限定为“当前 workload 集合不足以验证论文有效性”。
+
+本阶段实现级检查已实际通过：
+
+```text
+29 passed in 2.94s
+Python py_compile: PASS
+PowerShell parser (两份 pilot 脚本): PASS
+```
 
 ### Step 13：实现固定槽位最大化 FPS replay
 
-> 暂不对旧 `formal-v1` 模型运行本阶段。它只能作为工程 replay 控制结果；应等待 Step 12R-2 pilot 通过且新的同倍率 profile、共置 truth、数据集和模型全部生成后再执行。
+> 暂不对旧 `formal-v1` 模型运行本阶段。它只能作为工程 replay 控制结果；应等待 Step 12R-3 pilot 通过且新的同条件 profile、共置 truth、数据集和模型全部生成后再执行。
 
 逐请求：
 
@@ -2926,7 +2963,7 @@ python -m gaugur_lite verify `
 
 ## 13. 正式实验规模与时间
 
-原 `formal-v1` 的 720-run 规格仍完整保留，方便审计历史工程链路；但其中 216 个旧共置 run 没有实际 benchmark 压力，不能作为方法有效性的正式数据。Step 12R-1/2 都是独立修复实验，不覆盖上述产物，也不把 pilot 计入旧实验规模。只有 Step 12R-2 在同一高帧率条件下产生非退化 QoS 标签后，才冻结其完整重采规模与后续模型训练计划。
+原 `formal-v1` 的 720-run 规格仍完整保留，方便审计历史工程链路；但其中 216 个旧共置 run 没有实际 benchmark 压力，不能作为方法有效性的正式数据。Step 12R-1/2/3 都是独立修复实验，不覆盖上述产物，也不把 pilot 计入旧实验规模。只有 Step 12R-3 在同核 affinity 条件下产生非退化 QoS 标签后，才冻结其完整重采规模与后续模型训练计划。
 
 正式规格固定为：真实游戏 $W=8$、资源代理 $R=4$、压力档位 $P=5$、重复 $K=3$、固定原生画布/窗口策略、60 个主组合与 12 个额外四元组合。
 
@@ -2947,7 +2984,7 @@ total                                           720
 
 ## 14. 最终流程（历史控制数据与压力修复）
 
-Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；旧 Step 8 已完成 216 个共置 run、600 行 target truth、图表生成和 8/8 独立复核，但因未携带 benchmark 压力，它只保留为控制数据，不能支持方法有效性结论。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载；Step 12R-1 的外部 benchmark pilot 已失败，当前正式入口是上节 `run_effectiveness_highfps_pilot.ps1`，在它通过前不得继续用旧 truth 扩展模型或 replay 结论：
+Safety-v2 Step 7 已真实完成并通过 12/12 独立复核；旧 Step 8 已完成 216 个共置 run、600 行 target truth、图表生成和 8/8 独立复核，但因未携带 benchmark 压力，它只保留为控制数据，不能支持方法有效性结论。以下 Step 7 命令保留为只读复核入口，当前 `480/480` 状态无需再次运行长负载；Step 12R-1/2 均已失败，当前正式入口是上节 `run_effectiveness_affinity_pilot.ps1`，在它通过前不得继续用旧 truth 扩展模型或 replay 结论：
 
 ```powershell
 conda activate gaugur-lite

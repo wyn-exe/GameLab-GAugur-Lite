@@ -1,0 +1,189 @@
+{
+  "artifact_sha256": {
+    "barrier.json": "1e04b2abefda6e49cfbb8f8c32ec52993443388feff2f444630a2c5656c845a4",
+    "cooldown.jsonl": "fab059a628f43328a49855b9729d4bf3ec7f8f70f0da1e90d62eaab1efa1a96e",
+    "layout.json": "9d824252f4fd099eff481c2b846cd2478b460bf918a2a78dcb9fc9148a1a9ad8",
+    "manifest.json": "c28975de8fae48a9617bad2f484d900cdd0c8ba695325d57de18e1711203db4f",
+    "system_metrics.jsonl": "2996cff6ed3e2759efeb81667015197e97edd1a83353bb247bd3e25587219d62",
+    "window_observations.jsonl": "c13b77c90b419a212a4832b5a01b18b2381263bf20accd0c56ae4359e68cb686",
+    "workloads/pyxel_platformer/game_metrics.jsonl": "8a684100e2a8d41fed78d3aca2fbfbc2bdc59e30e050f6e46f4257864bab56b8",
+    "workloads/pyxel_platformer/heartbeat.json": "b7663dfb71f7eaea35d95c1105308d2b76d71ac79ef25806736afcdcafa65f32",
+    "workloads/pyxel_platformer/measurement-start.json": "76362e4de13711f4f1c484cf24b55b5d93fb3195fe41a41d5489bc0f7846c2e2",
+    "workloads/pyxel_platformer/ready.json": "89eddb412d03d0c34b79958624aa2a30f93fdcb3017dff8a2591863580549f88",
+    "workloads/pyxel_platformer/status.json": "afb8e4a19bb59c54ad6f80cd56d22a9b953388a8b660fd8bd5de27ab14f7f269",
+    "workloads/pyxel_platformer/stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_platformer/stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workloads/pyxel_platformer/stop.json": "d0a5ff6ff39f71822259f8e520f002e4e86be5ad0d8c537c097a96b14f8c6c28",
+    "workloads/pyxel_platformer/summary.json": "bc1f29b6bcda6d352959ca11bcc98ba3beebcf4809a5c04b12b05d0c7ededc7d"
+  },
+  "attempt": 1,
+  "benchmark": null,
+  "cleanup": {
+    "actions": [],
+    "global_kill_used": false
+  },
+  "cooldown": {
+    "elapsed_s": 10.028793100005714,
+    "extended_beyond_planned": false,
+    "gpu_temp_c_last": 46.0,
+    "samples": 11,
+    "thermal_target_c": 70.0,
+    "thermal_target_reached": true
+  },
+  "external_occlusion_checked": false,
+  "gpu_temp_c_max": 46.0,
+  "gpu_temp_limit_c": 80.0,
+  "gpu_thermal_slowdown_seen": false,
+  "measurement_end_monotonic_ns": 158607375473300,
+  "measurement_start_monotonic_ns": 158577375473300,
+  "mode": "solo",
+  "pressure_applied": null,
+  "pressure_requested": null,
+  "resource": null,
+  "run_id": "formal-highfps-v1__solo__pyxel_platformer__r01",
+  "schema_version": 1,
+  "split": "not_applicable",
+  "stage": "solo",
+  "status": "completed",
+  "system_coverage_ratio": 0.9994666666666667,
+  "system_coverage_s": 29.984,
+  "system_sample_count": 31,
+  "valid": true,
+  "window_sample_count": 31,
+  "windows_pairwise_nonoverlap": true,
+  "workload_fps_multiplier": 8.0,
+  "workload_ids": [
+    "pyxel_platformer"
+  ],
+  "workload_overlap_ratio": 0.9999628033333334,
+  "workload_overlap_s": 29.9988841,
+  "workloads": [
+    {
+      "audio_mode": "muted",
+      "barrier_used": true,
+      "barrier_wait_s": 0.06727420000243,
+      "controller": "platformer_right_jump_v1",
+      "controller_trace_sha256": "7c54fec33156656ea0e1b9aa2cc51640b1b21102128bfe74e34a56527c6de458",
+      "display_scale": 2,
+      "draw_count": 9299,
+      "draw_interval_ms": {
+        "count": 7011,
+        "max": 32.8261,
+        "mean": 4.276537783483098,
+        "min": 0.1624,
+        "p95": 5.609
+      },
+      "draw_time_ms": {
+        "count": 7012,
+        "max": 0.9051,
+        "mean": 0.05958271534512265,
+        "min": 0.0226,
+        "p95": 0.0954
+      },
+      "duration_requested_s": 30.0,
+      "elapsed_s": 40.0751782,
+      "entrypoint": "games/pyxel/10_platformer.py",
+      "fps_multiplier": 8.0,
+      "game_fps": {
+        "count": 30,
+        "max": 238.0431888964427,
+        "mean": 233.72487070206986,
+        "min": 225.18090446002665,
+        "p05": 229.23830986780226,
+        "p95": 237.1632406543234,
+        "windows_used": 30
+      },
+      "headless": false,
+      "logical_height": 128,
+      "logical_width": 128,
+      "max_frames": 0,
+      "measurement_coverage_ratio": 1.0,
+      "measurement_coverage_s": 30.00281770000001,
+      "measurement_finished_monotonic_ns": 158607376054300,
+      "measurement_metric_rows": 30,
+      "measurement_started_monotonic_ns": 158577377170200,
+      "metric_rows": 40,
+      "missed_deadline_count": 244,
+      "output_files": {
+        "heartbeat": "heartbeat.json",
+        "metrics": "game_metrics.jsonl",
+        "ready": "ready.json",
+        "status": "status.json",
+        "stop": "stop.json",
+        "summary": "summary.json"
+      },
+      "planned_measurement_end_monotonic_ns": 158607375473300,
+      "planned_measurement_start_monotonic_ns": 158577375473300,
+      "quality_gate": {
+        "checks": [
+          {
+            "actual": "duration_reached",
+            "name": "planned_stop",
+            "passed": true
+          },
+          {
+            "actual": 9299,
+            "name": "draw_count_positive",
+            "passed": true
+          },
+          {
+            "actual": 40,
+            "name": "metric_count_positive",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "name": "counts_consistent",
+            "passed": true
+          },
+          {
+            "actual": 9299,
+            "name": "expected_frames",
+            "passed": true,
+            "threshold": null
+          },
+          {
+            "actual": 240,
+            "name": "target_fps_matches_multiplier",
+            "passed": true,
+            "threshold": 240
+          },
+          {
+            "actual": true,
+            "name": "window_healthy",
+            "passed": true,
+            "skipped": false
+          },
+          {
+            "actual": 1.0,
+            "name": "measurement_coverage",
+            "passed": true,
+            "skipped": false,
+            "threshold": 0.95
+          }
+        ],
+        "failed_checks": [],
+        "status": "passed"
+      },
+      "registry_target_fps": 30,
+      "run_id": "formal-highfps-v1__solo__pyxel_platformer__r01",
+      "schema_version": 1,
+      "seed": 1005,
+      "status": "completed",
+      "stop_reason": "duration_reached",
+      "target_fps": 240,
+      "title": "Pyxel Platformer",
+      "update_count": 9299,
+      "update_time_ms": {
+        "count": 7012,
+        "max": 1.1669,
+        "mean": 0.146681232173417,
+        "min": 0.0369,
+        "p95": 0.2843
+      },
+      "warmup_requested_s": 10.0,
+      "window_observations": 30,
+      "workload_id": "pyxel_platformer"
+    }
+  ]
+}

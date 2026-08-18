@@ -9,7 +9,9 @@ param(
     [string]$PilotDirectory = 'artifacts\effectiveness\highfps-pilot',
     [int]$BatchSize = 12,
     [double]$FpsMultiplier = 8.0,
-    [double]$QosRatio = 0.80
+    [double]$QosRatio = 0.80,
+    [string]$ExperimentId = 'formal-highfps-v1',
+    [string]$CpuAffinity = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,6 +20,9 @@ Set-StrictMode -Version Latest
 if ($BatchSize -lt 1 -or $BatchSize -gt 36) { throw 'BatchSize must be in [1, 36].' }
 if ($FpsMultiplier -le 1.0 -or $FpsMultiplier -gt 16.0) { throw 'FpsMultiplier must be in (1, 16].' }
 if ($QosRatio -le 0.0 -or $QosRatio -gt 1.0) { throw 'QosRatio must be in (0, 1].' }
+if ($CpuAffinity -and $CpuAffinity -notmatch '^[0-9]+(,[0-9]+)*$') {
+    throw 'CpuAffinity must be a comma-separated list of non-negative CPU numbers.'
+}
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $basePlanPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $BasePlan))
@@ -76,17 +81,21 @@ try {
 
     if ($existingPlan.Count -eq 0) {
         Write-Host "[High-FPS pilot] Generating a real-workload plan with fps multiplier $FpsMultiplier..."
+        $affinityPlanArgs = @()
+        if ($CpuAffinity) { $affinityPlanArgs = @('--cpu-affinity', $CpuAffinity) }
         python -m gaugur_lite effectiveness plan-high-fps `
             --base-plan $basePlanPath `
             --local-config $localConfigPath `
             --out $highFpsPlanPath `
-            --experiment-id formal-highfps-v1 `
+            --experiment-id $ExperimentId `
             --fps-multiplier $FpsMultiplier `
-            --raw-root data/raw/formal-highfps-v1 | Out-Host
+            --raw-root ("data/raw/{0}" -f $ExperimentId) `
+            @affinityPlanArgs | Out-Host
         if ($LASTEXITCODE -ne 0) { throw 'High-FPS plan generation failed.' }
     }
 
     $env:GAUGUR_WORKLOAD_FPS_MULTIPLIER = [string]$FpsMultiplier
+    if ($CpuAffinity) { $env:GAUGUR_WORKLOAD_CPU_AFFINITY = $CpuAffinity }
     # 先采集同倍率 solo，避免拿原生 FPS 分母解释高帧率共置结果。
     Write-Host '[High-FPS pilot] Running all 24 high-FPS solo baselines first...'
     $soloReport = Join-Path $invocationRoot "$invocationLabel-solo-run.json"
@@ -137,6 +146,8 @@ try {
     }
 
     Write-Host '[High-FPS pilot] Auditing measured retention for non-degenerate QoS labels...'
+    $affinityAuditArgs = @()
+    if ($CpuAffinity) { $affinityAuditArgs = @('--cpu-affinity', $CpuAffinity) }
     $auditRaw = python -m gaugur_lite effectiveness audit-high-fps-pilot `
         --plan $highFpsPlanPath `
         --solo-baselines $soloPath `
@@ -145,6 +156,7 @@ try {
         --min-positive-targets 4 `
         --min-negative-targets 4 `
         --fps-multiplier $FpsMultiplier `
+        @affinityAuditArgs `
         --output $pilotAcceptance 2>&1
     $auditSucceeded = $LASTEXITCODE -eq 0
     $auditRaw | Out-Host
@@ -156,5 +168,6 @@ try {
 }
 finally {
     Remove-Item Env:GAUGUR_WORKLOAD_FPS_MULTIPLIER -ErrorAction SilentlyContinue
+    Remove-Item Env:GAUGUR_WORKLOAD_CPU_AFFINITY -ErrorAction SilentlyContinue
     Pop-Location
 }

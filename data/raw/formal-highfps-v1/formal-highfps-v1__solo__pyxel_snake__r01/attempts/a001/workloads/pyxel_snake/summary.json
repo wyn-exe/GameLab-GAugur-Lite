@@ -1,0 +1,127 @@
+{
+  "audio_mode": "muted",
+  "barrier_used": true,
+  "barrier_wait_s": 0.06817339998087846,
+  "controller": "snake_cycle_v1",
+  "controller_trace_sha256": "2d0dea63e736f78fb7e1f16c0d2b1f126556df5ae05936765aa78a7dd538bc40",
+  "display_scale": 2,
+  "draw_count": 6246,
+  "draw_interval_ms": {
+    "count": 4691,
+    "max": 39.4235,
+    "mean": 6.392526774674909,
+    "min": 0.0655,
+    "p95": 8.1585
+  },
+  "draw_time_ms": {
+    "count": 4692,
+    "max": 0.4651,
+    "mean": 0.027184953111679455,
+    "min": 0.0048,
+    "p95": 0.0472
+  },
+  "duration_requested_s": 30.0,
+  "elapsed_s": 40.0745709,
+  "entrypoint": "games/pyxel/07_snake.py",
+  "fps_multiplier": 8.0,
+  "game_fps": {
+    "count": 30,
+    "max": 158.9047402497872,
+    "mean": 156.37635573557546,
+    "min": 152.55877010812043,
+    "p05": 152.85408548999126,
+    "p95": 158.20593278217967,
+    "windows_used": 30
+  },
+  "headless": false,
+  "logical_height": 50,
+  "logical_width": 40,
+  "max_frames": 0,
+  "measurement_coverage_ratio": 1.0,
+  "measurement_coverage_s": 30.00674990000001,
+  "measurement_finished_monotonic_ns": 158340302967400,
+  "measurement_metric_rows": 30,
+  "measurement_started_monotonic_ns": 158310302986700,
+  "metric_rows": 40,
+  "missed_deadline_count": 106,
+  "output_files": {
+    "heartbeat": "heartbeat.json",
+    "metrics": "game_metrics.jsonl",
+    "ready": "ready.json",
+    "status": "status.json",
+    "stop": "stop.json",
+    "summary": "summary.json"
+  },
+  "planned_measurement_end_monotonic_ns": 158340299542300,
+  "planned_measurement_start_monotonic_ns": 158310299542300,
+  "quality_gate": {
+    "checks": [
+      {
+        "actual": "duration_reached",
+        "name": "planned_stop",
+        "passed": true
+      },
+      {
+        "actual": 6246,
+        "name": "draw_count_positive",
+        "passed": true
+      },
+      {
+        "actual": 40,
+        "name": "metric_count_positive",
+        "passed": true
+      },
+      {
+        "actual": true,
+        "name": "counts_consistent",
+        "passed": true
+      },
+      {
+        "actual": 6246,
+        "name": "expected_frames",
+        "passed": true,
+        "threshold": null
+      },
+      {
+        "actual": 160,
+        "name": "target_fps_matches_multiplier",
+        "passed": true,
+        "threshold": 160
+      },
+      {
+        "actual": true,
+        "name": "window_healthy",
+        "passed": true,
+        "skipped": false
+      },
+      {
+        "actual": 1.0,
+        "name": "measurement_coverage",
+        "passed": true,
+        "skipped": false,
+        "threshold": 0.95
+      }
+    ],
+    "failed_checks": [],
+    "status": "passed"
+  },
+  "registry_target_fps": 20,
+  "run_id": "formal-highfps-v1__solo__pyxel_snake__r01",
+  "schema_version": 1,
+  "seed": 1003,
+  "status": "completed",
+  "stop_reason": "duration_reached",
+  "target_fps": 160,
+  "title": "Snake!",
+  "update_count": 6246,
+  "update_time_ms": {
+    "count": 4692,
+    "max": 0.3699,
+    "mean": 0.0176151747655584,
+    "min": 0.0037,
+    "p95": 0.0309
+  },
+  "warmup_requested_s": 10.0,
+  "window_observations": 30,
+  "workload_id": "pyxel_snake"
+}

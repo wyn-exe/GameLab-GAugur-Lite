@@ -282,6 +282,7 @@ def _collect_run_record(
     allow_pressure: bool = False,
     expected_benchmark_cpu_workers: int | None = None,
     expected_workload_fps_multiplier: float | None = None,
+    expected_workload_cpu_affinity: tuple[int, ...] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """从一个哈希验证过的有效 attempt 提取物理 run 和每目标 truth。"""
 
@@ -313,6 +314,21 @@ def _collect_run_record(
                 - expected_workload_fps_multiplier
             )
             > 1e-9
+        )
+        or (
+            expected_workload_cpu_affinity is not None
+            and tuple(summary.get("workload_cpu_affinity") or ())
+            != expected_workload_cpu_affinity
+        )
+        or (
+            expected_workload_cpu_affinity is not None
+            and tuple(
+                manifest.get("runtime_contract", {}).get(
+                    "workload_cpu_affinity"
+                )
+                or ()
+            )
+            != expected_workload_cpu_affinity
         )
         or (
             expected_workload_fps_multiplier is not None
@@ -394,6 +410,7 @@ def _collect_run_record(
             else None
         ),
         "workload_fps_multiplier": summary.get("workload_fps_multiplier", 1.0),
+        "workload_cpu_affinity": summary.get("workload_cpu_affinity"),
         "attempt": int(summary["attempt"]),
         "attempt_directory": _relative(repo_root, attempt_dir),
         "summary_sha256": _file_sha256(attempt_dir / "summary.json"),
@@ -426,6 +443,11 @@ def _collect_run_record(
                     - expected_workload_fps_multiplier
                 )
                 > 1e-9
+            )
+            or (
+                expected_workload_cpu_affinity is not None
+                and tuple(workload.get("cpu_affinity") or ())
+                != expected_workload_cpu_affinity
             )
         ):
             raise ColocationError(f"目标 workload 质量门未通过: {row.run_id}/{workload_id}")

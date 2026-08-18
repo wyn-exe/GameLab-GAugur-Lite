@@ -6,7 +6,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from gaugur_lite.metrics.writer import JsonlWriter
-from gaugur_lite.workloads.pyxel_game import GameRunConfig, PyxelGameHarness
+from gaugur_lite.workloads.pyxel_game import (
+    GameRunConfig,
+    PyxelGameHarness,
+    parse_cpu_affinity,
+)
 from gaugur_lite.workloads.registry import get_game
 
 
@@ -169,6 +173,17 @@ def test_harness_applies_real_workload_fps_multiplier(tmp_path: Path) -> None:
     assert summary["registry_target_fps"] == game.target_fps
     assert summary["fps_multiplier"] == 2.0
     assert summary["quality_gate"]["failed_checks"] == []
+
+
+def test_cpu_affinity_parser_is_canonical_and_rejects_invalid_values() -> None:
+    assert parse_cpu_affinity(None) is None
+    assert parse_cpu_affinity("1, 0,1") == (0, 1)
+    try:
+        parse_cpu_affinity("core-0")
+    except ValueError as exc:
+        assert "cpu_affinity" in str(exc)
+    else:
+        raise AssertionError("invalid CPU affinity must be rejected")
 
 
 def test_harness_uses_shared_barrier_and_reports_measurement_coverage(tmp_path: Path) -> None:

@@ -6,7 +6,12 @@ from types import SimpleNamespace
 import pytest
 
 from gaugur_lite import effectiveness
-from gaugur_lite.effectiveness import _high_fps_rows, _stress_rows, audit_stress_pilot
+from gaugur_lite.effectiveness import (
+    _high_fps_rows,
+    _parse_cpu_affinity,
+    _stress_rows,
+    audit_stress_pilot,
+)
 from gaugur_lite.runner.plan import PLAN_COLUMNS
 
 
@@ -89,6 +94,11 @@ def test_high_fps_rows_preserve_shape_without_external_benchmark() -> None:
     assert all(row["root_commit"] == "c" * 40 for row in high_fps)
     assert all(row["run_id"].startswith("formal-highfps-v1__colocation__a+b__r01") for row in high_fps)
     assert all(row["row_sha256"] for row in high_fps)
+
+
+def test_effectiveness_cpu_affinity_is_canonical() -> None:
+    assert _parse_cpu_affinity(None) is None
+    assert _parse_cpu_affinity("1,0,1") == (0, 1)
 
 
 @pytest.mark.parametrize(

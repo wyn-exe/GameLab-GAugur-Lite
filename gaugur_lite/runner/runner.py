@@ -33,6 +33,20 @@ class RunInvalidError(RuntimeError):
     """实验完成不了质量门，但不表示 Runner 自身损坏。"""
 
 
+def _parse_cpu_affinity_env(value: str | None) -> tuple[int, ...] | None:
+    """解析 pilot 使用的逻辑 CPU 集合；空值保持历史默认行为。"""
+
+    if value is None or not value.strip():
+        return None
+    try:
+        cpus = tuple(sorted({int(token.strip()) for token in value.split(",")}))
+    except ValueError as exc:
+        raise ValueError("GAUGUR_WORKLOAD_CPU_AFFINITY 必须是逗号分隔的非负整数") from exc
+    if not cpus or any(cpu < 0 for cpu in cpus):
+        raise ValueError("GAUGUR_WORKLOAD_CPU_AFFINITY 必须至少包含一个非负 CPU 编号")
+    return cpus
+
+
 @dataclass(frozen=True)
 class ParsedPlanRow:
     raw: dict[str, str]
@@ -582,6 +596,9 @@ def run_one(
         raise ValueError("GAUGUR_WORKLOAD_FPS_MULTIPLIER 必须是数字") from exc
     if not math.isfinite(fps_multiplier) or not 1.0 <= fps_multiplier <= 16.0:
         raise ValueError("GAUGUR_WORKLOAD_FPS_MULTIPLIER 必须位于 [1, 16]")
+    cpu_affinity = _parse_cpu_affinity_env(
+        os.environ.get("GAUGUR_WORKLOAD_CPU_AFFINITY")
+    )
     if run_root.exists() and not resume:
         raise FileExistsError(f"run 目录已存在；使用 --resume 安全复核: {run_root}")
     run_root.mkdir(parents=True, exist_ok=True)
@@ -627,7 +644,12 @@ def run_one(
                 "config_sha256": row.config_sha256,
                 "row_sha256": row.row_sha256,
                 "execution_provenance": execution_provenance,
-                "runtime_contract": {"workload_fps_multiplier": fps_multiplier},
+                "runtime_contract": {
+                    "workload_fps_multiplier": fps_multiplier,
+                    "workload_cpu_affinity": list(cpu_affinity)
+                    if cpu_affinity is not None
+                    else None,
+                },
                 "plan_row": row.raw,
             },
         )
@@ -682,6 +704,13 @@ def run_one(
                 "--fps-multiplier",
                 format(fps_multiplier, ".10g"),
             ]
+            if cpu_affinity is not None:
+                command.extend(
+                    [
+                        "--cpu-affinity",
+                        ",".join(str(cpu) for cpu in cpu_affinity),
+                    ]
+                )
             if headless:
                 command.append("--headless")
             children.append(
@@ -952,6 +981,9 @@ def run_one(
             "pressure_requested": row.pressure_requested,
             "pressure_applied": row.pressure_applied,
             "workload_fps_multiplier": fps_multiplier,
+            "workload_cpu_affinity": list(cpu_affinity)
+            if cpu_affinity is not None
+            else None,
             "measurement_start_monotonic_ns": measurement_start_ns,
             "measurement_end_monotonic_ns": measurement_end_ns,
             "system_sample_count": len(system_rows),

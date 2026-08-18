@@ -41,6 +41,20 @@ def _format_cell(value: float | None) -> str:
     return "" if value is None else format(value, ".10g")
 
 
+def _parse_cpu_affinity(value: str | None) -> tuple[int, ...] | None:
+    """把计划参数规范化为可写入 manifest 的逻辑 CPU 元组。"""
+
+    if value is None or not value.strip():
+        return None
+    try:
+        cpus = tuple(sorted({int(token.strip()) for token in value.split(",")}))
+    except ValueError as exc:
+        raise EffectivenessError("cpu_affinity 必须是逗号分隔的非负整数") from exc
+    if not cpus or any(cpu < 0 for cpu in cpus):
+        raise EffectivenessError("cpu_affinity 必须至少包含一个非负 CPU 编号")
+    return cpus
+
+
 def _stress_rows(
     rows: list[dict[str, str]],
     *,
@@ -166,12 +180,14 @@ def build_high_fps_plan(
     experiment_id: str,
     fps_multiplier: float,
     raw_root: str,
+    cpu_affinity: str | None = None,
 ) -> dict[str, Any]:
     """生成真实游戏高帧率压力计划；共置阶段不携带外部 benchmark。"""
 
     root = repo_root.resolve()
     base = base_plan.resolve()
     output = output_plan.resolve()
+    affinity_tuple = _parse_cpu_affinity(cpu_affinity)
     if not math.isfinite(fps_multiplier) or not 1.0 < fps_multiplier <= 16.0:
         raise EffectivenessError("高帧率修复 fps_multiplier 必须位于 (1, 16]")
     if root not in output.parents:
@@ -195,6 +211,7 @@ def build_high_fps_plan(
             "experiment_id": experiment_id,
             "fps_multiplier": fps_multiplier,
             "raw_root": raw_root,
+            "cpu_affinity": list(affinity_tuple) if affinity_tuple is not None else None,
         }
     )
     rows = _high_fps_rows(
@@ -217,6 +234,9 @@ def build_high_fps_plan(
                 "source_plan": base.relative_to(root).as_posix(),
                 "source_plan_sha256": source_sha,
                 "workload_fps_multiplier": fps_multiplier,
+                "workload_cpu_affinity": list(affinity_tuple)
+                if affinity_tuple is not None
+                else None,
             },
         }
     )
@@ -245,6 +265,9 @@ def build_high_fps_plan(
         "source_plan_sha256": source_sha,
         "config_sha256": campaign_hash,
         "workload_fps_multiplier": fps_multiplier,
+        "workload_cpu_affinity": list(affinity_tuple)
+        if affinity_tuple is not None
+        else None,
         "root_commit": root_commit,
         "root_dirty_at_generation": root_dirty,
     }
@@ -486,6 +509,7 @@ def audit_high_fps_pilot(
     min_positive_targets: int,
     min_negative_targets: int,
     expected_fps_multiplier: float,
+    expected_cpu_affinity: tuple[int, ...] | None = None,
     output: Path | None = None,
 ) -> dict[str, Any]:
     """审计真实游戏高帧率共置 pilot，拒绝外部 benchmark 混入。"""
@@ -507,6 +531,14 @@ def audit_high_fps_pilot(
         baseline_file=solo_baselines_file.resolve(),
         expected_workload_ids={workload for row in all_rows for workload in row.workload_ids},
     )
+    baseline_multiplier_matches = all(
+        abs(float(item.get("fps_multiplier", 1.0)) - expected_fps_multiplier) <= 1e-9
+        for item in baselines.values()
+    )
+    baseline_affinity_matches = expected_cpu_affinity is None or all(
+        tuple(item.get("cpu_affinity") or ()) == expected_cpu_affinity
+        for item in baselines.values()
+    )
     manifest = json.loads(plan.with_name(f"{plan.stem}-manifest.json").read_text(encoding="utf-8"))
     completed_rows = []
     pending_rows = []
@@ -522,6 +554,7 @@ def audit_high_fps_pilot(
             plan_sha256=str(audit["plan_sha256"]),
             baselines=baselines,
             expected_workload_fps_multiplier=expected_fps_multiplier,
+            expected_workload_cpu_affinity=expected_cpu_affinity,
         )
         completed_rows.append(physical)
         targets.extend(row_targets)
@@ -535,9 +568,17 @@ def audit_high_fps_pilot(
         )
     except (TypeError, ValueError):
         manifest_multiplier_matches = False
+    manifest_affinity_matches = (
+        expected_cpu_affinity is None
+        or tuple(manifest.get("workload_cpu_affinity") or ())
+        == expected_cpu_affinity
+    )
     checks = {
         "plan_without_external_benchmark": audit["status"] == "passed",
         "manifest_fps_multiplier_matches": manifest_multiplier_matches,
+        "manifest_cpu_affinity_matches": manifest_affinity_matches,
+        "baseline_fps_multiplier_matches": baseline_multiplier_matches,
+        "baseline_cpu_affinity_matches": baseline_affinity_matches,
         "pilot_completed_run_count": len(completed_rows) >= min_completed_runs,
         "retention_values_finite": bool(retention)
         and all(math.isfinite(value) and value > 0 for value in retention),
@@ -550,6 +591,9 @@ def audit_high_fps_pilot(
         "status": "passed" if all(checks.values()) else "failed",
         "experiment_id": manifest.get("experiment_id"),
         "workload_fps_multiplier": expected_fps_multiplier,
+        "workload_cpu_affinity": list(expected_cpu_affinity)
+        if expected_cpu_affinity is not None
+        else None,
         "qos_ratio": qos_ratio,
         "completed_run_count": len(completed_rows),
         "pending_run_count": len(pending_rows),
