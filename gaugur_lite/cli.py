@@ -35,6 +35,7 @@ from .colocation import (
     verify_colocation_truth,
 )
 from .doctor import build_doctor_report
+from .features.dataset import DatasetError, audit_dataset, build_dataset
 from .metrics.telemetry import format_result, run_overhead, run_probe
 from .metrics.writer import write_json_atomic
 from .profiles import (
@@ -674,6 +675,74 @@ def features_verify_colocation(
         json.JSONDecodeError,
     ) as exc:
         typer.echo(f"COLOCATION_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+    if result["status"] != "passed":
+        raise typer.Exit(code=3)
+
+
+@features_app.command("build-dataset")
+def features_build_dataset(
+    ctx: typer.Context,
+    profiles: Path = typer.Option(..., "--profiles", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    truth: Path = typer.Option(..., "--truth", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
+    output_directory: Path = typer.Option(..., "--out-dir", help="独占创建的 Step 9 数据集目录。"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="只读取输入并输出预期样本数，不写数据集。"),
+) -> None:
+    """构建 base/RM/CM 表、组合 manifest、split manifest 和 feature manifest。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        if _effective_dry_run(ctx, dry_run):
+            profile_count = len(__import__("pyarrow.parquet", fromlist=["read_table"]).read_table(profiles))
+            truth_count = len(__import__("pyarrow.parquet", fromlist=["read_table"]).read_table(truth))
+            result = {
+                "status": "passed",
+                "dry_run": True,
+                "profiles_rows": profile_count,
+                "truth_rows": truth_count,
+                "expected": {"base": 600, "rm": 456, "cm": 1368, "extra_rm": 144, "extra_cm": 432},
+                "output_directory": output_directory.as_posix(),
+            }
+        else:
+            result = build_dataset(
+                repo_root=repo_root,
+                profiles_file=profiles,
+                truth_file=truth,
+                output_dir=output_directory,
+            )
+    except (
+        DatasetError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        typer.echo(f"DATASET_ERROR: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(code=2) from None
+    typer.echo(stable_json_dumps(result, indent=2))
+
+
+@features_app.command("audit")
+def features_audit_dataset(
+    dataset_directory: Path = typer.Option(..., "--dataset-dir", exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True),
+    output: Path | None = typer.Option(None, "--output", help="可选的独占 Step 9 验收 JSON。"),
+) -> None:
+    """独立重算并核对 Step 9 全部数据集表与 manifest。"""
+
+    try:
+        repo_root = discover_repo_root(Path.cwd())
+        result = audit_dataset(repo_root=repo_root, dataset_dir=dataset_directory, output_file=output)
+    except (
+        DatasetError,
+        FileExistsError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        typer.echo(f"DATASET_ERROR: {type(exc).__name__}: {exc}", err=True)
         raise typer.Exit(code=2) from None
     typer.echo(stable_json_dumps(result, indent=2))
     if result["status"] != "passed":

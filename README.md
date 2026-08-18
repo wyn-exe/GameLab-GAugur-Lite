@@ -19,7 +19,8 @@
 | Step 6 正式独占基线      | 已完成       | [8 workload 基线](data/interim/formal-v1/solo-baselines.json)、[稳定性图](artifacts/baselines/step6/formal-solo-baselines.png)、[独立校验](artifacts/baselines/step6/formal-solo-verification.json) |
 | Step 7 敏感度/强度 profile | 已完成 | [480-run 原始记录](data/interim/formal-v1/safety-v2/profile-runs.jsonl)、[160-row profile](data/interim/formal-v1/safety-v2/profiles.parquet)、[12/12 独立复核](artifacts/profiles/step7/safety-v2/formal-profile-verification.json) |
 | Step 8 真实共置组合      | 已完成并独立复核 | [216-run 安全采集/验收入口](scripts/run_step8_final.ps1)、[600-row truth](data/interim/formal-v1/safety-v2/colocation-truth.parquet)、[8/8 独立复核](artifacts/colocation/step8/safety-v2/formal-colocation-verification.json) |
-| Python 实现              | 分阶段实现中 | Step 0–8 的 plan、runner、profile、共置 truth 构建与自动验收已落实，103 项单测通过 |
+| Step 9 模型数据集        | 实现与预检完成 | [`features build-dataset`](gaugur_lite/features/dataset.py)、[Step 9 验收入口](scripts/run_step9_final.ps1)；正式表构建等待干净提交后执行 |
+| Python 实现              | 分阶段实现中 | Step 0–9 的 plan、runner、profile、共置 truth、模型数据集构建与自动验收已落实；Step 8 全量 103 项单测及 Step 9 定向单测通过 |
 | 正式实验数据、模型与报告 | 分阶段生成中 | 24 个正式 solo、480 个正式 profile、180 个主共置和 36 个四元外推 run 已生成 |
 
 本文档是后续实现规格。标记为“计划命令”的 CLI 在相应阶段实现前尚不可执行。
@@ -2368,6 +2369,39 @@ python -m gaugur_lite features audit `
 - 主/额外 RM 样本数分别为 456/144，CM 样本数分别为 1368/432；
 - 数据审计报告包含组合大小、标签、缺失和异常分布。
 
+#### Step 9 实现与真实预检（2026-08-18）
+
+新增 [`gaugur_lite/features/dataset.py`](gaugur_lite/features/dataset.py)，从 Step 7 的 160-row profile 和 Step 8 的 600-row truth 确定性生成：
+
+- `base_samples.parquet`：600 个目标样本；
+- `rm_samples.parquet` / `extra_rm_samples.parquet`：主 456 行、四元外推 144 行；
+- `cm_samples.parquet` / `extra_cm_samples.parquet`：按 `{0.70, 0.80, 0.90}` 展开为 1368/432 行；
+- `combination_manifest.json`、`split_manifest.json`、`feature_manifest.json` 和 `dataset-summary.json`。
+
+目标敏感度保留 4 个资源 × 5 个压力档位的完整曲线；邻居强度使用各 workload 在最高请求压力 `p=1.0` 的 `intensity_slowdown_mean`，按邻居计算均值与总体方差。`target_id` 只作为审计元数据，不进入 `feature_columns`。`retention_ratio > 1` 保留，不裁剪。
+
+短时实现验收：
+
+```text
+python -m pytest tests\unit\test_dataset.py -q
+3 passed in 0.18s
+
+python -m pytest tests\unit\test_dataset.py tests\unit\test_cli.py -q
+11 passed in 0.66s
+```
+
+正式构建必须在本阶段代码提交后运行，脚本会先执行全量单测、检查 Step 8 独立复核，再构建并独立重算所有 Parquet/manifest：
+
+```powershell
+conda activate gaugur-lite
+Set-Location D:\github\GameLab-RLCG
+
+pwsh.exe -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\run_step9_final.ps1
+```
+
+正式验收输出将写入 `artifacts/dataset/step9/`，完成后把脚本末尾输出发回，再把真实行数、哈希和审计结果补入本节。
+
 ### Step 10：训练 CM、RM 与基线
 
 #### 防止数据泄漏
@@ -2376,9 +2410,9 @@ python -m gaugur_lite features audit `
 
 | split      | pair key | triple key | key 合计 | RM 行数 | CM 行数 |
 | ---------- | -------- | ---------- | -------- | ------- | ------- |
-| train      | 17       | 19         | 36       | 273     | 819     |
-| validation | 6        | 6          | 12       | 90      | 270     |
-| test       | 5        | 7          | 12       | 93      | 279     |
+| train      | 15       | 21         | 36       | 279     | 837     |
+| validation | 4        | 8          | 12       | 96      | 288     |
+| test       | 9        | 3          | 12       | 81      | 243     |
 | extra_test | 0        | 0          | 12 quad  | 144     | 432     |
 
 切分 seed 固定为 `20260811`。分配器在满足上表数量的前提下平衡各 workload 在各 split 的出现次数，并将完整 key 列表写入 `split_manifest.json`。同一物理组合的三个重复、其中所有目标样本以及三个 QoS 标签行必须进入同一个 split；仅按 `colocation_id` 分组会让相同组合的不同重复泄漏，因此禁止使用。
